@@ -1,5 +1,21 @@
 # Journal 3 — LiDAR geometry and drift
 
+## Flat-805 matched scan update — 2 October 2026
+
+The owner supplied `Flat-805-lidar/flat_805.zip`. The archive SHA-256 is
+`c5bf24265bff21a150e36ed9ce1c2c784eb111d3362e6c66e0458f21fe548950`.
+An extracted copy in `/tmp/roomproof-flat805-lidar/7a3183a649` matched all
+6,608 archive files byte for byte. Audit run
+`run-413b2a445fe1417c9a83edd02a97628d` found 3,302 pose/depth/confidence
+frames and 3,301 decoded RGB frames. Pose timestamps span 110.04 seconds; RGB
+metadata reports 55.02 seconds, a near-exact 0.5 ratio. The revised audit
+warns against time-based RGB/pose alignment. Process run
+`run-0292663a46e44a7ba792dfcc5cbc72ee` completed in 26.78 seconds with a
+schema-valid unresolved plan and 20,730 provisional depth points. Seventeen
+of 32 sampled frames retained fewer than 500 points. No room dimensions,
+drift correction, or measured-scale claim follows from this run.
+
+
 **Status:** In progress on 2 October 2026. Completed substeps in T24 and T29 are checked in `TASK.md`; no full Phase 3 task has met its acceptance gate. Tape-measured scale and a multiroom capture are still required for T24 and T27–T28 acceptance.
 
 ## Work landed

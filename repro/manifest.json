@@ -30,6 +30,12 @@
       "file_count": 1144,
       "path": "captures/cap-f193a28646e74de985d18ea075eaa569.json",
       "sha256": "c768a60ff811d8fb8a4a7f6b3c4424028a20d27638c1750936f440c5d4876145"
+    },
+    {
+      "capture_id": "cap-flat-805-lidar",
+      "file_count": 1,
+      "path": "captures/cap-flat-805-lidar.json",
+      "sha256": "4fa4fa263240c8a3631d41a6b58828523eb650a0483b376f885ff22ba6612d73"
     }
   ],
   "manifest_version": "0.1.0"

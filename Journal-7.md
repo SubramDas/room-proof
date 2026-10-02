@@ -6,6 +6,14 @@ cross-tier IDs and keeps truth out of inference. Existing `Flat-805` photos and
 video remain original development inputs. No LiDAR, repeat room, scored damage,
 or tape/laser sheet has been supplied, so T54–T62 are not checked.
 
+**Update, 2 October 2026:** The owner supplied the full Flat-805 Stray ZIP and
+four room-level length, breadth, and ceiling-height triples. They confirmed
+`room-hall` is the connector. The values are stored in ignored
+`repro/bundle/benchmark_truth/flat_805_owner_dimensions.json`, outside the
+prediction input. The owner has not yet supplied wall/opening IDs, measurement
+method or repeated readings, and will list connections. The original wording
+above records the prior state; the new LiDAR audit is in `Journal-3.md`.
+
 The owner's four `Flat-805` photo folders and standalone video cover four
 named spaces, but folder name `room-hall` alone is not evidence that the hall
 is the required connector or that all spaces connect correctly. Once the

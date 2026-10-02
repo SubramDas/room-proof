@@ -12,15 +12,20 @@ A clean temporary environment installed the wheel using `pip --require-hashes`; 
 ## Optional cloud candidate, not adopted
 
 `roomproof.cloud_vision` contains a single-image adapter for Google's
-`gemini-2.5-flash-lite` API. It has no local model file or software dependency
-beyond Python's standard library. The [Google model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite)
+`gemini-3.5-flash-lite` API. The initially coded `gemini-2.5-flash-lite`
+returned HTTP 404 for this account with a message directing new users to
+3.5 Flash-Lite. It has no local model file or software dependency
+beyond Python's standard library. The [Google model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite)
 and [pricing/terms page](https://ai.google.dev/gemini-api/docs/pricing) govern
-the hosted service. A successful call would send the **original private image**
-to Google, record the returned model version, raw response, token usage, and
-latency, and use the result only as a development probe. No image was sent:
-the sandboxed call failed before transfer, and automatic approval review
-rejected an unsandboxed call for lack of explicit authorization for that
-specific photo and destination. This candidate is not part of the live
+the hosted service. A successful call sends the **original private image**
+to Google and records the returned model version, raw response, token usage,
+and latency for a development probe. The initial sandboxed call failed before
+transfer, and automatic approval review
+initially rejected an unsandboxed call for lack of explicit authorization for
+that specific photo and destination. The owner subsequently supplied that
+explicit authorization. One hall still was sent to Google in
+`run-1a11bb4523bd4cb88e834bfb3b81a442` with the 3.5 model. The original
+2.5 request returned 404 and no model result. This candidate is not part of the live
 prediction path or any reported accuracy number. Before use, confirm account
 quota, current terms, property-specific transfer permission, and defense
 availability; no free-tier SLA is assumed.

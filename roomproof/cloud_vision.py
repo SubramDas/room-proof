@@ -6,8 +6,9 @@ import os
 from pathlib import Path
 import time
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
-MODEL = "gemini-2.5-flash-lite"
+MODEL = "gemini-3.5-flash-lite"
 ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 PROMPT = (
     "Inspect this indoor photo. Return only JSON with keys visible_opening_types "
@@ -35,8 +36,12 @@ def probe(image_path):
     request = Request(ENDPOINT, data=json.dumps(body).encode(),
                       headers={"x-goog-api-key": key, "Content-Type": "application/json"}, method="POST")
     started = time.monotonic()
-    with urlopen(request, timeout=45) as response:
-        payload = json.load(response)
+    try:
+        with urlopen(request, timeout=45) as response:
+            payload = json.load(response)
+    except HTTPError as error:
+        detail = error.read(1000).decode("utf-8", errors="replace")
+        raise RuntimeError(f"Gemini HTTP {error.code}: {detail}") from error
     elapsed = time.monotonic()-started
     candidates = payload.get("candidates", [])
     if not candidates:

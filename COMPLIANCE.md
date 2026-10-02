@@ -7,7 +7,7 @@ Status as of 2 October 2026. `Complete` means the named evidence exists and has 
 | Chosen Route 2 and supported devices | [protocols/stock_capture.md](protocols/stock_capture.md), [docs/device_matrix.md](docs/device_matrix.md) | Owner Stray 1.4 ZIP tested; non-engineer timing breakdown/repeat pending | partial |
 | Photo input: 2–8 stills per room, no hidden depth/poses | [roomproof/readers.py](roomproof/readers.py), `Flat-805/` | 30 owner stills across four rooms; current plan unresolved | partial |
 | Ordinary standalone video input | [roomproof/readers.py](roomproof/readers.py), `Flat-805/IMG_0031.mp4` | 3,328 decoded frames; current plan unresolved | partial |
-| LiDAR RGB/depth/confidence/poses/intrinsics input | Starter directories and `dummy_room.zip`; [device audit](reports/device_format_dummy_room.md) | 569 RGB vs 570 pose/depth/confidence; ZIP bytes verified; metric accuracy untested | partial |
+| LiDAR RGB/depth/confidence/poses/intrinsics input | Starter directories, owner `flat_805.zip`; [device audit](reports/device_format_dummy_room.md), [Journal-3.md](Journal-3.md) | Flat-805 ZIP bytes verified: 3,301 RGB vs 3,302 pose/depth/confidence; RGB metadata duration is half pose duration; metric accuracy untested | partial |
 | Explicit input rejection and capture quality report | [roomproof/capture.py](roomproof/capture.py) | Valid, low-confidence, and rejected paths logged | partial |
 | Common three-tier property-plan JSON contract | [schema/property_plan.schema.json](schema/property_plan.schema.json), [roomproof/plan.py](roomproof/plan.py) | Three tiers generate unresolved contract artifacts | partial |
 | Whole-property plan, rooms, surfaces, openings, adjacency, dimensions | Planned `runs/<id>/property_plan.json` | None | not started |
@@ -29,7 +29,7 @@ Status as of 2 October 2026. `Complete` means the named evidence exists and has 
 | Video wall lengths ±3% | [roomproof/benchmark.py](roomproof/benchmark.py) | Scorer written; no independent truth | partial |
 | Two damage classes in a furnished room | [docs/damage_vocabulary.md](docs/damage_vocabulary.md) | Vocabulary draft exists; owner classes/labels absent | partial |
 | 90% proposed interval coverage, width and unknown-rate report | [roomproof/benchmark.py](roomproof/benchmark.py), [docs/decisions.md](docs/decisions.md) | Summary logic exists; no held-out calibration | partial |
-| At least three rooms plus connector, all three tiers, one repeat, tape/laser truth | Planned `benchmark/` bundle | Starter scans do not qualify | not started |
+| At least three rooms plus connector, all three tiers, one repeat, tape/laser truth | Owner Flat-805 raw captures; ignored reference draft; [Journal-7.md](Journal-7.md) | Four named spaces across three tiers; hall confirmed connector; repeat capture and scored wall/opening truth missing | partial |
 | Two-room consumer-app comparison and ≥70% shared-dimension wins/ties | [roomproof/comparator.py](roomproof/comparator.py), [docs/comparator_protocol.md](docs/comparator_protocol.md) | Scorer and 5 cm ours-only wall limit frozen; app exports absent | partial |
 | Frozen baseline, one-page predicted fix, implementation, rerun and diff | [fix_loop/README.md](fix_loop/README.md), [roomproof/fix_selection.py](roomproof/fix_selection.py) | Ranking rule/template only; baseline absent | partial |
 | New walk-in capture processed without property setup | Planned cold rehearsal | None | not started |

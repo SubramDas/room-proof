@@ -81,7 +81,8 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 - [x] **T36 [Agent]** Record alternate/unresolved room placements when photos lack connection evidence; do not silently assert a unique layout. **Done when:** ambiguity appears in JSON and plan warnings while the one-property artifact still exists. Run `run-732ee29b93a24b508091137148c1f4fc` writes one four-room artifact with `placement_ambiguities` and an SVG unresolved-placement label; no adjacency or dimensions are invented.
 - [ ] **T37 [Agent]** Limit frames/images/model calls to fit the no-GPU machine and log all selection rules. **Done when:** one fresh capture per tier is timed end to end and reduction choices are reproducible.
   - [x] Time the owner Flat-805 photo and video runs on the local CPU: 30 stills and 256 candidate pairs in 17.68 s (`run-732ee29b93a24b508091137148c1f4fc`); 24 motion frames plus a one-frame-per-second scene pass in 9.92 s (`run-08357569b6104024adcda7c6af3a1b88`). Selection rules are recorded in `frames.json` and `visual_geometry.json`.
-  - [ ] Time and assess a matched Flat-805 LiDAR run and an end-to-end scored output before closing this gate.
+  - [ ] Time and assess an end-to-end scored output before closing this gate.
+  - [x] Matched Flat-805 LiDAR development run `run-0292663a46e44a7ba792dfcc5cbc72ee` took 26.78 s, selecting 32 of 3,302 depth frames; 20,730 diagnostic points. No scored output yet.
 
 ## 5. Damage, concealed flags, and scope — P0/P1
 

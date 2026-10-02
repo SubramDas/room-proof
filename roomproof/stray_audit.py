@@ -237,6 +237,15 @@ def audit_stray(args, run_dir, run):
                       "counted_frames": counted_frames, "counted_seconds": counted_seconds, "decoded_frames": decoded_frames})
         if decoded_frames != len(poses):
             warnings.append(f"RGB frames ({decoded_frames}) differ from pose/depth frames ({len(poses)})")
+        video_seconds = video.get("duration_seconds")
+        pose_seconds = pose_timing["duration_seconds"]
+        if video_seconds and pose_seconds:
+            video["duration_to_pose_ratio"] = video_seconds / pose_seconds
+            if abs(video_seconds - pose_seconds) > max(1.0, .1 * pose_seconds):
+                warnings.append(
+                    f"RGB metadata duration ({video_seconds:.2f}s) differs from pose duration ({pose_seconds:.2f}s); "
+                    "do not align by reported video time without independent frame-timestamp evidence"
+                )
     except Exception as error:
         video["decode_error"] = f"{type(error).__name__}: {error}"
         warnings.append("RGB video could not be fully decoded")
