@@ -128,6 +128,18 @@ def score_benchmark(args, run_dir, run):
     print(f"benchmark report: {output}")
 
 
+def probe_vision(args, run_dir, run):
+    from .cloud_vision import probe
+    result = probe(args.image)
+    output = run_dir / "vision_probe.json"
+    write_json(output, result)
+    run["model_or_api"] = result["model"]
+    run["data_revision"] = sha256(Path(args.image).resolve(strict=True))
+    run["metrics"] = {"latency_seconds": result["latency_seconds"], "image_bytes": result["image_bytes"]}
+    run["artifacts"] = [{"path": str(output), "sha256": sha256(output)}]
+    print(f"vision probe: {output}")
+
+
 def object_path(bundle, digest):
     return bundle / "objects" / "sha256" / digest[:2] / digest
 
@@ -339,5 +351,9 @@ def main():
     benchmark.add_argument("manifest")
     benchmark.add_argument("--runs-dir", default="runs")
     benchmark.set_defaults(func=score_benchmark)
+    vision = subcommands.add_parser("probe-vision", help="optional disclosed single-image Gemini vision pilot")
+    vision.add_argument("image")
+    vision.add_argument("--runs-dir", default="runs")
+    vision.set_defaults(func=probe_vision)
     args = parser.parse_args()
     return execute(args.command, args, args.func)

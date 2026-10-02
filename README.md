@@ -4,11 +4,13 @@ Status: input-validation foundation. The repository does **not** yet reconstruct
 
 Phase journals are [Journal-0.md](Journal-0.md) through [Journal-10.md](Journal-10.md). Phase 5 adds evidence-gated damage rules but no detector. The separate reference evaluator is invoked after prediction, once independent truth exists:
 
+An optional single-image [Gemini vision probe](roomproof/cloud_vision.py) is available with `GEMINI_API_KEY` set: `.venv/bin/python -m roomproof probe-vision PHOTO.jpeg`. It sends the original image to Google's API, stores model/response/usage/latency in an ignored run directory, and does not modify the property plan. Google's [pricing page](https://ai.google.dev/gemini-api/docs/pricing) currently lists a free tier for `gemini-2.5-flash-lite`; [image input documentation](https://ai.google.dev/gemini-api/docs/image-understanding) explains inline image transfer. Account quota and free availability must be rechecked at use time. No labelled cloud-versus-local accuracy result exists yet.
+
 ```bash
 .venv/bin/python -m roomproof score-benchmark /path/to/benchmark_manifest.json
 ```
 
-The manifest format is in [docs/benchmark_manifest.md](docs/benchmark_manifest.md). Keep this reference file outside the capture input tree; `process-capture` never reads it. The scorer currently covers measurement omissions/error and finite interval coverage, openings, ceiling accuracy, photo/video wall error, footprint area, and adjacency. Repeatability, shape alignment, drift ablation, and damage accuracy remain unfinished. [reports/benchmark.md](reports/benchmark.md) records the outstanding evidence.
+The manifest format is in [docs/benchmark_manifest.md](docs/benchmark_manifest.md). Keep this reference file outside the capture input tree; `process-capture` never reads it. The scorer currently covers measurement omissions/error and finite interval coverage, openings, ceiling accuracy, photo/video wall error, footprint area, adjacency, repeat spread, and damage class/surface omissions. Shape alignment, drift ablation, and damage polygon accuracy remain unfinished. [reports/benchmark.md](reports/benchmark.md) records the outstanding evidence.
 
 Ubuntu 24.04 with Python 3.12.3 is the tested platform. The pinned [requirements.txt](requirements.txt) now includes a free HEVC decoder for Stray Scanner export validation. Its Linux x86-64 wheel is about 29.5 MB. Set up a local environment and print the CLI version:
 
