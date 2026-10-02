@@ -1,0 +1,7 @@
+# Stray Scanner RGB/depth alignment rule (draft)
+
+The owner Stray Scanner 1.4 test export and all three starter scans have one fewer decoded HEVC RGB frame than depth, confidence, and odometry samples. The [owner audit](../reports/device_format_dummy_room.md) confirms that the original ZIP exactly matches the extraction, so transfer did not cause the count mismatch. The position of the missing video frame has **not** been established.
+
+For the importer, join **depth and confidence to poses by their six-digit frame IDs**. Retain all original records. Report the RGB count, depth/pose count, and unmatched count in the quality and run manifests. Do not assign an RGB frame to a depth/pose record merely by assuming that the first or last video frame is missing. Until a timestamp or independently checked image/depth alignment identifies the offset, keep RGB-to-depth references unresolved. Geometry can use depth and pose records after unit/axis checks; surface damage mapped from RGB to metric geometry cannot claim frame-accurate provenance from an unresolved pairing.
+
+Next validation: capture another short Stray scan, inspect per-frame video presentation times if available, and compare image edges with projected depth at the beginning, middle, and end. Preserve the result and adopt a deterministic alignment rule only if supported by those checks. If a future app release fixes the difference, keep its version-specific rule separate. This document defines a cautious importer policy; it does not claim that metric geometry or a whole-property output has passed.

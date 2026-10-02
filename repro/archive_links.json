@@ -1,0 +1,14 @@
+{
+  "version": "0.1.0",
+  "relationships": [
+    {
+      "archive_import_id": "cap-56e289351c2c4cd5b564ea64f06a5fe8",
+      "extracted_import_id": "cap-f193a28646e74de985d18ea075eaa569",
+      "physical_recording_count": 1,
+      "archive_sha256": "1e91bb25ecd182203aa4388dd68b9adb744a83cfe8d9adb6ad80aa93ab4282ac",
+      "archive_root": "4b6bc9e700",
+      "extracted_root": "dummy_room",
+      "byte_comparison_report": "reports/device_format_dummy_room.json"
+    }
+  ]
+}

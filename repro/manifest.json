@@ -8,6 +8,12 @@
       "sha256": "4316a5a44b837d2f2c2bbedcac5c35d88fd69dcdf3b7ead266c3b2b71ae4a80a"
     },
     {
+      "capture_id": "cap-56e289351c2c4cd5b564ea64f06a5fe8",
+      "file_count": 1,
+      "path": "captures/cap-56e289351c2c4cd5b564ea64f06a5fe8.json",
+      "sha256": "02be3d1c286f2ac13b0f198c0c9ade992a0a09e22a5334ac56eea354e81b6c29"
+    },
+    {
       "capture_id": "cap-bb46b443767f4b50ac5d0364bd271808",
       "file_count": 10506,
       "path": "captures/cap-bb46b443767f4b50ac5d0364bd271808.json",
@@ -18,6 +24,12 @@
       "file_count": 3434,
       "path": "captures/cap-c07fff0bef1248249509972a948a8ef8.json",
       "sha256": "0b8ab5c312d6f504256cc892b0e30bdf76624f27533cfe2f5aa75b856136606e"
+    },
+    {
+      "capture_id": "cap-f193a28646e74de985d18ea075eaa569",
+      "file_count": 1144,
+      "path": "captures/cap-f193a28646e74de985d18ea075eaa569.json",
+      "sha256": "c768a60ff811d8fb8a4a7f6b3c4424028a20d27638c1750936f440c5d4876145"
     }
   ],
   "manifest_version": "0.1.0"

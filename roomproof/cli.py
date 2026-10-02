@@ -114,8 +114,8 @@ def object_path(bundle, digest):
 def import_capture(args, run_dir, run):
     source = Path(args.source).resolve(strict=True)
     bundle = Path(args.bundle).resolve()
-    if not source.is_dir():
-        raise ValueError("capture source must be a directory")
+    if not source.is_dir() and not source.is_file():
+        raise ValueError("capture source must be a file or directory")
     if bundle == source or source in bundle.parents or bundle in source.parents:
         raise ValueError("source and bundle must be separate directory trees")
     property_id = valid_id(args.property_id, "prop")
@@ -124,12 +124,13 @@ def import_capture(args, run_dir, run):
     if manifest_path.exists():
         raise FileExistsError(f"capture ID already imported: {capture_id}")
     files = []
-    for path in sorted(source.rglob("*")):
+    paths = sorted(source.rglob("*")) if source.is_dir() else [source]
+    for path in paths:
         if path.is_symlink():
             raise ValueError(f"symlink in raw capture: {path}")
         if not path.is_file():
             continue
-        relative = path.relative_to(source).as_posix()
+        relative = path.relative_to(source).as_posix() if source.is_dir() else path.name
         digest = sha256(path)
         size = path.stat().st_size
         object_file = object_path(bundle, digest)
@@ -258,7 +259,7 @@ def main():
     parser = argparse.ArgumentParser(prog="roomproof", description="RoomProof reproducibility foundation")
     parser.add_argument("--version", action="version", version=f"RoomProof {__version__}")
     subcommands = parser.add_subparsers(dest="command", required=True)
-    importer = subcommands.add_parser("import-capture", help="copy raw files into a content-addressed bundle")
+    importer = subcommands.add_parser("import-capture", help="copy a raw file or folder into a content-addressed bundle")
     importer.add_argument("source")
     importer.add_argument("--bundle", required=True)
     importer.add_argument("--property-id", required=True)
@@ -287,5 +288,16 @@ def main():
     indexer.add_argument("--index", default="repro/manifest.json")
     indexer.add_argument("--runs-dir", default="runs")
     indexer.set_defaults(func=index_bundle)
+    auditor = subcommands.add_parser("audit-stray", help="inspect a Stray Scanner export and write a format report")
+    auditor.add_argument("scan")
+    auditor.add_argument("--report", required=True)
+    auditor.add_argument("--capture-manifest")
+    auditor.add_argument("--archive")
+    auditor.add_argument("--device-model")
+    auditor.add_argument("--ios-version")
+    auditor.add_argument("--app-version")
+    auditor.add_argument("--runs-dir", default="runs")
+    from .stray_audit import audit_stray
+    auditor.set_defaults(func=audit_stray)
     args = parser.parse_args()
     return execute(args.command, args, args.func)

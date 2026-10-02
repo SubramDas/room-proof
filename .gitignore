@@ -1,6 +1,8 @@
 /single_room/
 /single_scan_floor_only/
 /single_scan_with_ceiling/
+/dummy_room/
+/dummy_room.zip
 /.venv/
 /.room-proof/
 /runs/
