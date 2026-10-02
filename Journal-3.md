@@ -21,7 +21,10 @@ drift correction, or measured-scale claim follows from this run.
 ## Work landed
 
 - Added a bounded depth-to-world converter in `roomproof/lidar_geometry.py`. It joins the existing frame-indexed depth, confidence, pose, and intrinsics records. The 16-bit depth PNG is read as millimetres; per-frame intrinsics are scaled from 1920×1440 RGB coordinates to 256×192 depth coordinates. A camera-to-world xyzw quaternion and ARKit-style camera axes are **hypotheses**, explicitly recorded in each report.
-- Sampled at most 32 evenly spaced depth frames by default and every fourth depth pixel, retaining only confidence codes 1–2, depths 0.25–6 m, and pixels without a large local depth discontinuity. The confidence ordering follows [Stray's format document](https://github.com/strayrobots/scanner/blob/main/docs/format.md). RGB is not paired to depth, so none of this uses RGB evidence.
+- Initially sampled at most 32 evenly spaced depth frames and every fourth depth pixel, retaining only confidence codes 1–2, depths 0.25–6 m, and pixels without a large local depth discontinuity. The confidence ordering follows [Stray's format document](https://github.com/strayrobots/scanner/blob/main/docs/format.md). RGB is not paired to depth, so none of this uses RGB evidence.
+- After the Flat-805 audit exposed weak evenly spaced frames, changed the selection to one frame from each evenly spaced time window, choosing the strongest raw depth/confidence coverage among up to four deterministic candidates. Run `run-666042b95394415587b2ec66455ca306` retained 33,044 points versus 20,730 before, with weak selected frames falling from 17 to 11 of 32; processing rose from 26.78 to 28.88 seconds. Selection probes and chosen frame IDs are saved in `lidar_geometry.json`.
+- Added frame-supported horizontal height bins and vertical plane-normal/distance bins. Run `run-f88a07cf2db14f21ac58eb71c77559ac` records 12,627 vertical-patch samples and explicit supporting frame IDs for wall-like candidates. Multiple 1.35–1.8 m upper horizontal bands appear, while lower horizontal evidence is dispersed. Furniture and pose/depth alignment can produce such bands; no wall, floor, ceiling, or height has been promoted into the plan.
+- A denser 128-frame diagnostic run `run-f40d8101c36e41f4b0f138397a8a6e7d` retained 118,242 points in 63.30 seconds. Lower horizontal candidates remained spread over roughly −0.8 to 0.05 m. More samples alone did not establish a common floor plane.
 - Each LiDAR `process-capture` run now writes `lidar_points.ply` and `lidar_geometry.json` alongside the common contract. The report records source frame IDs, filter counts, coordinate extents, horizontal-surface candidates, and pose jumps. The property-plan JSON remains unresolved because no tape check has established the projection's metric correctness.
 
 ## Evidence
@@ -36,6 +39,7 @@ Runs and point clouds are under `/tmp/roomproof-phase3-runs`. They are developme
 ## Remaining gates
 
 - **T24:** Check axis convention, camera-to-depth calibration, and point distances against a known tape-measured target. Do not mark complete from point-cloud appearance.
+- Flat-805 room-level laser dimensions are now available in an ignored reference file, but no wall/room correspondence has yet been inferred, so they cannot validate the projection by themselves.
 - **T25–T26:** Fit planes and openings robustly enough to make a consistent room plan. Current horizontal candidates are exploratory only.
 - **T27–T28:** Obtain and process a complete multiroom capture; implement transitions and drift correction with an on/off ablation.
 - **T29:** Expand tracking and depth-quality warnings into actual glass/mirror/low-light/ceiling coverage diagnostics.

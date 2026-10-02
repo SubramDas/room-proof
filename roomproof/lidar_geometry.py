@@ -46,18 +46,95 @@ def selected_indices(total, maximum):
     return sorted({i * (total - 1) // (count - 1) for i in range(count)})
 
 
-def _peak_bins(values, bin_width=.05, minimum_count=50):
-    bins = Counter(round(value / bin_width) for value in values)
-    return [{'center_m': round(key * bin_width, 3), 'samples': count}
-            for key, count in bins.most_common(8) if count >= minimum_count]
+def quality_selected_indices(scan, frames, maximum, candidates_per_window=4, probe_stride=8):
+    """Select one high-coverage depth frame from each temporal window.
+
+    Quality uses only raw depth/confidence, never RGB or reference dimensions.
+    The first and last windows are kept; no temporal region is discarded.
+    """
+    total = len(frames)
+    windows = min(total, maximum)
+    if total <= maximum:
+        return list(range(total)), []
+    chosen, probes = [], []
+    for window in range(windows):
+        start = window * total // windows
+        stop = (window + 1) * total // windows
+        count = min(candidates_per_window, stop - start)
+        indices = sorted({start + j * (stop - start - 1) // max(1, count - 1) for j in range(count)})
+        options = []
+        for frame_number in indices:
+            frame_id = frames[frame_number]['frame_id']
+            depth = png_info(scan / 'depth' / f'{frame_id}.png', decode=True, pixels=True)
+            confidence = png_info(scan / 'confidence' / f'{frame_id}.png', decode=True, pixels=True)
+            if (depth['width'], depth['height']) != (confidence['width'], confidence['height']):
+                raise ValueError(f'frame {frame_id}: depth/confidence dimensions differ')
+            width, height = depth['width'], depth['height']
+            dvals, cvals = depth['pixels'], confidence['pixels']
+            valid = sum(250 <= dvals[v*width+u] <= 6000 and cvals[v*width+u] >= 1
+                        for v in range(1, height-1, probe_stride)
+                        for u in range(1, width-1, probe_stride))
+            options.append({'frame_index': frame_number, 'valid_probe_pixels': valid})
+        selected = max(options, key=lambda item: (item['valid_probe_pixels'], -item['frame_index']))
+        chosen.append(selected['frame_index'])
+        probes.append({'window_index': window, 'window_frame_range': [start, stop-1],
+                       'candidates': options, 'selected_frame_index': selected['frame_index']})
+    return chosen, probes
+
+
+def _horizontal_bins(observations, bin_width=.05, minimum_count=30):
+    bins = Counter(round(height / bin_width) for height, _, _ in observations)
+    frames = {}
+    signs = Counter()
+    for height, normal_sign, frame_id in observations:
+        key = round(height / bin_width)
+        frames.setdefault(key, set()).add(frame_id)
+        signs[(key, normal_sign)] += 1
+    return [{'center_m': round(key * bin_width, 3), 'samples': count,
+             'supporting_frames': len(frames[key]),
+             'frame_ids': sorted(frames[key]),
+             'positive_normal_samples': signs[(key, 1)],
+             'negative_normal_samples': signs[(key, -1)]}
+            for key, count in sorted(bins.items(), key=lambda item: item[0])
+            if count >= minimum_count]
+
+
+def _vertical_bins(observations, angle_step_degrees=5, distance_step=.1):
+    groups = {}
+    for x, y, z, nx, nz, frame_id in observations:
+        angle = math.atan2(nz, nx)
+        if angle < 0:
+            angle += math.pi
+            nx, nz = -nx, -nz
+        if angle >= math.pi:
+            angle -= math.pi
+            nx, nz = -nx, -nz
+        angle_bin = round(math.degrees(angle) / angle_step_degrees)
+        distance_bin = round((nx*x + nz*z) / distance_step)
+        group = groups.setdefault((angle_bin, distance_bin), {'count': 0, 'frames': set(), 'y_min': y, 'y_max': y})
+        group['count'] += 1
+        group['frames'].add(frame_id)
+        group['y_min'] = min(group['y_min'], y)
+        group['y_max'] = max(group['y_max'], y)
+    candidates = []
+    for (angle_bin, distance_bin), group in groups.items():
+        if group['count'] < 20 or len(group['frames']) < 2:
+            continue
+        candidates.append({'normal_angle_degrees': angle_bin * angle_step_degrees,
+                           'signed_distance_m': round(distance_bin * distance_step, 3),
+                           'samples': group['count'], 'supporting_frames': len(group['frames']),
+                           'frame_ids': sorted(group['frames']),
+                           'vertical_span_m': round(group['y_max']-group['y_min'], 3)})
+    return sorted(candidates, key=lambda item: (-item['supporting_frames'], -item['samples']))[:40]
 
 
 def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimum_confidence=1):
     """Write a bounded world-point PLY and candidate horizontal plane heights."""
     scan = Path(scan)
-    chosen = selected_indices(len(index['frames']), max_frames)
+    chosen, selection_probes = quality_selected_indices(scan, index['frames'], max_frames)
     points = []
     horizontal = []
+    vertical = []
     confidence_counts = Counter()
     rejection = Counter()
     frame_records = []
@@ -104,7 +181,12 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
                 nz = a[0]*b[1]-a[1]*b[0]
                 norm = math.sqrt(nx*nx+ny*ny+nz*nz)
                 if norm > 1e-8 and abs(ny)/norm > .9:
-                    horizontal.append(world[1])
+                    horizontal.append((world[1], 1 if ny > 0 else -1, frame_id))
+                elif norm > 1e-8 and abs(ny)/norm < .25:
+                    horizontal_norm = math.hypot(nx, nz)
+                    if horizontal_norm > 1e-8:
+                        vertical.append((world[0], world[1], world[2], nx/horizontal_norm,
+                                         nz/horizontal_norm, frame_id))
         frame_records.append({'frame_id': frame_id, 'accepted_points': accepted,
                               'depth_source_ref': frame['depth']['source_ref'],
                               'pose_source_ref': frame['pose_source_ref']})
@@ -129,15 +211,20 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
             'Confidence code >= 1 is used because Stray documents 0/1/2 with higher meaning more confidence.'
         ],
         'selection': {'total_frames': len(index['frames']), 'selected_frame_indices': chosen,
+                      'rule': 'one best valid-depth/confidence frame per evenly spaced temporal window; up to four evenly spaced candidates per window; ties choose earlier frame',
+                      'probe_pixel_stride': 8, 'quality_probes': selection_probes,
                       'pixel_stride': pixel_stride, 'min_confidence_code': minimum_confidence,
                       'depth_range_m': [.25, 6.0]},
         'point_count': len(points), 'horizontal_candidate_count': len(horizontal),
+        'vertical_candidate_count': len(vertical),
         'confidence_counts_sampled': {str(k): v for k,v in sorted(confidence_counts.items())},
         'rejected_sample_counts': dict(rejection),
         'tracking_jump_frame_indices': jump_indices,
         'largest_pose_step_m': max(pose_jumps, default=0),
         'coordinate_extent_m': {'x': [min(xs), max(xs)], 'y': [min(ys), max(ys)], 'z': [min(zs), max(zs)]},
-        'horizontal_y_peaks': _peak_bins(horizontal),
+        'horizontal_y_peaks': sorted(_horizontal_bins(horizontal), key=lambda item: -item['samples'])[:8],
+        'horizontal_surface_bins': _horizontal_bins(horizontal),
+        'vertical_plane_candidates': _vertical_bins(vertical),
         'frames': frame_records,
         'warnings': ['Candidate plane heights are not a calibrated floor/ceiling estimate.',
                      'Glass, mirrors, wet surfaces, low light, and unobserved ceiling cannot yet be diagnosed from this extraction.']
