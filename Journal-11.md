@@ -233,3 +233,17 @@ plan remains schema-valid with provisional 2.4909 × 2.3777 × 2.7781 m
 geometry and an unresolved opening. Updated serial model-on time is
 1,076.13 s (17.9 min). Exact stage counts and limits are in
 `reports/kitchen_pipeline_pilot.md`.
+
+## Florence-2 Base candidate comparison — 3 October 2026
+
+Added pinned local `microsoft/Florence-2-base` phrase grounding through the
+same `visual_candidates.json` adapter for photos, standalone video, and scan
+RGB. The model has no comparable box score in this path; zero is explicitly
+marked as a missing-score sentinel. CPU runs used the same kitchen frames
+as OWLv2. Florence completed photo/video/LiDAR/link stages in 516.93 s
+versus OWLv2's 1,076.13 s, but accepted no structural opening or calibrated
+registration and left the same provisional kitchen plan. On the owner's
+identified `IMG_0004.jpeg` passage view, its passage box covered nearly the
+whole image and did not locate both jambs. Florence remains optional rather
+than replacing OWLv2. See `reports/florence2_kitchen_comparison.md` for
+commands, run IDs, selected frame parity, and comparison limits.

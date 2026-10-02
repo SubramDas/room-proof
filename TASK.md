@@ -325,6 +325,16 @@ synthetic two-room assembly fixture validated the accepted-connection path,
 but is not a real multiroom accuracy result. The serial kitchen model-on
 time is still 17.9 minutes.
 
+**Florence-2 Base alternative:** A pinned local phrase-grounding backend now
+feeds photo, video, and LiDAR RGB candidates through the same schema. On
+identical selected kitchen frames it reduced serial source-plus-link time
+from 17.9 to 8.6 minutes, but it did not verify the hall passage, accept a
+metric camera registration, or change the plan dimensions or adjacency.
+Its box on the owner-identified passage photo was too broad to locate both
+jambs. Keep it optional until reviewed candidate labels establish whether
+its faster path preserves acceptable recall and false-positive rates. See
+`reports/florence2_kitchen_comparison.md`.
+
 ## Stop conditions and honest reporting
 
 - If an input tier cannot produce the complete schema and rendered whole-property plan, mark its execution gate **failing**. A local cache or hand-edited plan does not satisfy a fresh walk-in run.

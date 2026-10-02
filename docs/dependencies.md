@@ -60,6 +60,29 @@ box detector proposes visible objects only. The paired depth and fitted-wall
 checks can reject or leave those proposals unresolved; they do not turn its
 score into a metric uncertainty interval.
 
+## Optional Florence-2 Base visual candidate comparison
+
+`--visual-backend florence2` uses Microsoft's
+[Florence-2 Base](https://huggingface.co/microsoft/Florence-2-base) at commit
+`5ca5edf5bd017b9919c05d08aebef5e4c7ac3bac`. The model card lists MIT.
+`scripts/fetch_florence2_model.py` retrieves only the local inference assets
+into ignored `.room-proof/models/florence-2-base/`, including the model's
+Python configuration, processor, and modeling code. The 463,221,266-byte
+`model.safetensors` has SHA-256
+`03075d2d2d2bbd3e180b9ba0afae4aa8563226e2d32911656966e05b2f2ee060`.
+The adapter hashes every local model file and checks the weight and custom
+Python code digests. It
+uses the pinned local PyTorch 2.8.0+cpu and Transformers 4.57.1 stack plus
+`einops==0.8.1` and `timm==1.0.20`. The model's custom code is loaded only
+from that local pinned snapshot into the ignored Hugging Face modules cache.
+For this Transformers version, use its fast processor, eager attention, and
+generation with `use_cache=False`; the alternative native loader did not
+map the downloaded checkpoint weights correctly. No capture media is sent
+to a service. Phrase grounding emits boxes without comparable confidence
+scores, so the adapter stores a documented zero sentinel and leaves all
+boxes as proposals. See `reports/florence2_kitchen_comparison.md` for the
+CPU comparison against OWLv2.
+
 ## Optional ALIKED + LightGlue cross-capture matcher
 
 The kitchen pilot uses the public [LightGlue repository](https://github.com/cvg/LightGlue)

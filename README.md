@@ -92,6 +92,16 @@ adjacency. The [candidate contract](docs/visual_candidates.md),
 The checkpoint is research/evaluation licensed and has not been adopted for
 commercial production.
 
+For a local Florence-2 Base comparison, install the documented optional
+PyTorch/Transformers stack plus `einops==0.8.1` and `timm==1.0.20`, run
+`.venv/bin/python scripts/fetch_florence2_model.py`, then use
+`--visual-model on --visual-backend florence2 --visual-model-path
+.room-proof/models/florence-2-base`. The checkpoint and its required Python
+model files are pinned; inference stays local. Florence phrase grounding
+provides unscored image boxes. Its zero `raw_model_score` is a missing-score
+sentinel, not confidence. The same capture command supports photo, video,
+and LiDAR tiers; use `--lidar-rgb-rotation 90` for this kitchen scan.
+
 To compare independently processed photo, standalone-video, and LiDAR RGB
 captures, use `link-captures` with their completed run directories and the
 original photo folder and extracted Stray folder. It writes

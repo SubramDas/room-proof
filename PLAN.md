@@ -260,3 +260,11 @@ pose, verified crossing, adjacency, or 2.26 m hall-passage width passed.
 The implementation now runs end to end with explicit unknown outputs;
 real multiroom accuracy and a finite width still require matching capture
 evidence, calibration, and an untouched benchmark.
+
+Florence-2 Base is now an optional phrase-grounding backend for the same
+photo, video, and scan-RGB candidate contract. Its kitchen comparison used
+the same selected frames as OWLv2 and cut the serial run from 17.9 to
+8.6 minutes, but the plan did not improve and the known passage view was
+localized poorly. Keep the faster backend experimental until reviewed labels
+establish its opening recall and false-positive rate. See
+`reports/florence2_kitchen_comparison.md`.

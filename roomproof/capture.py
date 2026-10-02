@@ -218,8 +218,8 @@ def process_capture(args, run_dir, run):
     if args.room_id is not None:
         valid_id(args.room_id, "room")
     device_has_lidar = args.device_has_lidar
-    if args.lidar_rgb_rotation and (args.tier != "lidar" or args.visual_backend != "owlv2"):
-        raise ValueError("--lidar-rgb-rotation requires --tier lidar and --visual-backend owlv2")
+    if args.lidar_rgb_rotation and (args.tier != "lidar" or args.visual_backend not in ("owlv2", "florence2")):
+        raise ValueError("--lidar-rgb-rotation requires --tier lidar and --visual-backend owlv2 or florence2")
     inspectors = {"photo": inspect_photo, "video": inspect_video, "lidar": inspect_lidar}
     errors, warnings, metrics = (inspect_photo(source, device_has_lidar, args.room_id)
                                 if args.tier == "photo" else inspectors[args.tier](source, device_has_lidar))
@@ -290,6 +290,8 @@ def process_capture(args, run_dir, run):
                 try:
                     if args.visual_backend == "owlv2":
                         from .owlv2_candidates import generate_candidates
+                    elif args.visual_backend == "florence2":
+                        from .florence2_candidates import generate_candidates
                     else:
                         from .visual_candidates import generate_candidates
                     if args.tier == "lidar":
@@ -300,7 +302,7 @@ def process_capture(args, run_dir, run):
                         candidate_report, candidate_artifacts = generate_candidates(
                             source, rgb_index, run_dir, maximum=args.max_model_frames,
                             model_path=args.visual_model_path,
-                            **({"rotation_degrees": args.lidar_rgb_rotation} if args.visual_backend == "owlv2" else {}))
+                            **({"rotation_degrees": args.lidar_rgb_rotation} if args.visual_backend in ("owlv2", "florence2") else {}))
                         candidate_report["status"] = (
                             "proposals_sampled_registration_supported"
                             if pairing_report["spatial_registration_verified"]
