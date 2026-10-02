@@ -208,6 +208,22 @@ def process_capture(args, run_dir, run):
         "sha256": sha256(path),
     } for path in paths]
     source_revision = hashlib.sha256(json.dumps(source_files, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    output_artifacts = []
+    next_stage = "not_implemented"
+    if not errors and args.tier in ("photo", "video"):
+        try:
+            from .readers import read_photo_folders, read_video_samples
+            if args.tier == "photo":
+                output_artifacts = read_photo_folders(source, args.capture_id, run_dir)
+            else:
+                output_artifacts = read_video_samples(
+                    source, args.capture_id, run_dir,
+                    metrics["decoded_frames"], metrics["fps"], args.max_video_frames,
+                )
+            next_stage = "frames_indexed"
+        except Exception as error:
+            errors.append(f"frame reader failed: {type(error).__name__}: {error}")
+    status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"
     report = {
         "report_version": "0.1.0",
         "software_version": __version__,
@@ -223,7 +239,7 @@ def process_capture(args, run_dir, run):
         "warnings": warnings,
         "metrics": metrics,
         "source_files": source_files,
-        "next_stage": "not_implemented",
+        "next_stage": next_stage,
     }
     report_path = run_dir / "quality_report.json"
     write_json(report_path, report)
@@ -231,7 +247,7 @@ def process_capture(args, run_dir, run):
     run["warnings"].extend(warnings)
     run["metrics"] = {**metrics, "validity": status, "error_count": len(errors)}
     run["data_revision"] = source_revision
-    run["artifacts"] = [{"path": str(report_path), "sha256": sha256(report_path)}]
+    run["artifacts"] = output_artifacts + [{"path": str(report_path), "sha256": sha256(report_path)}]
     print(f"capture quality: {status}")
     print(f"quality report: {report_path}")
     if errors:

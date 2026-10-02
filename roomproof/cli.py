@@ -107,6 +107,16 @@ def valid_id(value, prefix):
     return value
 
 
+def positive_int(value):
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be an integer") from error
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return parsed
+
+
 def object_path(bundle, digest):
     return bundle / "objects" / "sha256" / digest[:2] / digest
 
@@ -299,13 +309,14 @@ def main():
     auditor.add_argument("--runs-dir", default="runs")
     from .stray_audit import audit_stray
     auditor.set_defaults(func=audit_stray)
-    processor = subcommands.add_parser("process-capture", help="validate a photo, video, or LiDAR capture and create a run report")
+    processor = subcommands.add_parser("process-capture", help="validate a capture, index photo/video frames, and create a run report")
     processor.add_argument("capture", help="photo room folders, one video file, or extracted Stray Scanner folder")
     processor.add_argument("--tier", choices=("photo", "video", "lidar"), required=True)
     processor.add_argument("--property-id", required=True)
     processor.add_argument("--capture-id", required=True)
     processor.add_argument("--device-model")
     processor.add_argument("--device-has-lidar", choices=("true", "false", "unknown"), default="unknown")
+    processor.add_argument("--max-video-frames", type=positive_int, default=24, help="maximum evenly spaced frames to decode for an ordinary video")
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture
     processor.set_defaults(func=process_capture)
