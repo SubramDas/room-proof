@@ -60,6 +60,6 @@ Status as of 2 October 2026. `Complete` means the named evidence exists and has 
 | T03 compliance coverage | This file | complete |
 | T04 zero-cost setup | [scripts/setup.sh](scripts/setup.sh), [README.md](README.md) | complete for foundation CLI; 3.07 s, 16 MB, 0 download in fresh temp directory |
 | T05 immutable raw import | [roomproof/cli.py](roomproof/cli.py), [repro/README.md](repro/README.md) | complete for all three starter scans; 33,434 file hashes |
-| T06 second-copy reproducibility | [repro/README.md](repro/README.md), [repro/manifest.json](repro/manifest.json) | complete for starter scans; clean-copy run `run-688b8f671cfc44a28e4b1f88466722e2` |
+| T06 second-copy reproducibility | [repro/README.md](repro/README.md), [repro/manifest.json](repro/manifest.json) | complete for starter scans; clean committed-code run `run-ea1cf72ec4da4ae9885726059699bf1b` |
 | T07 run logging, including failure | [roomproof/cli.py](roomproof/cli.py), [docs/ids_and_manifests.md](docs/ids_and_manifests.md) | complete for current commands; failure run `run-93e41cf1501a4b2eb618771b50abf40c` |
-| T08 milestone history | Git `95510f2`, `59b1a58`; foundation commit pending | partial; fix-loop history cannot exist yet |
+| T08 milestone history | Git `95510f2`, `59b1a58`, `dd30e38` | partial; fix-loop history cannot exist yet |
