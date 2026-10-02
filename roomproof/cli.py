@@ -1,0 +1,291 @@
+"""Content-addressed capture import and audited command execution."""
+
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import platform
+import shutil
+import subprocess
+import sys
+import time
+import uuid
+
+from . import __version__
+
+
+def utc_now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp-" + uuid.uuid4().hex)
+    with temporary.open("w", encoding="utf-8") as stream:
+        json.dump(value, stream, indent=2, sort_keys=True)
+        stream.write("\n")
+    temporary.replace(path)
+
+
+def git_revision():
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[1],
+        capture_output=True, text=True, check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def git_dirty():
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=normal"],
+        cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True,
+        check=False,
+    )
+    return bool(result.stdout.strip()) if result.returncode == 0 else None
+
+
+def new_run(command, args):
+    run_id = "run-" + uuid.uuid4().hex
+    run_dir = Path(args.runs_dir).resolve() / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return run_dir, {
+        "manifest_version": "0.1.0",
+        "run_id": run_id,
+        "command": command,
+        "config": {key: str(value) for key, value in vars(args).items() if key != "func"},
+        "argv": sys.argv[1:],
+        "started_at_utc": utc_now(),
+        "code_revision": git_revision(),
+        "code_dirty": git_dirty(),
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "data_revision": None,
+        "model_or_api": None,
+        "seed": None,
+        "stage_seconds": {},
+        "status": "running",
+        "warnings": [],
+        "metrics": {},
+        "artifacts": [],
+    }
+
+
+def execute(command, args, action):
+    run_dir, run = new_run(command, args)
+    started = time.monotonic()
+    try:
+        action(args, run_dir, run)
+        run["status"] = "complete"
+        code = 0
+    except Exception as error:
+        run["status"] = "failed"
+        run["error"] = {"type": type(error).__name__, "message": str(error)}
+        print(f"{command} failed: {error}", file=sys.stderr)
+        code = 1
+    finally:
+        run["stage_seconds"][command] = round(time.monotonic() - started, 6)
+        run["finished_at_utc"] = utc_now()
+        write_json(run_dir / "run.json", run)
+        print(f"run manifest: {run_dir / 'run.json'}")
+    return code
+
+
+def valid_id(value, prefix):
+    if not value.startswith(prefix + "-") or len(value) <= len(prefix) + 1:
+        raise ValueError(f"{prefix} ID must start with '{prefix}-'")
+    if not all(character.isascii() and (character.islower() or character.isdigit() or character == "-") for character in value):
+        raise ValueError(f"{prefix} ID must use lowercase ASCII letters, digits, or hyphens")
+    return value
+
+
+def object_path(bundle, digest):
+    return bundle / "objects" / "sha256" / digest[:2] / digest
+
+
+def import_capture(args, run_dir, run):
+    source = Path(args.source).resolve(strict=True)
+    bundle = Path(args.bundle).resolve()
+    if not source.is_dir():
+        raise ValueError("capture source must be a directory")
+    if bundle == source or source in bundle.parents or bundle in source.parents:
+        raise ValueError("source and bundle must be separate directory trees")
+    property_id = valid_id(args.property_id, "prop")
+    capture_id = valid_id(args.capture_id or "cap-" + uuid.uuid4().hex, "cap")
+    manifest_path = bundle / "captures" / (capture_id + ".json")
+    if manifest_path.exists():
+        raise FileExistsError(f"capture ID already imported: {capture_id}")
+    files = []
+    for path in sorted(source.rglob("*")):
+        if path.is_symlink():
+            raise ValueError(f"symlink in raw capture: {path}")
+        if not path.is_file():
+            continue
+        relative = path.relative_to(source).as_posix()
+        digest = sha256(path)
+        size = path.stat().st_size
+        object_file = object_path(bundle, digest)
+        if not object_file.exists():
+            object_file.parent.mkdir(parents=True, exist_ok=True)
+            temporary = object_file.with_name(object_file.name + ".tmp-" + uuid.uuid4().hex)
+            shutil.copyfile(path, temporary)
+            if sha256(temporary) != digest:
+                temporary.unlink(missing_ok=True)
+                raise OSError(f"copy changed while importing: {path}")
+            temporary.chmod(0o444)
+            temporary.replace(object_file)
+        elif object_file.stat().st_size != size or sha256(object_file) != digest:
+            raise OSError(f"stored object differs from expected content: {object_file}")
+        files.append({"path": relative, "size_bytes": size, "sha256": digest})
+    if not files:
+        raise ValueError("capture source contains no files")
+    manifest = {
+        "manifest_version": "0.1.0",
+        "property_id": property_id,
+        "capture_id": capture_id,
+        "tier": args.tier,
+        "source_label": args.source_label,
+        "source_path_at_import": str(source),
+        "imported_at_utc": utc_now(),
+        "device_model": args.device_model,
+        "ios_version": args.ios_version,
+        "capture_app": args.capture_app,
+        "capture_app_version": args.capture_app_version,
+        "capture_notes": args.notes,
+        "files": files,
+    }
+    write_json(manifest_path, manifest)
+    manifest_digest = sha256(manifest_path)
+    run["data_revision"] = manifest_digest
+    run["metrics"] = {"file_count": len(files), "total_bytes": sum(item["size_bytes"] for item in files)}
+    run["artifacts"] = [{"path": str(manifest_path), "sha256": manifest_digest}]
+    print(f"capture manifest: {manifest_path}")
+
+
+def verify_capture(args, run_dir, run):
+    bundle = Path(args.bundle).resolve(strict=True)
+    manifest_path = Path(args.manifest).resolve(strict=True)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    failures = []
+    for item in manifest["files"]:
+        path = object_path(bundle, item["sha256"])
+        if not path.is_file() or path.stat().st_size != item["size_bytes"] or sha256(path) != item["sha256"]:
+            failures.append(item["path"])
+    digest = sha256(manifest_path)
+    run["data_revision"] = digest
+    run["metrics"] = {"file_count": len(manifest["files"]), "invalid_files": len(failures)}
+    run["artifacts"] = [{"path": str(manifest_path), "sha256": digest}]
+    if failures:
+        raise ValueError(f"{len(failures)} raw objects missing or corrupt; first: {failures[0]}")
+    print(f"verified {len(manifest['files'])} files for {manifest['capture_id']}")
+
+
+def verify_bundle(args, run_dir, run):
+    bundle = Path(args.bundle).resolve(strict=True)
+    index_path = Path(args.index).resolve(strict=True)
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    failures = []
+    checked_files = 0
+    seen_captures = set()
+    for entry in index["capture_manifests"]:
+        capture_id = valid_id(entry["capture_id"], "cap")
+        if capture_id in seen_captures:
+            failures.append(f"duplicate capture ID {capture_id}")
+            continue
+        seen_captures.add(capture_id)
+        expected_path = f"captures/{capture_id}.json"
+        if entry["path"] != expected_path:
+            failures.append(f"invalid manifest path for {capture_id}")
+            continue
+        manifest_path = bundle / expected_path
+        if not manifest_path.is_file() or sha256(manifest_path) != entry["sha256"]:
+            failures.append(f"manifest missing or changed: {expected_path}")
+            continue
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest["capture_id"] != capture_id or len(manifest["files"]) != entry["file_count"]:
+            failures.append(f"manifest ID or file count differs: {capture_id}")
+            continue
+        for item in manifest["files"]:
+            object_file = object_path(bundle, item["sha256"])
+            if not object_file.is_file() or object_file.stat().st_size != item["size_bytes"] or sha256(object_file) != item["sha256"]:
+                failures.append(f"object missing or corrupt: {capture_id}/{item['path']}")
+            checked_files += 1
+    run["data_revision"] = sha256(index_path)
+    run["metrics"] = {"capture_count": len(seen_captures), "file_count": checked_files, "invalid_items": len(failures)}
+    run["artifacts"] = [{"path": str(index_path), "sha256": run["data_revision"]}]
+    if failures:
+        raise ValueError(f"{len(failures)} bundle issues; first: {failures[0]}")
+    print(f"verified {len(seen_captures)} captures and {checked_files} files")
+
+
+def index_bundle(args, run_dir, run):
+    bundle = Path(args.bundle).resolve(strict=True)
+    index_path = Path(args.index).resolve()
+    entries = []
+    for manifest_path in sorted((bundle / "captures").glob("*.json")):
+        capture_id = valid_id(manifest_path.stem, "cap")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest["capture_id"] != capture_id:
+            raise ValueError(f"capture ID differs from filename: {manifest_path}")
+        entries.append({
+            "capture_id": capture_id,
+            "path": f"captures/{manifest_path.name}",
+            "sha256": sha256(manifest_path),
+            "file_count": len(manifest["files"]),
+        })
+    if not entries:
+        raise ValueError("bundle has no capture manifests")
+    write_json(index_path, {
+        "manifest_version": "0.1.0",
+        "bundle_kind": "content-addressed-local",
+        "capture_manifests": entries,
+    })
+    run["data_revision"] = sha256(index_path)
+    run["metrics"] = {"capture_count": len(entries)}
+    run["artifacts"] = [{"path": str(index_path), "sha256": run["data_revision"]}]
+    print(f"bundle index: {index_path}")
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="roomproof", description="RoomProof reproducibility foundation")
+    parser.add_argument("--version", action="version", version=f"RoomProof {__version__}")
+    subcommands = parser.add_subparsers(dest="command", required=True)
+    importer = subcommands.add_parser("import-capture", help="copy raw files into a content-addressed bundle")
+    importer.add_argument("source")
+    importer.add_argument("--bundle", required=True)
+    importer.add_argument("--property-id", required=True)
+    importer.add_argument("--capture-id")
+    importer.add_argument("--tier", choices=("photo", "video", "lidar"), required=True)
+    importer.add_argument("--source-label", required=True)
+    importer.add_argument("--device-model")
+    importer.add_argument("--ios-version")
+    importer.add_argument("--capture-app")
+    importer.add_argument("--capture-app-version")
+    importer.add_argument("--notes")
+    importer.add_argument("--runs-dir", default="runs")
+    importer.set_defaults(func=import_capture)
+    verifier = subcommands.add_parser("verify-capture", help="verify all files named by a capture manifest")
+    verifier.add_argument("--bundle", required=True)
+    verifier.add_argument("--manifest", required=True)
+    verifier.add_argument("--runs-dir", default="runs")
+    verifier.set_defaults(func=verify_capture)
+    bundle_verifier = subcommands.add_parser("verify-bundle", help="verify capture manifests and all raw objects against a tracked index")
+    bundle_verifier.add_argument("--bundle", required=True)
+    bundle_verifier.add_argument("--index", default="repro/manifest.json")
+    bundle_verifier.add_argument("--runs-dir", default="runs")
+    bundle_verifier.set_defaults(func=verify_bundle)
+    indexer = subcommands.add_parser("index-bundle", help="write a versioned index of all capture manifests")
+    indexer.add_argument("--bundle", required=True)
+    indexer.add_argument("--index", default="repro/manifest.json")
+    indexer.add_argument("--runs-dir", default="runs")
+    indexer.set_defaults(func=index_bundle)
+    args = parser.parse_args()
+    return execute(args.command, args, args.func)

@@ -1,0 +1,24 @@
+{
+  "bundle_kind": "content-addressed-local",
+  "capture_manifests": [
+    {
+      "capture_id": "cap-1e6ed40918ce441dbea5b553dc358c8e",
+      "file_count": 19494,
+      "path": "captures/cap-1e6ed40918ce441dbea5b553dc358c8e.json",
+      "sha256": "4316a5a44b837d2f2c2bbedcac5c35d88fd69dcdf3b7ead266c3b2b71ae4a80a"
+    },
+    {
+      "capture_id": "cap-bb46b443767f4b50ac5d0364bd271808",
+      "file_count": 10506,
+      "path": "captures/cap-bb46b443767f4b50ac5d0364bd271808.json",
+      "sha256": "3a44b68c07a7460c798b2e8161e56a68a38b24ac67b66601c51de7a2fe00ea54"
+    },
+    {
+      "capture_id": "cap-c07fff0bef1248249509972a948a8ef8",
+      "file_count": 3434,
+      "path": "captures/cap-c07fff0bef1248249509972a948a8ef8.json",
+      "sha256": "0b8ab5c312d6f504256cc892b0e30bdf76624f27533cfe2f5aa75b856136606e"
+    }
+  ],
+  "manifest_version": "0.1.0"
+}
