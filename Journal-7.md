@@ -10,8 +10,12 @@ or tape/laser sheet has been supplied, so T54–T62 are not checked.
 four room-level length, breadth, and ceiling-height triples. They confirmed
 `room-hall` is the connector. The values are stored in ignored
 `repro/bundle/benchmark_truth/flat_805_owner_dimensions.json`, outside the
-prediction input. The owner has not yet supplied wall/opening IDs, measurement
-method or repeated readings, and will list connections. The original wording
+prediction input. The owner then confirmed a laser instrument and connections
+`bed–hall`, `hall–toilet`, and `hall–kitchen`; these were added only to the
+reference file. Prior notes identify iPhone 15 Pro Max, owner-reported iOS
+26.5, and Stray Scanner 1.4, but these versions have not been reconfirmed for
+this scan. The owner has not yet supplied wall/opening IDs, endpoint method,
+or repeated readings. The original wording
 above records the prior state; the new LiDAR audit is in `Journal-3.md`.
 
 The owner's four `Flat-805` photo folders and standalone video cover four

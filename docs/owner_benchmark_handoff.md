@@ -4,6 +4,13 @@ Your current `Flat-805/` folder already has the original photo and video
 captures. Keep those files unchanged. The following evidence is still needed
 for the full benchmark; these are not inference inputs.
 
+**Current status:** The original `flat_805.zip` LiDAR export, four room-level
+laser length/breadth/height triples, and the three hall connections are now
+received. Prior Markdown records the iPhone 15 Pro Max, iOS 26.5, and Stray
+Scanner 1.4; those version numbers have not been reconfirmed for this scan.
+The numbered list below is the original capture checklist. Item 1 is done;
+items 2, 4–6 remain. The simple adjacency part of item 3 is done.
+
 1. **LiDAR:** Make one Stray Scanner scan of the same flat, walking through all
    four spaces and revisiting a starting area. Export and transfer the complete
    original ZIP or export folder. Record phone model, iOS version, Stray version,

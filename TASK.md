@@ -115,11 +115,14 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 ## 7. Home benchmark capture and reference truth — P1; Owner critical path
 
 - [ ] **T54 [Owner]** Choose and label a home area with **three or more rooms plus a connector**; note any stairs/floors and ensure all required spaces can be entered. **Done when:** a room map/ID list exists before scanning.
+  - [x] Flat-805 has bed, kitchen, toilet, and confirmed hall connector; owner reference connections are bed–hall, hall–toilet, hall–kitchen. Stairs/floor note remains pending.
 - [ ] **T55 [Owner]** Capture the **same complete property** at photo tier: one folder per room/connector, 2–8 stills each, every wall/corner/opening/ceiling/floor edge/damage region, doorways from both sides. **Done when:** original stills and transfer metadata are preserved.
 - [ ] **T56 [Owner]** Capture a separate ordinary Camera walkthrough of the same property, continuous through connectors and all doors. **Done when:** an original standalone clip exists without depth/pose sidecars.
 - [ ] **T57 [Owner]** Capture the same property in Stray Scanner LiDAR mode with revisit/loop-closure opportunity; preserve the complete export. **Done when:** RGB, depth, confidence, intrinsics, and pose data are transferred unmodified.
+  - [x] Original Flat-805 Stray ZIP transferred; all 6,608 extracted files match the ZIP and the required streams decode. Room coverage/revisit still needs visual review.
 - [ ] **T58 [Owner]** Independently capture at least one room **twice at the same tier**, following the same protocol and without selecting the better run. **Done when:** two separate capture IDs exist for repeatability.
 - [ ] **T59 [Owner]** Tape-measure all scored wall lengths, openings, ceiling heights, damage extents, and footprint dimensions; record method, units, IDs, and repeated readings where practical. **Done when:** a ground-truth sheet links each value to a physical feature and stays separate from inference inputs.
+  - [x] Owner supplied laser length, breadth, and ceiling height for all four rooms, stored outside prediction input; individual walls/openings, endpoints, repeats, and footprint remain pending.
 - [ ] **T60 [Both]** Include documented mirror, glass, reflective/wet-look, and low-light examples and record any safe recapture conditions. **Done when:** raw evidence and failure/quality notes exist, not just a report claim.
 - [ ] **T61 [Agent]** Import the home captures without altering originals, run all three tiers cold, and freeze raw outputs before reading tape truth for scoring. **Done when:** three linked run IDs and immutable raw outputs exist.
 - [ ] **T62 [Agent]** Audit benchmark composition against the exact brief and capture missing material promptly. **Done when:** matched multiroom all-tier inputs, furnished two-class damage, repeat room, and reference truth are all present or explicitly marked missing.
@@ -128,6 +131,7 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 
 - [ ] **T63 [Owner]** Install magicplan, report installed version and whether its free account exports a dimensioned plan. **Done when:** an actual unedited free-tier export is available; if unavailable, select/test another free comparator and document the reason.
 - [ ] **T64 [Both]** Preselect two distinct benchmark rooms and the eligible wall/opening/height dimensions **before** seeing comparison errors. **Done when:** the frozen list and reference IDs are recorded.
+  - [x] Preselected bed and kitchen and all eligible wall/opening/height dimensions in `docs/flat805_comparator_preselection.md` before any app export; physical feature IDs remain pending.
 - [ ] **T65 [Owner]** Scan the two rooms with magicplan on the same phone/site visit, with no manual truth-based correction; save original exports and actions taken. **Done when:** both app exports and versions are in the raw benchmark bundle.
 - [ ] **T66 [Agent]** Build the dimension-by-dimension table with independent truth, our error, app error, win/tie/loss, omissions, and reported precision. **Done when:** both literal shared-only ≥70% score and the owner-requested expanded score (accurate ours-only dimensions may win) are reported separately.
   - [x] Add both scoring paths, explicit omissions, and per-dimension rows; app export/truth values remain pending.

@@ -2,8 +2,9 @@
 
 No all-tier benchmark result is reported yet. Current Flat-805 photo/video
 plans have unresolved geometry and cannot satisfy the plan or accuracy gates.
-The owner is preparing a matched LiDAR export. Independent laser/tape truth,
-repeat capture, two labelled damage classes, and comparator exports are still
+The owner has supplied a matched LiDAR export and room-level laser dimensions.
+Individual wall/opening reference rows, repeat capture, two labelled damage
+classes, and comparator exports are still
 required. Do not interpret the presence of this report as a passing gate.
 
 ## Evidence ledger to complete
