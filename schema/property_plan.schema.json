@@ -15,6 +15,7 @@
     "plan": {"$ref": "#/$defs/plan"},
     "rooms": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/room"}},
     "adjacency": {"type": "array", "items": {"$ref": "#/$defs/adjacency"}},
+    "placement_ambiguities": {"type": "array", "items": {"$ref": "#/$defs/placement_ambiguity"}},
     "damage_regions": {"type": "array", "items": {"$ref": "#/$defs/damage_region"}},
     "concealed_damage_flags": {"type": "array", "items": {"$ref": "#/$defs/concealed_flag"}},
     "scope_items": {"type": "array", "items": {"$ref": "#/$defs/scope_item"}},
@@ -148,6 +149,16 @@
         "opening_id": {"type": ["string", "null"]},
         "status": {"$ref": "#/$defs/observation_status"},
         "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "source_refs": {"$ref": "#/$defs/source_refs"}
+      }
+    },
+    "placement_ambiguity": {
+      "description": "Spaces whose relative positions cannot be resolved from this capture.",
+      "type": "object", "additionalProperties": false,
+      "required": ["room_ids", "reason", "source_refs"],
+      "properties": {
+        "room_ids": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/id"}},
+        "reason": {"type": "string", "minLength": 1},
         "source_refs": {"$ref": "#/$defs/source_refs"}
       }
     },

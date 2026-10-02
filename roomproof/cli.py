@@ -310,13 +310,17 @@ def main():
     from .stray_audit import audit_stray
     auditor.set_defaults(func=audit_stray)
     processor = subcommands.add_parser("process-capture", help="validate a capture, index photo/video frames, and create a run report")
-    processor.add_argument("capture", help="photo room folders, one video file, or extracted Stray Scanner folder")
+    processor.add_argument("capture", help="photo room folders, one video file or property folder with one top-level video, or extracted Stray Scanner folder")
     processor.add_argument("--tier", choices=("photo", "video", "lidar"), required=True)
     processor.add_argument("--property-id", required=True)
     processor.add_argument("--capture-id", required=True)
     processor.add_argument("--device-model")
+    processor.add_argument("--ios-version")
+    processor.add_argument("--capture-app")
+    processor.add_argument("--capture-app-version")
     processor.add_argument("--device-has-lidar", choices=("true", "false", "unknown"), default="unknown")
     processor.add_argument("--max-video-frames", type=positive_int, default=24, help="maximum evenly spaced frames to decode for an ordinary video")
+    processor.add_argument("--max-lidar-frames", type=positive_int, default=32, help="maximum evenly spaced depth frames for diagnostic geometry")
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture
     processor.set_defaults(func=process_capture)

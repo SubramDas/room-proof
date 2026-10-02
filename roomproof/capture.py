@@ -72,9 +72,11 @@ def inspect_photo(root, device_has_lidar):
                 errors.append(f"duplicate photo content: {photo.relative_to(root).as_posix()} matches {hashes[digest]}")
             else:
                 hashes[digest] = photo.relative_to(root).as_posix()
-    other_media = [path for path in input_files(root) if path.suffix.lower() in VIDEO_SUFFIXES or path.suffix.lower() == ".png" and path.parent == root]
+    other_media = [path for path in input_files(root)
+                   if (path.suffix.lower() in VIDEO_SUFFIXES and path.parent != root)
+                   or (path.suffix.lower() in IMAGE_SUFFIXES and path.parent == root)]
     if other_media:
-        errors.append("photo tier accepts room-folder still images only; found video or root-level PNG media")
+        errors.append("photo tier accepts stills in room folders only; found video inside a room or root-level still media")
     if device_has_lidar == "false":
         warnings.append("photo tier does not require LiDAR; selected device is marked without LiDAR")
     if metrics["photo_count"]:
@@ -192,6 +194,13 @@ def process_capture(args, run_dir, run):
     if given_source.is_symlink():
         raise ValueError("capture path must not be a symlink")
     source = given_source.resolve()
+    if args.tier == "video" and source.is_dir():
+        candidates = sorted(path for path in source.iterdir() if path.is_file() and path.suffix.lower() in VIDEO_SUFFIXES)
+        if len(candidates) != 1:
+            raise ValueError(f"video property folder must contain exactly one top-level clip; found {len(candidates)}")
+        if candidates[0].is_symlink():
+            raise ValueError("video capture must not be a symlink")
+        source = candidates[0]
     from .cli import valid_id
     valid_id(args.property_id, "prop")
     valid_id(args.capture_id, "cap")
@@ -200,6 +209,8 @@ def process_capture(args, run_dir, run):
     errors, warnings, metrics = inspectors[args.tier](source, device_has_lidar)
     status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"
     paths = input_files(source) if source.is_dir() else ([source] if source.is_file() else [])
+    if args.tier == "photo":
+        paths = [path for path in paths if path.parent != source and path.suffix.lower() in IMAGE_SUFFIXES]
     runs_root = Path(args.runs_dir).resolve()
     paths = [path for path in paths if not (runs_root == source or runs_root in path.parents)]
     source_files = [{
@@ -225,6 +236,40 @@ def process_capture(args, run_dir, run):
             else:
                 output_artifacts = read_stray_scan(source, args.capture_id, run_dir, metrics["rgb_frames"])
                 next_stage = "frames_indexed"
+            from .plan import build_plan, render, validate
+            index_name = "lidar_frames.json" if args.tier == "lidar" else "frames.json"
+            index = json.loads((run_dir / index_name).read_text(encoding="utf-8"))
+            if args.tier in ("photo", "video"):
+                from .visual_geometry import analyze_photos, analyze_video
+                visual, visual_artifacts = (analyze_photos(source, index, run_dir) if args.tier == "photo"
+                                            else analyze_video(index, run_dir, source))
+                output_artifacts.extend(visual_artifacts)
+                warnings.extend(visual["warnings"])
+                metrics["visual_frame_count"] = len(visual["frames"])
+                if args.tier == "video":
+                    metrics["supported_visual_transitions"] = visual["supported_transition_count"]
+                    metrics["visual_tracking_gap_count"] = len(visual["tracking_gap_after_sample_indices"])
+                else:
+                    metrics["supported_photo_pairs"] = sum(pair["overlap_supported"] for pair in visual["pairs"])
+            if args.tier == "lidar":
+                from .lidar_geometry import extract_geometry
+                geometry, geometry_artifacts = extract_geometry(source, index, run_dir, args.max_lidar_frames)
+                output_artifacts.extend(geometry_artifacts)
+                metrics["lidar_point_count"] = geometry["point_count"]
+                metrics["lidar_horizontal_candidates"] = geometry["horizontal_candidate_count"]
+                warnings.extend(geometry["warnings"])
+            plan = build_plan(args, run["run_id"], index, warnings)
+            validation_errors = validate(plan)
+            if validation_errors:
+                raise ValueError("property plan validation: " + "; ".join(validation_errors[:5]))
+            plan_path = run_dir / "property_plan.json"
+            svg_path = run_dir / "property_plan.svg"
+            write_json(plan_path, plan)
+            render(plan, svg_path)
+            output_artifacts.extend({"path": str(path), "sha256": sha256(path)} for path in (plan_path, svg_path))
+            metrics["schema_valid"] = True
+            metrics["semantic_valid"] = True
+            next_stage = "provisional_depth_points_geometry_unresolved" if args.tier == "lidar" else "visual_evidence_geometry_unresolved"
         except Exception as error:
             errors.append(f"frame reader failed: {type(error).__name__}: {error}")
     status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"

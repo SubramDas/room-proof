@@ -15,6 +15,7 @@ python3 -m jsonschema -i schema/example_property.json schema/property_plan.schem
 - `plan` names the rendered plan and holds the whole-property footprint and floor area.
 - `rooms` holds each room or connector. Each has a boundary, floor area, ceiling height, wall/floor/ceiling surfaces, and openings. A wall has a 2D line and measured length. Openings are tied to wall surface IDs and have width, height, and distance along the wall from its first endpoint.
 - `adjacency` lists room-to-room connections separately from room geometry. Its `confidence` is a probability for a discrete connection, not a measurement interval.
+- `placement_ambiguities` groups rooms whose relative placement remains unresolved and gives the reason and source references. It is optional in version 0.1.0 so earlier illustrative outputs still validate.
 - `damage_regions` are tied to surfaces. Their 2D region uses surface-local metres: for walls, horizontal distance from the wall line's first endpoint and vertical height above the floor. Floor and ceiling region coordinates use a local surface frame fixed by the pipeline and documented in each run manifest. Width, height, and area are measurements; `length` is optional for cracks or other line-like damage.
 - `concealed_damage_flags` identify the specific rule and evidence for a suspected hidden problem. `scope_items` identify proposed work and quantities by room and surface. Empty arrays are allowed when no credible finding exists.
 - `warnings` records capture, geometry, or inference limitations.

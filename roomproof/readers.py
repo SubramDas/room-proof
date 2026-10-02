@@ -50,13 +50,20 @@ def read_photo_folders(root, capture_id, run_dir):
 
 def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=24):
     """Decode a bounded, even sample to downscaled RGB files with frame refs."""
-    selected_count = min(max_frames, frame_count)
-    if selected_count < 1:
+    if frame_count < 1:
         raise ValueError("video has no frames to sample")
-    if selected_count == 1:
-        selected_indices = {0}
+    if frame_count <= max_frames or max_frames < 6:
+        selected_indices = {i: 0 for i in range(min(max_frames, frame_count))}
     else:
-        selected_indices = {index * (frame_count - 1) // (selected_count - 1) for index in range(selected_count)}
+        group_count = min(6, max_frames // 3)
+        group_size = max_frames // group_count
+        step = 2
+        span = (group_size - 1) * step
+        selected_indices = {}
+        for group in range(group_count):
+            start = group * max(0, frame_count - 1 - span) // max(1, group_count - 1)
+            for offset in range(group_size):
+                selected_indices[min(frame_count - 1, start + offset * step)] = group
     out_dir = run_dir / "frames"
     out_dir.mkdir(parents=True, exist_ok=True)
     stream = imageio_ffmpeg.read_frames(
@@ -67,8 +74,15 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
         raise ValueError("video has no decoded frame header")
     frames = []
     index = 0
+    sampled_height = None
     for rgb in stream:
         if index in selected_indices:
+            if len(rgb) % (640 * 3):
+                raise ValueError(f"sampled frame {index} has unexpected RGB byte count")
+            height = len(rgb) // (640 * 3)
+            if sampled_height is not None and height != sampled_height:
+                raise ValueError("sampled video frame dimensions changed")
+            sampled_height = height
             frame_path = out_dir / f"frame-{index:06d}.rgb"
             frame_path.write_bytes(rgb)
             frames.append({
@@ -76,9 +90,10 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
                 "source_ref": f"{capture_id}/{Path(path).name}#frame={index}",
                 "source_path": Path(path).name,
                 "source_frame_index": index,
+                "sampling_group": selected_indices[index],
                 "timestamp_seconds": round(index / fps, 6),
-                "width": header["size"][0],
-                "height": header["size"][1],
+                "width": 640,
+                "height": height,
                 "pixel_format": "rgb24",
                 "sampled_path": frame_path.name,
                 "sampled_sha256": sha256(frame_path),
@@ -94,7 +109,7 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
         "source_sha256": sha256(path),
         "source_frame_count": frame_count,
         "source_fps": fps,
-        "sampling": "evenly spaced from first to last decoded frame; maximum count is configurable",
+        "sampling": "up to six evenly spaced short bursts; source frames two apart within each burst; maximum count is configurable",
         "max_frames": max_frames,
         "frame_count": len(frames),
         "frames": frames,

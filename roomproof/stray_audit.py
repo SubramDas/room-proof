@@ -16,7 +16,7 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 FORMAT_SOURCE = "https://github.com/strayrobots/scanner/blob/main/docs/format.md"
 
 
-def png_info(path, decode=False):
+def png_info(path, decode=False, pixels=False):
     data = path.read_bytes()
     if not data.startswith(PNG_SIGNATURE):
         raise ValueError(f"invalid PNG signature: {path}")
@@ -93,6 +93,8 @@ def png_info(path, decode=False):
     result["median_nonzero"] = statistics.median(value for value in values if value > 0) if any(values) else None
     if depth == 8:
         result["value_counts"] = {str(value): values.count(value) for value in sorted(set(values))}
+    if pixels:
+        result["pixels"] = values
     return result
 
 
