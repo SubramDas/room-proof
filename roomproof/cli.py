@@ -117,6 +117,17 @@ def positive_int(value):
     return parsed
 
 
+def score_benchmark(args, run_dir, run):
+    from .benchmark import evaluate, SCORER_VERSION
+    report = evaluate(args.manifest)
+    output = run_dir / "benchmark.json"
+    write_json(output, report)
+    run["data_revision"] = sha256(Path(args.manifest).resolve(strict=True))
+    run["metrics"] = {"capture_count": len(report["captures"]), "scorer_version": SCORER_VERSION}
+    run["artifacts"] = [{"path": str(output), "sha256": sha256(output)}]
+    print(f"benchmark report: {output}")
+
+
 def object_path(bundle, digest):
     return bundle / "objects" / "sha256" / digest[:2] / digest
 
@@ -324,5 +335,9 @@ def main():
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture
     processor.set_defaults(func=process_capture)
+    benchmark = subcommands.add_parser("score-benchmark", help="score frozen plans against separate reference truth")
+    benchmark.add_argument("manifest")
+    benchmark.add_argument("--runs-dir", default="runs")
+    benchmark.set_defaults(func=score_benchmark)
     args = parser.parse_args()
     return execute(args.command, args, args.func)
