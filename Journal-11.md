@@ -30,3 +30,12 @@ rejection, and placement optimization; metric validation and calibrated
 intervals; visible damage examples; untouched all-tier evaluation. Current
 photo and video plans remain unresolved. A model-on run producing proposals
 does not satisfy the scored benchmark or show final-plan improvement.
+
+The owner subsequently confirmed the bedroom–hall and toilet–hall doorways
+face each other and that the open kitchen doorway connects to the hall.
+These development labels are in `docs/model_label_review.md`. A hall-only
+model-on run across the seven `room-hall` photos, `hall.mp4`, and `hall.zip`
+is documented in `reports/hall_model_pipeline.md`. Photo/video plans remain
+unresolved; LiDAR produces the same provisional single-hall geometry and
+skips RGB model inference because exact pairing remains unresolved. The
+private output bundle is under ignored `runs/`.

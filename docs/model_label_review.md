@@ -1,5 +1,15 @@
 # Owner review: visible openings in Flat-805
 
+Owner review on 2 October 2026 confirmed the draft observations in this
+sheet. The bedroom doorway (`room-bed/IMG_0011.jpeg`) opens to the hall and
+faces the toilet doorway. The toilet doorway
+(`room-toilet/IMG_0003.jpeg`) opens to the hall and faces the bedroom
+doorway. The open kitchen doorway connects the kitchen to the hall. These
+are **owner supplied topology labels** for development and later scoring;
+they are not evidence produced by the hall-only model runs. The owner also
+confirmed the listed cabinet/window negative observations. Exact boxes,
+wall IDs, and reciprocal image matches are still to be annotated.
+
 This is a draft review list, not reference truth. Open the original JPEGs in
 `Flat-805/`; the candidate IDs below are from photo run
 `run-fc0df29f8b2e4845aa31a6c8fd13b6ee`. For each visible opening, record
