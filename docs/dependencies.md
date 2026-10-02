@@ -60,6 +60,36 @@ box detector proposes visible objects only. The paired depth and fitted-wall
 checks can reject or leave those proposals unresolved; they do not turn its
 score into a metric uncertainty interval.
 
+## Optional ALIKED + LightGlue cross-capture matcher
+
+The kitchen pilot uses the public [LightGlue repository](https://github.com/cvg/LightGlue)
+at commit `eb42fee2d71449efb0aa5c10549752b5d75384d8` (Apache-2.0
+LightGlue code/weights; ALIKED code follows BSD-3-Clause). The local
+`aliked-n16.pth` SHA-256 is
+`5be8704840ed662d9d8c561bf7279c222092674e7eb05fd0feab94899e9d82f2`;
+`aliked_lightglue_v0-1_arxiv.pth` is
+`d975e965b105311a6143194852297dff4f02aea5cc2e10cecfed966ca0e22503`.
+The model cache and cloned source are ignored by Git. The pipeline checks
+for both local weights before inference and does not download during a run.
+
+For the current CPU Python 3.12 environment:
+
+```bash
+.venv/bin/python -m pip install 'opencv-python-headless==4.12.0.88' 'kornia==0.8.1' 'matplotlib==3.10.6'
+.venv/bin/python -m pip install 'torch==2.8.0' 'torchvision==0.23.0+cpu' --index-url https://download.pytorch.org/whl/cpu
+.venv/bin/python scripts/fetch_lightglue.py
+```
+
+`--match-backend aliked-lightglue` runs locally and records the source
+revision, weight hashes, model matches, and epipolar RANSAC inliers. Its
+result is a 2D correspondence. The later PnP probe records held-out
+reprojection error under explicitly assumed independent-camera focal
+lengths; it does not certify metric placement without calibration and
+cross-view agreement. The kitchen model-on stages plus learned linker took
+1,081.65 seconds (18.0 minutes) sequentially on this CPU, above the
+15-minute target, before provisioning or transfer. A complete clean-machine
+timing remains to be measured.
+
 ## Optional cloud candidate, not adopted
 
 `roomproof.cloud_vision` contains a single-image adapter for Google's

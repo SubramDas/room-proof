@@ -91,3 +91,101 @@ closure and one unstable wall (axis 1, side 1). Existing room lengths remain
 3.9308 × 3.4133 m, making the short-side laser error worse (+0.2033 m versus
 +0.1858 m). It was therefore **not** promoted into the plan. See
 `reports/hall_measurement_diagnostics.md` for exact metrics and command.
+
+## Standalone video full-sequence correction — 3 October 2026
+
+The owner clarified that the ordinary property video is independent of the
+LiDAR scan's own `rgb.mp4`. The previous overview conflated their roles.
+Changed `coarse_scene_profile` to stream every decoded standalone-video
+frame, with no 180-second or one-frame-per-second cap. The resulting
+`visual_geometry.json` records source frame index, nominal-FPS timestamp,
+brightness, dark-pixel fraction, pixel change, appearance change, and
+possible scene changes. `quality_report.json` records the full-sequence frame
+count and candidate scene-change count. This supplies output from the full
+clip while leaving expensive feature matching and optional model inference
+explicitly bounded. It does not infer a metric building structure or a
+verified room transition. The photo/video candidate model remains optional;
+no learned structured-LiDAR building-reconstruction model is in the live
+path. A full-sequence model/geometry integration and new-capture evaluation
+remain open.
+
+Ran the new standalone-video path on `Flat-805/IMG_0031.mp4` as
+`run-6916bb2cc05e4c1787160f703975ccd5` with the visual model off. All
+3,328 decoded frames contributed to the 64×48 timeline. It recorded one
+large appearance-change candidate at source frame 1848 (nominal 61.6 s,
+score 61.94), while the bounded 24-frame matcher recorded 11 supported
+overlaps and 7 tracking gaps. The run completed `valid_low_confidence`; its
+plan correctly remains unresolved, with no verified room transition,
+adjacency, or metric scale. `visual_geometry.json`, `quality_report.json`,
+and the plan remain in the ignored run directory. This is a functional
+full-sequence output, not evidence that the scene-change candidate is a
+doorway.
+
+## Kitchen first integration slice — 3 October 2026
+
+The owner supplied `kitchen/` with eight photos at the root, a standalone
+video, and a Stray ZIP. Added explicit `--room-id` support for root-level
+single-room photo collections without reading the top-level video or ZIP as
+photo input. Processed the three captures independently. The kitchen video
+has 1,270 decoded frames and a full-sequence timeline. The LiDAR run inferred
+a provisional 2.4909 × 2.3777 m rectangle, 2.7781 m height, and one
+unverified 0.697 m depth gap. These runs finished before kitchen reference
+measurements were supplied.
+
+Added `link-captures` and `roomproof/cross_capture.py`. They read prior run
+artifacts, compare bounded photo/video/scan-RGB views, preserve source refs
+and optional model proposals, and write `cross_capture_links.json` plus an
+observation-only `visual_room_graph.json`. The command requires at least nine
+scan RGB views because fewer cannot satisfy the existing RGB/depth
+registration gate. Kitchen's 12-view run supported the scan's +1 sampled
+RGB/depth frame offset and found five video-to-scan RGB 2D overlaps; no
+photo cross-capture pair passed the current matcher. This is not a 3D
+transform or room adjacency.
+
+OWLv2 proposed 200 boxes on eight kitchen photos and took 386.97 s for its
+CPU model stage; many were cabinet-door or passage boxes. The existing
+SegFormer evaluation pilot produced 106 wall/floor/ceiling/door/window
+regions on 24 standalone-video samples. Candidate labels and physical
+opening identity have not been reviewed. See
+`reports/kitchen_pipeline_pilot.md` for all run IDs and commands.
+
+The later scan RGB OWLv2 run proposed 171 boxes across 12 frames. Of its 92
+opening-like boxes, 49 projected to a fitted wall and 36 coincided with a
+depth gap, but none passed the structural-opening confirmation gate. A fresh
+link run with all three model runs again found five video-to-scan RGB image
+overlaps, zero photo links, and no metric cross-capture transform or inferred
+adjacency. Separately, the owner supplied independent kitchen spans 2.36 and 2.30 m,
+height 2.80 m, and hall-facing passage width 2.26 m. Sorted-span LiDAR errors
+are +0.1309 and +0.0777 m; height error is −0.0219 m. The detected 0.697 m
+gap lacks a verified identity and the detector's 1.6 m maximum excludes the
+2.26 m passage in that initial run. A later general candidate ceiling of
+3.2 m still did not detect the passage. The reference values were used only for comparison, never
+as pipeline input. Kitchen is now development evidence, so changed rules
+need a separate untouched evaluation capture.
+
+## Kitchen learned correspondence and fused plan — 3 October 2026
+
+Implemented optional CPU ALIKED/LightGlue matching with pinned source and
+weight hashes. The linker retains patch-match results on the same pairs,
+epipolar inliers, matched source pixels, provisional depth-backed PnP
+hypotheses, and locally supported opening-box links. It writes separate
+2D, registration, opening, and room-graph reports plus a schema-valid fused
+property plan and SVG. The standalone video processes all decoded frames
+in its coarse scene timeline before selecting detailed windows. Unverified
+LiDAR gap width and type now remain unknown in the plan.
+
+Ran OWLv2 on all eight kitchen photos, 12 selected standalone-video frames,
+and 12 scan-RGB views, along with 128 selected depth frames. The final
+learned linker run is `run-dc79cc91e51243fab3100e1018dfb6a3`. It found
+148 supported 2D view pairs from 336 tests, compared with five for the
+patch matcher on the same model-on source runs. It produced 52 constrained
+opening-region links in 19 unverified groups and three consistent pose
+hypotheses under assumed camera focal lengths. None established calibrated
+metric registration or adjacency. The owner later identified kitchen
+`IMG_0004.jpeg` as showing both edges of the hall-facing 2.26 m passage.
+One model box roughly covers that visible passage, but its jambs were not
+registered to the LiDAR wall. The final plan retains the 2.4909 × 2.3777 m
+provisional kitchen fit, 2.7781 m height, and an unresolved opening with
+null width. The serial model-on pass took 1,081.65 s (18.0 min) on this
+CPU, above the 15-minute target. See
+`reports/kitchen_pipeline_pilot.md` for run IDs, errors, and limits.

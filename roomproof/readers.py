@@ -10,13 +10,15 @@ from .cli import sha256, valid_id, write_json
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".heic", ".heif"}
 
 
-def read_photo_folders(root, capture_id, run_dir):
-    """Index stills independently by room folder; infer no room adjacency."""
+def read_photo_folders(root, capture_id, run_dir, room_id=None):
+    """Index stills by room folder or one explicitly labelled root room."""
     root = Path(root)
     frames = []
     room_dirs = sorted(path for path in root.iterdir() if path.is_dir())
-    for room_dir in room_dirs:
-        room_id = valid_id(room_dir.name, "room")
+    sources = ([(root, valid_id(room_id, "room"))]
+               if not room_dirs and room_id is not None else
+               [(path, valid_id(path.name, "room")) for path in room_dirs])
+    for room_dir, source_room_id in sources:
         for path in sorted(item for item in room_dir.iterdir() if item.is_file() and item.suffix.lower() in IMAGE_SUFFIXES):
             stream = imageio_ffmpeg.read_frames(str(path), pix_fmt="rgb24")
             header = next(stream, None)
@@ -26,7 +28,7 @@ def read_photo_folders(root, capture_id, run_dir):
             digest = sha256(path)
             frames.append({
                 "frame_id": "frame-" + digest[:16],
-                "room_id": room_id,
+                "room_id": source_room_id,
                 "width": header["size"][0],
                 "height": header["size"][1],
                 "pixel_format": "rgb24",
@@ -38,7 +40,7 @@ def read_photo_folders(root, capture_id, run_dir):
         "index_version": "0.1.0",
         "tier": "photo",
         "capture_id": capture_id,
-        "room_ids": [valid_id(path.name, "room") for path in room_dirs],
+        "room_ids": [source_room_id for _, source_room_id in sources],
         "adjacency_inferred": False,
         "frame_count": len(frames),
         "frames": frames,
@@ -50,9 +52,13 @@ def read_photo_folders(root, capture_id, run_dir):
 
 def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=24,
                        source_size=None):
-    """Decode a bounded, even sample to downscaled RGB files with frame refs."""
+    """Decode bounded bursts, reserving windows near full-video appearance changes."""
     if frame_count < 1:
         raise ValueError("video has no frames to sample")
+    from .visual_geometry import coarse_scene_profile
+    profile = coarse_scene_profile(path, frame_count, fps, f'{capture_id}/{Path(path).name}')
+    profile_path = run_dir/'coarse_scene_profile.json'
+    write_json(profile_path, profile)
     if frame_count <= max_frames or max_frames < 6:
         selected_indices = {i: 0 for i in range(min(max_frames, frame_count))}
     else:
@@ -61,8 +67,14 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
         step = 2
         span = (group_size - 1) * step
         selected_indices = {}
-        for group in range(group_count):
-            start = group * max(0, frame_count - 1 - span) // max(1, group_count - 1)
+        events = sorted(profile['scene_change_candidates'],
+                        key=lambda item: -item['appearance_change_score'])[:min(2, group_count-2)]
+        regular = group_count-len(events)
+        starts = [group * max(0, frame_count - 1 - span) // max(1, regular - 1)
+                  for group in range(regular)]
+        starts += [max(0, min(frame_count-1-span,
+                              event['source_frame_index']-span//2)) for event in events]
+        for group, start in enumerate(sorted(starts)):
             for offset in range(group_size):
                 selected_indices[min(frame_count - 1, start + offset * step)] = group
     out_dir = run_dir / "frames"
@@ -112,7 +124,8 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
         "source_sha256": sha256(path),
         "source_frame_count": frame_count,
         "source_fps": fps,
-        "sampling": "up to six evenly spaced short bursts; source frames two apart within each burst; maximum count is configurable",
+        "sampling": "up to six short bursts; strongest full-sequence appearance changes reserve up to two interior bursts; source frames two apart",
+        "full_sequence_profile_path": profile_path.name,
         "max_frames": max_frames,
         "frame_count": len(frames),
         "frames": frames,
@@ -122,7 +135,8 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
     return [
         {"path": str(frame_path), "sha256": sha256(frame_path)}
         for frame_path in sorted(out_dir.glob("*.rgb"))
-    ] + [{"path": str(index_path), "sha256": sha256(index_path)}]
+    ] + [{"path": str(index_path), "sha256": sha256(index_path)},
+         {"path": str(profile_path), "sha256": sha256(profile_path)}]
 
 
 def read_stray_scan(root, capture_id, run_dir, rgb_frame_count):

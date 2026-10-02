@@ -231,6 +231,75 @@ audit portions of T94–T95 and the comparison in T98; they do not complete
 pose-graph correction, competing surface selection, calibration, or the
 non-rectangular/multiroom acceptance cases.
 
+**Standalone video correction (3 October 2026):** The ordinary video clip is
+independent of the Stray scan's `rgb.mp4`. `visual_geometry.json` now includes
+a low-resolution appearance/lighting timeline for every decoded source frame,
+with source frame indices and possible scene-change times. The bounded
+640-pixel feature matcher and optional model still inspect selected frames;
+their limits and selections remain explicit. This full sequence pass is an
+evidence index, not a metric reconstruction. Remaining video work: use the
+complete sequence to choose trackable keyframes and candidate transition
+windows, run the local model on those windows, estimate and verify camera
+motion/geometry where possible, and feed only supported room structure into
+the plan. Photo and LiDAR RGB-D model proposals likewise still need verified
+surface and topology integration; no model currently consumes the structured
+LiDAR stream directly to produce a building layout.
+The first replay on `Flat-805/IMG_0031.mp4` processed all 3,328 source frames,
+found one strong appearance-change candidate at frame 1848 (nominal 61.6 s),
+and kept the plan unresolved. See `Journal-11.md` for run ID and limits.
+
+**Kitchen multi-capture checkpoint (3 October 2026):** Added explicit
+single-room root-photo input support and the `link-captures` command. It
+uses completed independent photo/video/LiDAR runs to emit
+`cross_capture_links.json` and `visual_room_graph.json`, carrying source
+frames, bounded 2D matches, and optional model opening proposals. It does
+not infer a metric cross-capture transform or room adjacency from 2D overlap.
+The initial patch-matcher kitchen run matched five video/scan-RGB view pairs, zero photo pairs,
+and supported a +1 sampled scan RGB/depth offset. The provisional LiDAR
+kitchen fit is 2.4909 × 2.3777 m, 2.7781 m high, with a 0.697 m unverified
+gap. OWLv2 generated 200 unreviewed boxes on eight photos in 386.97 s;
+SegFormer generated 106 unreviewed regions on 24 video samples. See
+`reports/kitchen_pipeline_pilot.md`. T85–T90/T93–T98 remain open for
+reviewed labels, robust learned matching, verified 3D registration, full
+structure assembly, metric calibration, and end-to-end runtime.
+The later scan RGB OWLv2 pass proposed 171 boxes but confirmed no structural
+opening. The initial combined graph linked five video/scan RGB image pairs and no
+photos, with no metric registration or adjacency. Owner-supplied kitchen
+reference is 2.36 × 2.30 m, 2.80 m high, and a 2.26 m hall-facing passage.
+The provisional LiDAR fit differs by +0.1309 and +0.0777 m on sorted spans
+and −0.0219 m in height. The 0.697 m gap is not identified as that passage;
+the prior 1.6 m width ceiling prevented its proposal; the wider generic
+candidate range still did not identify it in the kitchen scan. Kitchen reference is
+now development data, not an untouched score set for later changes.
+
+**Kitchen learned-matching and fused-plan pass:** The reader now selects
+detailed video windows after a full-frame lightweight scan. Added optional
+pinned ALIKED/LightGlue matching with epipolar verification and the patch
+baseline on the same selected pairs. Added depth-backed PnP probes with
+held-out reprojection and separated-scan-view consistency checks, plus
+unverified cross-view opening-region links. `link-captures` now emits a
+schema-validated fused `property_plan.json`/SVG alongside correspondence,
+registration, opening, and visual-room-graph reports. Unsupported gap width
+and kind remain unknown in the plan. This is an implementation advance on
+T85–T90/T93–T98; none of their final done criteria are claimed without
+reviewed physical opening labels, calibrated registration, multiroom
+placement, untouched evaluation, and the end-to-end time gate.
+
+**Final kitchen pilot outcome:** Using the same three model-on source runs,
+the learned linker `run-dc79cc91e51243fab3100e1018dfb6a3` supported
+148 of 336 2D view pairs, versus five for the patch baseline. Its 52
+opening-region links formed 19 unverified groups. Three pose hypotheses
+agreed across separated scan views only under assumed focal lengths; no
+metric registration or adjacency was accepted. `IMG_0004.jpeg`, later
+identified by the owner as showing the hall-facing passage, has a roughly
+covering model box, but no verified same-wall jamb measurements. The fused
+plan retains a provisional 2.4909 × 2.3777 × 2.7781 m kitchen and a null,
+unbounded opening width. The full serial model-on run took 1,081.65 s
+(18.0 min), above the 15-minute target. The 2.26 m passage is a miss.
+Open gates remain: reviewed physical-opening labels, calibrated independent
+camera-to-scan registration, multiroom placement, candidate precision and
+recall, runtime reduction, and evaluation on a separate untouched capture.
+
 ## Stop conditions and honest reporting
 
 - If an input tier cannot produce the complete schema and rendered whole-property plan, mark its execution gate **failing**. A local cache or hand-edited plan does not satisfy a fresh walk-in run.

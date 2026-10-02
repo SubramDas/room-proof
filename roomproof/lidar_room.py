@@ -147,9 +147,12 @@ def _opening_gap_candidates(frame_points, boundary, floor_y, ceiling_y):
             width = (end_index-index)*length/count
             left = any(supported(cell) for cell in range(max(0,index-3), index))
             right = any(supported(cell) for cell in range(end_index,min(count,end_index+3)))
-            if .35 <= width <= 1.6 and index >= 2 and end_index <= count-2 and left and right:
+            # An open passage can span most of a short wall. Width alone is
+            # not evidence that a hole is a doorway, so retain it unverified.
+            if .35 <= width <= min(3.2, .9*length) and index >= 2 and end_index <= count-2 and left and right:
                 evidence = sorted(set().union(*frame_ids[max(0,index-3):min(count,end_index+3)]))
-                candidates.append({'wall_index': wall_index, 'kind_hypothesis': 'doorway_depth_gap',
+                kind = 'wide_open_passage_depth_gap' if width > 1.6 else 'doorway_depth_gap'
+                candidates.append({'wall_index': wall_index, 'kind_hypothesis': kind,
                                    'status': 'unverified', 'offset_along_wall_m': round(index*length/count, 3),
                                    'width_m': round(width, 3), 'frame_ids': evidence,
                                    'reason': 'low/mid wall returns absent beneath supported upper wall; RGB and occlusion checks pending'})

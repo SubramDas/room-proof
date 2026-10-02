@@ -5,6 +5,7 @@ Reports image-space overlap and motion only. No metric or 3D camera pose is clai
 
 import math
 import hashlib
+import json
 from pathlib import Path
 import statistics
 
@@ -159,42 +160,57 @@ def _strip(frame):
     return {key: value for key,value in frame.items() if key != 'features'}
 
 
-def coarse_scene_profile(video_path, maximum=180):
-    """One-frame-per-second appearance changes; not semantic room detection."""
+def coarse_scene_profile(video_path, expected_frames, fps, source_ref):
+    """Stream every source frame at low resolution; preserve the full timeline."""
     stream = imageio_ffmpeg.read_frames(str(video_path), pix_fmt='rgb24',
-                                        output_params=['-vf', 'fps=1,scale=160:-2', '-vsync', '0'])
+                                        output_params=['-vf', 'scale=64:48', '-vsync', '0'])
     next(stream, None)
-    signatures = []
-    for rgb in stream:
-        width = 160
-        if len(rgb) % (width*3):
-            raise ValueError('coarse video frame has unexpected RGB byte count')
-        height = len(rgb)//(width*3)
-        cells = [[0,0,0,0] for _ in range(16)]
-        for y in range(0,height,4):
-            for x in range(0,width,4):
-                cell = min(3, 4*y//height)*4 + min(3, 4*x//width)
-                at = (y*width+x)*3
-                cells[cell][0] += rgb[at]
-                cells[cell][1] += rgb[at+1]
-                cells[cell][2] += rgb[at+2]
-                cells[cell][3] += 1
-        signatures.append([channel/count for red,green,blue,count in cells
-                           for channel in (red,green,blue)])
-        if len(signatures) >= maximum:
-            break
-    differences = [sum(abs(a-b) for a,b in zip(first,second))/len(first)
-                   for first,second in zip(signatures,signatures[1:])]
-    threshold = max(28.0, sorted(differences)[int(.85*(len(differences)-1))]*1.2) if differences else None
+    previous = None
+    previous_cells = None
+    records = []
+    for frame_index, rgb in enumerate(stream):
+        if len(rgb) != 64*48*3:
+            raise ValueError(f'video frame {frame_index}: unexpected profile byte count')
+        gray = bytearray(64*48)
+        cells = [0]*16
+        dark = 0
+        for pixel in range(64*48):
+            at = pixel*3
+            value = (77*rgb[at] + 150*rgb[at+1] + 29*rgb[at+2]) >> 8
+            gray[pixel] = value
+            dark += value < 32
+            cells[(pixel//64//12)*4 + (pixel%64//16)] += value
+        signature = [value/192 for value in cells]
+        difference = (sum(abs(a-b) for a,b in zip(signature, previous_cells))/16
+                      if previous_cells is not None else None)
+        pixel_change = (sum(abs(a-b) for a,b in zip(gray, previous))/(64*48)
+                        if previous is not None else None)
+        records.append({'source_frame_index': frame_index,
+                        'source_ref': f'{source_ref}#frame={frame_index}',
+                        'timestamp_estimate_seconds': round(frame_index/fps, 6),
+                        'mean_luma_0_255': round(sum(gray)/(64*48), 2),
+                        'dark_pixel_fraction': round(dark/(64*48), 3),
+                        'appearance_change_score': round(difference, 2) if difference is not None else None,
+                        'pixel_change_score': round(pixel_change, 2) if pixel_change is not None else None})
+        previous = gray
+        previous_cells = signature
+    if len(records) != expected_frames:
+        raise ValueError(f'video frame count changed during full sequence analysis: expected {expected_frames}, decoded {len(records)}')
+    changes = [record['appearance_change_score'] for record in records[1:]]
+    threshold = max(20.0, sorted(changes)[int(.95*(len(changes)-1))]*1.5) if changes else None
     candidates = []
-    for second, score in enumerate(differences, start=1):
-        if score >= threshold and (not candidates or second-candidates[-1]['second_index'] >= 5):
-            candidates.append({'second_index': second, 'timestamp_estimate_seconds': second,
-                               'appearance_change_score': round(score,2)})
-    return {'sample_rate_hz': 1, 'sample_count': len(signatures),
-            'threshold': round(threshold,2) if threshold is not None else None,
+    for record in records[1:]:
+        if (record['appearance_change_score'] >= threshold and
+                (not candidates or record['source_frame_index']-candidates[-1]['source_frame_index'] >= fps)):
+            candidates.append({'source_frame_index': record['source_frame_index'],
+                               'timestamp_estimate_seconds': record['timestamp_estimate_seconds'],
+                               'appearance_change_score': record['appearance_change_score']})
+    return {'sample_rate_hz': fps, 'sample_count': len(records),
+            'selection': 'every decoded source frame; 64x48 analysis; no frame cap',
+            'frames': records,
+            'threshold': round(threshold, 2) if threshold is not None else None,
             'scene_change_candidates': candidates,
-            'interpretation': 'appearance changes may reflect a turn, lighting, occlusion, or a room transition'}
+            'interpretation': 'appearance changes may reflect a turn, lighting, occlusion, or a room transition; timestamps use nominal FPS'}
 
 
 def analyze_video(index, run_dir, video_path=None):
@@ -231,7 +247,11 @@ def analyze_video(index, run_dir, video_path=None):
               'room_transition_hypotheses': [], 'metric_scale_status': 'unidentifiable',
               'warnings': warnings}
     if video_path is not None:
-        report['coarse_scene_profile'] = coarse_scene_profile(video_path)
+        profile_path = run_dir/'coarse_scene_profile.json'
+        report['coarse_scene_profile'] = (json.loads(profile_path.read_text())
+                                          if profile_path.is_file() else coarse_scene_profile(
+                                              video_path, index['source_frame_count'], index['source_fps'],
+                                              index['source_ref']))
         if report['coarse_scene_profile']['scene_change_candidates']:
             report['warnings'].append('Coarse video appearance changes are candidates only; none is verified as a doorway or room transition')
     path = run_dir / 'visual_geometry.json'

@@ -1,6 +1,6 @@
 # RoomProof
 
-Status: partial reconstruction pipeline. A labelled single-room LiDAR scan can produce a provisional plan; photo and video plans remain unresolved, and benchmark gates are not met. See [SPEC.md](SPEC.md), [TASK.md](TASK.md), and [COMPLIANCE.md](COMPLIANCE.md).
+Status: partial reconstruction pipeline. A labelled single-room LiDAR scan can produce a provisional plan; photo and video plans remain unresolved, and benchmark gates are not met. See [SPEC.md](SPEC.md), [PLAN.md](PLAN.md) for the visual structure and LiDAR fusion order, [TASK.md](TASK.md), and [COMPLIANCE.md](COMPLIANCE.md).
 
 Phase journals are [Journal-0.md](Journal-0.md) through [Journal-11.md](Journal-11.md). Phase 5 adds evidence-gated damage rules but no detector. The separate reference evaluator is invoked after prediction, once independent truth exists:
 
@@ -21,7 +21,7 @@ bash scripts/setup.sh
 
 The earlier foundation-only setup took 3.07 seconds, used a 16 MB virtual environment, and downloaded 0 bytes. A new temporary-directory setup with the pinned decoder took **14.65 seconds** and used a **92 MB** virtual environment with the wheel cached. The Linux x86-64 wheel is 29.5 MB to download when uncached. These measurements exclude capture transfer and property-plan processing.
 
-The CLI imports and verifies original capture files in a reproducible [local bundle](repro/README.md). `process-capture` uses one command shape for `photo`, `video`, and `lidar`; it writes an input quality report and a run manifest, including for rejected inputs. Valid inputs also write `property_plan.json` and `property_plan.svg` from one common contract. Photo and video still leave geometry unresolved. An explicitly labelled single-room LiDAR capture can now produce a provisional rectangle, wall/floor/ceiling surfaces, and unverified doorway gap candidates; an unlabelled or multiroom LiDAR capture remains unresolved. Dimensions have unbounded intervals until calibrated. Photo runs index decoded stills by the stable room-folder ID. Ordinary video runs decode up to 24 frames by default in evenly spaced short bursts, downscale them to 640 pixels wide, and preserve source-video frame references; `--max-video-frames` changes that limit. Variable-rate video decoding preserves source frame boundaries. Photo and video runs write `visual_geometry.json` with source-linked visual corners, overlap, image motion, and quality warnings. These are visual evidence, not metric poses or a stitched layout. LiDAR runs preserve depth/confidence/pose joins by frame ID and leave RGB links unresolved where timing evidence is absent. The three starter exports' format findings are in [reports/input_audit.md](reports/input_audit.md).
+The CLI imports and verifies original capture files in a reproducible [local bundle](repro/README.md). `process-capture` uses one command shape for `photo`, `video`, and `lidar`; it writes an input quality report and a run manifest, including for rejected inputs. Valid inputs also write `property_plan.json` and `property_plan.svg` from one common contract. Photo and video still leave geometry unresolved. An explicitly labelled single-room LiDAR capture can now produce a provisional rectangle, wall/floor/ceiling surfaces, and unverified doorway gap candidates; an unlabelled or multiroom LiDAR capture remains unresolved. Dimensions have unbounded intervals until calibrated. Photo runs index decoded stills by the stable room-folder ID. Ordinary standalone video runs analyze **every decoded frame** at 64×48 for an ordered brightness and appearance-change timeline in `visual_geometry.json`; nominal-FPS timestamps are estimates. The more expensive corner matching uses up to 24 frames by default in evenly spaced short bursts at 640 pixels wide; `--max-video-frames` changes that limit. The optional visual model also has a separate `--max-model-frames` limit. Variable-rate video decoding preserves source frame boundaries. Photo and video runs write `visual_geometry.json` with source-linked visual corners, overlap, image motion, full-video appearance changes, and quality warnings. These are visual evidence, not metric poses or a stitched layout. The standalone video is separate from a LiDAR scan's `rgb.mp4`; the latter is used only within the LiDAR path for optional RGB/depth candidate linkage. LiDAR runs preserve depth/confidence/pose joins by frame ID and leave RGB links unresolved where timing evidence is absent. The three starter exports' format findings are in [reports/input_audit.md](reports/input_audit.md).
 
 LiDAR runs also write a filtered diagnostic point cloud (`lidar_points.ply`) and `lidar_geometry.json`. The default sampler uses at most 32 frames: it reserves up to six slots for pose-near revisit views and fills the rest from evenly spaced time windows with strong raw depth/confidence coverage. `--max-lidar-frames` changes the bound. The report records the selection probes, horizontal height bins, and wall-like vertical-plane bins. These coordinates use documented camera and calibration assumptions and have not passed a tape-measured scale check. See [Journal-3.md](Journal-3.md) for current evidence and limits.
 
@@ -29,6 +29,9 @@ Use `--lidar-drift on` (the default) or `--lidar-drift off` to compare a geometr
 The geometry report also samples RGB brightness across the scan and records weak-depth frames. RGB frame times are not paired to depth in this export, so a bright RGB sample does not certify a particular depth frame or surface.
 
 A property folder may contain `room-...` photo subfolders and one top-level video file. Run `process-capture PROPERTY_FOLDER --tier photo ...` and `process-capture PROPERTY_FOLDER --tier video ...` separately. The photo run indexes only stills inside room folders; the video run selects the sole top-level clip. If there are multiple top-level clips, pass the intended video file path explicitly.
+For a folder containing the stills of just one room at its root, pass
+`--room-id room-...` to the photo command. Root-level video and ZIP files are
+not treated as photos.
 
 Example input check (replace the IDs with the project's stable IDs):
 
@@ -88,6 +91,32 @@ adjacency. The [candidate contract](docs/visual_candidates.md),
 [owner review sheet](docs/model_label_review.md) record current evidence.
 The checkpoint is research/evaluation licensed and has not been adopted for
 commercial production.
+
+To compare independently processed photo, standalone-video, and LiDAR RGB
+captures, use `link-captures` with their completed run directories and the
+original photo folder and extracted Stray folder. It writes
+`cross_capture_links.json`, `cross_capture_registration.json`,
+`opening_correspondences.json`, `visual_room_graph.json`, a conservative
+fused `property_plan.json`/SVG, and RGB pairing evidence.
+At least nine scan RGB views are required for its registration gate. The
+default patch matcher records 2D visual overlaps and opening proposals.
+`--match-backend aliked-lightglue` enables the optional local learned matcher
+after [provisioning](docs/dependencies.md); it also probes LiDAR-backed PnP
+poses with held-out reprojection checks. Unknown independent-camera
+calibration keeps those poses as hypotheses. The fused plan retains only
+LiDAR-supported dimensions, carries unresolved rooms and openings, and does
+not infer adjacency merely from image matches.
+
+```bash
+.venv/bin/python -m roomproof link-captures \
+  --photo-run runs/PHOTO_RUN --video-run runs/VIDEO_RUN \
+  --lidar-run runs/LIDAR_RUN --photo-source kitchen \
+  --lidar-source /path/to/extracted/stray/scan \
+  --max-views 12 --lidar-rgb-rotation 90
+```
+
+Add `--match-backend aliked-lightglue` to compare the learned matcher with
+the patch baseline on the same selected view pairs.
 
 The optional cloud probe needs `GEMINI_API_KEY` in the environment and explicit
 approval before uploading any private interior photo. Its output is separate

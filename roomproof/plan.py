@@ -53,12 +53,12 @@ def _apply_lidar_room_fit(plan, index, fit):
     openings = []
     for number, candidate in enumerate(fit.get('opening_gap_candidates', []), 1):
         gap_refs = refs(candidate['frame_ids'])
-        openings.append({'id': f'opening-{slug}-candidate-{number}', 'kind': 'door',
+        openings.append({'id': f'opening-{slug}-candidate-{number}', 'kind': 'other',
                          'surface_id': surfaces[candidate['wall_index']]['id'],
                          'status': 'unresolved',
-                         'width': _provisional(candidate['width_m'], 'm', gap_refs),
+                         'width': unknown('m', gap_refs),
                          'height': unknown('m', gap_refs),
-                         'offset_along_wall': _provisional(candidate['offset_along_wall_m'], 'm', gap_refs),
+                         'offset_along_wall': unknown('m', gap_refs),
                          'source_refs': gap_refs})
     room.update({'status': 'inferred', 'boundary': boundary,
                  'floor_area': _provisional(area, 'm2', floor_refs),
@@ -69,7 +69,7 @@ def _apply_lidar_room_fit(plan, index, fit):
                          'floor_area': _provisional(area, 'm2', floor_refs)})
 
 
-def _apply_supported_candidate_links(plan, candidate_links):
+def _apply_supported_candidate_links(plan, candidate_links, fit=None):
     """Attach repeated visual support to an existing depth gap, never create a metric opening."""
     if not plan['rooms'] or not candidate_links:
         return
@@ -91,11 +91,16 @@ def _apply_supported_candidate_links(plan, candidate_links):
         supported = [record for record in candidate_links['records']
                      if record['candidate_id'] in group['candidate_ids'] and
                      record['status'] == 'supported_proposal' and
-                     (record['class'] == opening['kind'] or
-                      (opening['kind'] == 'door' and record['class'] in ('doorway', 'open_passage')))]
+                     record['class'] in ('door', 'doorway', 'open_passage')]
         if len(supported) < 2:
             continue
         opening['status'] = 'inferred'
+        opening['kind'] = ('open_passage' if group['class'] == 'open_passage' else 'door')
+        gaps = fit.get('opening_gap_candidates', []) if fit else []
+        if number <= len(gaps):
+            opening['width'] = _provisional(gaps[number-1]['width_m'], 'm', opening['source_refs'])
+            opening['offset_along_wall'] = _provisional(
+                gaps[number-1]['offset_along_wall_m'], 'm', opening['source_refs'])
         opening['source_refs'] = sorted(set(opening['source_refs']) |
                                         {record['source_ref'] for record in supported})
 
@@ -126,7 +131,8 @@ def build_plan(args, run_id, index, warnings, geometry=None, candidates=None, ca
             'Visual model proposals: ' + ', '.join(f'{count} {kind}' for kind, count in counts.items())
             + '; see visual_candidates.json. Openings and room connections are unverified.')
     if candidate_links is not None:
-        _apply_supported_candidate_links(plan, candidate_links)
+        _apply_supported_candidate_links(plan, candidate_links,
+                                         geometry['room_fit'] if geometry else None)
         plan['warnings'].append(
             f"LiDAR RGB candidate linkage: {candidate_links['projected_to_wall_count']} rays hit fitted walls, "
             f"{candidate_links['gap_coincidence_count']} coincide with a depth gap, "

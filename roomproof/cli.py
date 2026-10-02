@@ -140,6 +140,34 @@ def probe_vision(args, run_dir, run):
     print(f"vision probe: {output}")
 
 
+def link_capture_runs(args, run_dir, run):
+    from .cross_capture import link_captures
+    report, artifacts = link_captures(
+        args.photo_run, args.video_run, args.lidar_run,
+        args.photo_source, args.lidar_source, run_dir,
+        max_views=args.max_views, lidar_rgb_rotation=args.lidar_rgb_rotation,
+        match_backend=args.match_backend, model_root=args.model_root)
+    source_revisions = []
+    for path in (args.photo_run, args.video_run, args.lidar_run):
+        source_run = json.loads((Path(path).resolve(strict=True)/'run.json').read_text())
+        source_revisions.append(source_run['data_revision'])
+    run['data_revision'] = hashlib.sha256(
+        json.dumps(source_revisions, separators=(',', ':')).encode()).hexdigest()
+    run['artifacts'] = artifacts
+    registration = json.loads((run_dir/'cross_capture_registration.json').read_text())
+    opening_links = json.loads((run_dir/'opening_correspondences.json').read_text())
+    plan = json.loads((run_dir/'property_plan.json').read_text())
+    run['metrics'] = {'pair_count': report['pair_count'],
+                      'supported_2d_overlap_count': report['supported_2d_overlap_count'],
+                      'plausible_assumed_pose_count': registration.get('plausible_assumed_pose_count', 0),
+                      'cross_view_consistent_pose_count': len(registration.get('cross_view_consistent_hypotheses', [])),
+                      'opening_region_link_count': opening_links['link_count'],
+                      'fused_plan_status': plan['plan']['status'],
+                      'status': report['status'], 'fused_plan_path': 'property_plan.json'}
+    run['warnings'].extend(report['warnings'])
+    print(f"cross-capture links: {run_dir/'cross_capture_links.json'}")
+
+
 def object_path(bundle, digest):
     return bundle / "objects" / "sha256" / digest[:2] / digest
 
@@ -356,6 +384,19 @@ def main():
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture
     processor.set_defaults(func=process_capture)
+    linker = subcommands.add_parser('link-captures',
+        help='compare independent photo, video, and LiDAR RGB runs in image space')
+    linker.add_argument('--photo-run', required=True)
+    linker.add_argument('--video-run', required=True)
+    linker.add_argument('--lidar-run', required=True)
+    linker.add_argument('--photo-source', required=True)
+    linker.add_argument('--lidar-source', required=True)
+    linker.add_argument('--max-views', type=positive_int, default=12)
+    linker.add_argument('--lidar-rgb-rotation', type=int, choices=(0, 90, 180, 270), default=0)
+    linker.add_argument('--match-backend', choices=('patch', 'aliked-lightglue'), default='patch')
+    linker.add_argument('--model-root', default='.room-proof/models')
+    linker.add_argument('--runs-dir', default='runs')
+    linker.set_defaults(func=link_capture_runs)
     benchmark = subcommands.add_parser("score-benchmark", help="score frozen plans against separate reference truth")
     benchmark.add_argument("manifest")
     benchmark.add_argument("--runs-dir", default="runs")

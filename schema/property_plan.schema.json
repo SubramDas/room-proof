@@ -23,7 +23,7 @@
   },
   "$defs": {
     "id": {"type": "string", "minLength": 1},
-    "tier": {"enum": ["photo", "video", "lidar"]},
+    "tier": {"enum": ["photo", "video", "lidar", "fusion"]},
     "observation_status": {"enum": ["observed", "inferred", "unresolved"]},
     "source_refs": {"type": "array", "items": {"$ref": "#/$defs/id"}},
     "measurement": {
@@ -131,7 +131,7 @@
       "required": ["id", "kind", "surface_id", "status", "width", "height", "offset_along_wall", "source_refs"],
       "properties": {
         "id": {"$ref": "#/$defs/id"},
-        "kind": {"enum": ["door", "window", "other"]},
+        "kind": {"enum": ["door", "window", "open_passage", "other"]},
         "surface_id": {"$ref": "#/$defs/id"},
         "status": {"$ref": "#/$defs/observation_status"},
         "width": {"$ref": "#/$defs/measurement"},

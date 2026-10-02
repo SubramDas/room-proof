@@ -46,20 +46,31 @@ def input_files(root):
     return sorted(path for path in root.rglob("*") if path.is_file())
 
 
-def inspect_photo(root, device_has_lidar):
+def inspect_photo(root, device_has_lidar, room_id=None):
     errors, warnings, metrics = [], [], {"room_count": 0, "photo_count": 0}
     if not root.is_dir():
         return ["photo input must be a directory with one subfolder per room"], warnings, metrics
     room_dirs = sorted(path for path in root.iterdir() if path.is_dir())
-    if not room_dirs:
-        errors.append("photo input has no room subfolders")
-    metrics["room_count"] = len(room_dirs)
+    root_photos = sorted(path for path in root.iterdir()
+                         if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES)
+    if room_id is not None and root_photos and room_dirs:
+        errors.append("photo input cannot mix root-level room photos with room subfolders")
+    if not room_dirs and root_photos and room_id is not None:
+        room_sources = [(room_id, root_photos)]
+    else:
+        room_sources = [(room.name, sorted(path for path in room.iterdir()
+                                          if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES))
+                        for room in room_dirs]
+        if not room_dirs:
+            errors.append("photo input needs room subfolders or --room-id for root-level photos")
+        elif root_photos:
+            errors.append("photo input has root-level photos without a single-room --room-id")
+    metrics["room_count"] = len(room_sources)
     hashes = {}
-    for room in room_dirs:
-        photos = sorted(path for path in room.iterdir() if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES)
+    for room_name, photos in room_sources:
         metrics["photo_count"] += len(photos)
         if len(photos) < 2 or len(photos) > 8:
-            errors.append(f"room '{room.name}' has {len(photos)} photos; expected 2–8")
+            errors.append(f"room '{room_name}' has {len(photos)} photos; expected 2–8")
         for photo in photos:
             try:
                 supported = image_signature(photo)
@@ -74,10 +85,9 @@ def inspect_photo(root, device_has_lidar):
             else:
                 hashes[digest] = photo.relative_to(root).as_posix()
     other_media = [path for path in input_files(root)
-                   if (path.suffix.lower() in VIDEO_SUFFIXES and path.parent != root)
-                   or (path.suffix.lower() in IMAGE_SUFFIXES and path.parent == root)]
+                   if (path.suffix.lower() in VIDEO_SUFFIXES and path.parent != root)]
     if other_media:
-        errors.append("photo tier accepts stills in room folders only; found video inside a room or root-level still media")
+        errors.append("photo tier found video inside a room folder")
     if device_has_lidar == "false":
         warnings.append("photo tier does not require LiDAR; selected device is marked without LiDAR")
     if metrics["photo_count"]:
@@ -211,11 +221,12 @@ def process_capture(args, run_dir, run):
     if args.lidar_rgb_rotation and (args.tier != "lidar" or args.visual_backend != "owlv2"):
         raise ValueError("--lidar-rgb-rotation requires --tier lidar and --visual-backend owlv2")
     inspectors = {"photo": inspect_photo, "video": inspect_video, "lidar": inspect_lidar}
-    errors, warnings, metrics = inspectors[args.tier](source, device_has_lidar)
+    errors, warnings, metrics = (inspect_photo(source, device_has_lidar, args.room_id)
+                                if args.tier == "photo" else inspectors[args.tier](source, device_has_lidar))
     status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"
     paths = input_files(source) if source.is_dir() else ([source] if source.is_file() else [])
     if args.tier == "photo":
-        paths = [path for path in paths if path.parent != source and path.suffix.lower() in IMAGE_SUFFIXES]
+        paths = [path for path in paths if path.suffix.lower() in IMAGE_SUFFIXES]
     runs_root = Path(args.runs_dir).resolve()
     paths = [path for path in paths if not (runs_root == source or runs_root in path.parents)]
     source_files = [{
@@ -230,7 +241,7 @@ def process_capture(args, run_dir, run):
         try:
             from .readers import read_photo_folders, read_stray_scan, read_video_samples
             if args.tier == "photo":
-                output_artifacts = read_photo_folders(source, args.capture_id, run_dir)
+                output_artifacts = read_photo_folders(source, args.capture_id, run_dir, args.room_id)
                 next_stage = "frames_indexed"
             elif args.tier == "video":
                 output_artifacts = read_video_samples(
@@ -255,6 +266,9 @@ def process_capture(args, run_dir, run):
                 if args.tier == "video":
                     metrics["supported_visual_transitions"] = visual["supported_transition_count"]
                     metrics["visual_tracking_gap_count"] = len(visual["tracking_gap_after_sample_indices"])
+                    metrics["video_full_sequence_frame_count"] = visual["coarse_scene_profile"]["sample_count"]
+                    metrics["video_scene_change_candidate_count"] = len(
+                        visual["coarse_scene_profile"]["scene_change_candidates"])
                 else:
                     metrics["supported_photo_pairs"] = sum(pair["overlap_supported"] for pair in visual["pairs"])
             if args.tier == "lidar":
