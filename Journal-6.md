@@ -13,3 +13,7 @@ and phantoms. These remain unscored without independent repeated captures and
 labels. Still open: property-held-out calibration, footprint shape
 alignment, drift ablation, damage polygon metrics, final scoring definitions,
 and a complete benchmark. No gate has been marked passing from absent truth.
+
+Published the present rules in `docs/scorer_definitions.md` before any complete
+baseline. T53 remains open because several scorer rows and baseline revision
+links are still missing.

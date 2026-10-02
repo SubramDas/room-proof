@@ -34,6 +34,37 @@ Example input check (replace the IDs with the project's stable IDs):
   --property-id prop-home --capture-id cap-home-lidar
 ```
 
+For the supplied mixed `Flat-805/` folder, use a separate stable capture ID
+for each independently interpreted tier:
+
+```bash
+.venv/bin/python -m roomproof process-capture Flat-805 --tier photo \
+  --property-id prop-flat-805 --capture-id cap-flat-805-photo
+.venv/bin/python -m roomproof process-capture Flat-805 --tier video \
+  --property-id prop-flat-805 --capture-id cap-flat-805-video
+```
+
+Each invocation prints a `runs/run-.../run.json` path. Successful input
+processing also writes `quality_report.json`, `property_plan.json`, and
+`property_plan.svg` in that run directory; photo/video runs add
+`visual_geometry.json`, and LiDAR adds `lidar_geometry.json` and sampled
+`lidar_points.ply`. Check `run.json` for completion and warnings. A rejected
+input still gets a failed run record. An accepted capture can produce an
+*unresolved* plan; this means the geometry gate remains unsatisfied.
+
+No neural-network weights are required for the current local processing path.
+The optional cloud probe needs `GEMINI_API_KEY` in the environment and explicit
+approval before uploading any private interior photo. Its output is separate
+from `process-capture`. Keep raw captures and reference truth in the separate
+versioned bundle described in [repro/README.md](repro/README.md).
+
+If setup fails, confirm Ubuntu/Python version, network access to the pinned
+wheel, and free disk space (the current environment was about 92 MB). If a
+capture fails, inspect its run's error and `quality_report.json`; keep the
+original files intact and recapture missing coverage rather than editing the
+source folder. If input processing succeeds but dimensions are null, that is
+the current geometry limitation, not a setup failure.
+
 Run **every** project Python or CLI command through `.venv/bin/python` after setup. The setup script uses system `python3` only to create that virtual environment. Progress is recorded in [TASK.md](TASK.md) and a root-level journal for each numbered phase, beginning with [Journal-0.md](Journal-0.md).
 
 Working choices are in [docs/decisions.md](docs/decisions.md); stable IDs and manifests are in [docs/ids_and_manifests.md](docs/ids_and_manifests.md). The Phase 1 capture card, [device matrix](docs/device_matrix.md), [format audit](reports/device_format_dummy_room.md), and [component/license record](docs/dependencies.md) document the stock route. Raw starter data and local environments are ignored by Git. Preserve raw interiors outside public Git until the owner chooses a submission destination and access level.
