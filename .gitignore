@@ -7,5 +7,10 @@
 /.room-proof/
 /runs/
 /repro/bundle/
+/Flat-805/
+/Flat-805.zip
+/Flat-805-lidar/
+/hall_photos/
+/hall_video/
 __pycache__/
 *.py[cod]

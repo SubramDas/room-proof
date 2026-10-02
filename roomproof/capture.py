@@ -204,6 +204,8 @@ def process_capture(args, run_dir, run):
     from .cli import valid_id
     valid_id(args.property_id, "prop")
     valid_id(args.capture_id, "cap")
+    if args.room_id is not None:
+        valid_id(args.room_id, "room")
     device_has_lidar = args.device_has_lidar
     inspectors = {"photo": inspect_photo, "video": inspect_video, "lidar": inspect_lidar}
     errors, warnings, metrics = inspectors[args.tier](source, device_has_lidar)
@@ -253,12 +255,19 @@ def process_capture(args, run_dir, run):
                     metrics["supported_photo_pairs"] = sum(pair["overlap_supported"] for pair in visual["pairs"])
             if args.tier == "lidar":
                 from .lidar_geometry import extract_geometry
-                geometry, geometry_artifacts = extract_geometry(source, index, run_dir, args.max_lidar_frames)
+                geometry, geometry_artifacts = extract_geometry(source, index, run_dir, args.max_lidar_frames,
+                                                                drift_correction=args.lidar_drift == "on",
+                                                                single_room=args.room_id is not None)
                 output_artifacts.extend(geometry_artifacts)
                 metrics["lidar_point_count"] = geometry["point_count"]
                 metrics["lidar_horizontal_candidates"] = geometry["horizontal_candidate_count"]
+                metrics["lidar_verified_closure_count"] = geometry["drift_ablation"]["candidate_count"]
+                metrics["lidar_drift_area_change_m2"] = geometry["drift_ablation"]["area_change_m2"]
+                metrics["lidar_room_fit_status"] = geometry["room_fit"]["status"]
+                metrics["lidar_opening_candidate_count"] = len(geometry["room_fit"].get("opening_gap_candidates", []))
                 warnings.extend(geometry["warnings"])
-            plan = build_plan(args, run["run_id"], index, warnings)
+            plan = build_plan(args, run["run_id"], index, warnings,
+                              geometry=geometry if args.tier == "lidar" else None)
             validation_errors = validate(plan)
             if validation_errors:
                 raise ValueError("property plan validation: " + "; ".join(validation_errors[:5]))
@@ -269,7 +278,9 @@ def process_capture(args, run_dir, run):
             output_artifacts.extend({"path": str(path), "sha256": sha256(path)} for path in (plan_path, svg_path))
             metrics["schema_valid"] = True
             metrics["semantic_valid"] = True
-            next_stage = "provisional_depth_points_geometry_unresolved" if args.tier == "lidar" else "visual_evidence_geometry_unresolved"
+            next_stage = ("provisional_single_room_layout" if plan["plan"]["status"] == "inferred"
+                          else "provisional_depth_points_geometry_unresolved" if args.tier == "lidar"
+                          else "visual_evidence_geometry_unresolved")
         except Exception as error:
             errors.append(f"frame reader failed: {type(error).__name__}: {error}")
     status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"

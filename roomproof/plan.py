@@ -12,23 +12,87 @@ def unknown(unit, refs=()):
     return {'value': None, 'unit': unit, 'interval': {'lower': None, 'upper': None, 'coverage': 0.9, 'method': 'unbounded; no calibrated estimate'}, 'status': 'unresolved', 'source_refs': list(refs)}
 
 
-def build_plan(args, run_id, index, warnings):
+def _provisional(value, unit, refs):
+    return {'value': round(value, 4), 'unit': unit,
+            'interval': {'lower': None, 'upper': None, 'coverage': .9,
+                         'method': 'unbounded; provisional LiDAR fit without held-out calibration'},
+            'status': 'inferred', 'source_refs': list(refs)}
+
+
+def _apply_lidar_room_fit(plan, index, fit):
+    if fit['status'] != 'inferred':
+        return
+    room = plan['rooms'][0]
+    frames = {frame['frame_id']: frame for frame in index['frames']}
+    def refs(frame_ids):
+        return sorted({ref for frame_id in frame_ids
+                       for ref in (frames[frame_id]['depth']['source_ref'], frames[frame_id]['pose_source_ref'])})
+    boundary = fit['boundary_xz_m']
+    height = fit['ceiling_height_m']
+    floor_refs = refs(fit['floor']['frame_ids'])
+    ceiling_refs = refs(fit['ceiling']['frame_ids'])
+    wall_evidence = [fit['walls'][1][0], fit['walls'][0][1],
+                     fit['walls'][1][1], fit['walls'][0][0]]
+    slug = room['id'].removeprefix('room-')
+    surfaces = []
+    for number, evidence in enumerate(wall_evidence):
+        line = [boundary[number], boundary[(number+1) % 4]]
+        length = math.dist(*line)
+        wall_refs = refs(evidence['frame_ids'])
+        surfaces.append({'id': f'surf-{slug}-wall-{number+1}', 'kind': 'wall',
+                         'status': 'inferred', 'line': line,
+                         'length': _provisional(length, 'm', wall_refs),
+                         'area': _provisional(length*height, 'm2', wall_refs),
+                         'source_refs': wall_refs})
+    area = fit['area_m2']
+    surfaces.extend([
+        {'id': f'surf-{slug}-floor-1', 'kind': 'floor', 'status': 'inferred',
+         'area': _provisional(area, 'm2', floor_refs), 'source_refs': floor_refs},
+        {'id': f'surf-{slug}-ceiling-1', 'kind': 'ceiling', 'status': 'inferred',
+         'area': _provisional(area, 'm2', ceiling_refs), 'source_refs': ceiling_refs}])
+    openings = []
+    for number, candidate in enumerate(fit.get('opening_gap_candidates', []), 1):
+        gap_refs = refs(candidate['frame_ids'])
+        openings.append({'id': f'opening-{slug}-candidate-{number}', 'kind': 'door',
+                         'surface_id': surfaces[candidate['wall_index']]['id'],
+                         'status': 'unresolved',
+                         'width': _provisional(candidate['width_m'], 'm', gap_refs),
+                         'height': unknown('m', gap_refs),
+                         'offset_along_wall': _provisional(candidate['offset_along_wall_m'], 'm', gap_refs),
+                         'source_refs': gap_refs})
+    room.update({'status': 'inferred', 'boundary': boundary,
+                 'floor_area': _provisional(area, 'm2', floor_refs),
+                 'ceiling_height': _provisional(height, 'm', floor_refs+ceiling_refs),
+                 'surfaces': surfaces, 'openings': openings,
+                 'source_refs': sorted(set(room['source_refs']+floor_refs+ceiling_refs))})
+    plan['plan'].update({'status': 'inferred', 'footprint': boundary,
+                         'floor_area': _provisional(area, 'm2', floor_refs)})
+
+
+def build_plan(args, run_id, index, warnings, geometry=None):
     refs = [frame['source_ref'] for frame in index['frames'] if 'source_ref' in frame]
     if args.tier == 'lidar':
         refs = [index['rgb_source_ref'], index['odometry_source_ref'], index['camera_matrix_source_ref']]
-    room_ids = index['room_ids'] if args.tier == 'photo' else ['room-unresolved-1']
+    room_ids = index['room_ids'] if args.tier == 'photo' else [args.room_id or 'room-unresolved-1']
     rooms = []
     for room_id in room_ids:
         room_refs = [frame['source_ref'] for frame in index['frames'] if frame.get('room_id') == room_id] if args.tier == 'photo' else refs
         slug = room_id.removeprefix('room-')
-        rooms.append({'id': room_id, 'name': slug.replace('-', ' ').title(), 'floor_id': None, 'kind': 'room', 'status': 'unresolved', 'boundary': None, 'floor_area': unknown('m2', room_refs), 'ceiling_height': unknown('m', room_refs), 'surfaces': [
+        rooms.append({'id': room_id, 'name': slug.replace('-', ' ').title(), 'floor_id': None, 'kind': args.room_kind if args.tier != 'photo' else 'room', 'status': 'unresolved', 'boundary': None, 'floor_area': unknown('m2', room_refs), 'ceiling_height': unknown('m', room_refs), 'surfaces': [
             {'id': f'surf-{slug}-wall-1', 'kind': 'wall', 'status': 'unresolved', 'line': [[0, 0], [0, 0]], 'length': unknown('m', room_refs), 'area': unknown('m2', room_refs), 'source_refs': room_refs},
             {'id': f'surf-{slug}-floor-1', 'kind': 'floor', 'status': 'unresolved', 'area': unknown('m2', room_refs), 'source_refs': room_refs},
             {'id': f'surf-{slug}-ceiling-1', 'kind': 'ceiling', 'status': 'unresolved', 'area': unknown('m2', room_refs), 'source_refs': room_refs}], 'openings': [], 'source_refs': room_refs})
     ambiguities = ([{'room_ids': room_ids,
                      'reason': 'No verified doorway correspondence or geometric placement; multiple layouts remain possible.',
                      'source_refs': refs}] if args.tier == 'photo' and len(room_ids) > 1 else [])
-    return {'schema_version': '0.1.0', 'property_id': args.property_id, 'run_id': run_id, 'capture': {'capture_id': args.capture_id, 'tier': args.tier, 'device_model': args.device_model, 'ios_version': args.ios_version, 'capture_app': args.capture_app, 'capture_app_version': args.capture_app_version, 'source_refs': refs}, 'coordinate_system': {'unit': 'm', 'origin': 'capture_local', 'x_axis': 'right_on_plan', 'y_axis': 'up_on_plan'}, 'plan': {'status': 'unresolved', 'footprint': None, 'floor_area': unknown('m2', refs), 'rendered_plan_path': 'property_plan.svg'}, 'rooms': rooms, 'adjacency': [], 'placement_ambiguities': ambiguities, 'damage_regions': [], 'concealed_damage_flags': [], 'scope_items': [], 'warnings': list(warnings) + ['Geometry, openings, damage, and room placement have not been inferred. Capture coverage does not establish absence of damage.']}
+    plan = {'schema_version': '0.1.0', 'property_id': args.property_id, 'run_id': run_id, 'capture': {'capture_id': args.capture_id, 'tier': args.tier, 'device_model': args.device_model, 'ios_version': args.ios_version, 'capture_app': args.capture_app, 'capture_app_version': args.capture_app_version, 'source_refs': refs}, 'coordinate_system': {'unit': 'm', 'origin': 'capture_local', 'x_axis': 'right_on_plan', 'y_axis': 'up_on_plan'}, 'plan': {'status': 'unresolved', 'footprint': None, 'floor_area': unknown('m2', refs), 'rendered_plan_path': 'property_plan.svg'}, 'rooms': rooms, 'adjacency': [], 'placement_ambiguities': ambiguities, 'damage_regions': [], 'concealed_damage_flags': [], 'scope_items': [], 'warnings': list(warnings)}
+    if args.tier == 'lidar' and geometry is not None:
+        _apply_lidar_room_fit(plan, index, geometry['room_fit'])
+    if plan['plan']['status'] == 'unresolved':
+        plan['warnings'].append('Geometry, openings, damage, and room placement have not been inferred. Capture coverage does not establish absence of damage.')
+    else:
+        plan['warnings'].append('Provisional LiDAR room layout; dimensions are not calibrated. Opening candidates are unverified; damage remains unresolved.')
+    return plan
 
 
 def _schema_errors(value, schema, definitions, location='$'):
@@ -168,16 +232,19 @@ def validate(plan):
 
 def render(plan, path):
     rooms = plan['rooms']; height = max(450, 190 + 100*len(rooms))
-    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="{height}" viewBox="0 0 1000 {height}">', '<rect width="100%" height="100%" fill="#f8fafc"/>', '<style>text{font-family:Arial,sans-serif;fill:#172b4d}.title{font-size:26px;font-weight:bold}.body{font-size:16px}.small{font-size:13px;fill:#52657d}</style>', f'<text x="36" y="45" class="title">Property plan: {html.escape(plan["property_id"])}</text>', f'<text x="36" y="72" class="small">{html.escape(plan["capture"]["tier"].title())} capture · Geometry and scale unresolved</text>']
+    subtitle = ('Provisional LiDAR geometry · metric accuracy unvalidated'
+                if plan['plan']['status'] == 'inferred' else 'Geometry and scale unresolved')
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="{height}" viewBox="0 0 1000 {height}">', '<rect width="100%" height="100%" fill="#f8fafc"/>', '<style>text{font-family:Arial,sans-serif;fill:#172b4d}.title{font-size:26px;font-weight:bold}.body{font-size:16px}.small{font-size:13px;fill:#52657d}</style>', f'<text x="36" y="45" class="title">Property plan: {html.escape(plan["property_id"])}</text>', f'<text x="36" y="72" class="small">{html.escape(plan["capture"]["tier"].title())} capture · {html.escape(subtitle)}</text>']
     for i, room in enumerate(rooms):
         y = 105 + i*100
         area = room['floor_area']['value']
         area_label = f'{area:.2f} m²' if area is not None else 'unknown m²'
         opening_count = len(room['openings'])
+        opening_label = f'{opening_count} candidate(s), unverified' if opening_count else 'unassessed'
         damage_count = sum(item['room_id'] == room['id'] for item in plan['damage_regions'])
-        parts += [f'<rect x="36" y="{y}" width="920" height="82" rx="8" fill="white" stroke="#94a3b8" stroke-dasharray="7 5"/>', f'<text x="55" y="{y+29}" class="body">{html.escape(room["name"])} ({html.escape(room["id"])})</text>', f'<text x="55" y="{y+55}" class="small">Area: {area_label} · Openings: {opening_count} · Damage regions: {damage_count} · {html.escape(room["status"])}</text>']
+        parts += [f'<rect x="36" y="{y}" width="920" height="82" rx="8" fill="white" stroke="#94a3b8" stroke-dasharray="7 5"/>', f'<text x="55" y="{y+29}" class="body">{html.escape(room["name"])} ({html.escape(room["id"])})</text>', f'<text x="55" y="{y+55}" class="small">Area: {area_label} · Openings: {opening_label} · Damage regions: {damage_count} · {html.escape(room["status"])}</text>']
     y = 125 + 100*len(rooms)
-    parts += [f'<text x="36" y="{y}" class="body">Connections: {len(plan["adjacency"])} supported</text>', f'<text x="36" y="{y+27}" class="small">Dashed cards indicate indexed spaces, not measured placement or room shape.</text>']
+    parts += [f'<text x="36" y="{y}" class="body">Connections: {len(plan["adjacency"])} supported</text>', f'<text x="36" y="{y+27}" class="small">Dashed cards indicate indexed spaces; any drawn LiDAR layout is provisional.</text>']
     if plan.get('placement_ambiguities'):
         groups = ', '.join(', '.join(item['room_ids']) for item in plan['placement_ambiguities'])
         parts.append(f'<text x="36" y="{y+47}" class="small">Unresolved placement: {html.escape(groups[:110])}</text>')
@@ -189,7 +256,7 @@ def render(plan, path):
         scale = min(850/max(max(xs)-min(xs), .01), 550/max(max(ys)-min(ys), .01))
         offset_y = height + 100
         parts[0] = f'<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="{height+750}" viewBox="0 0 1000 {height+750}">'
-        parts.append(f'<text x="36" y="{offset_y-20}" class="title">Measured layout</text>')
+        parts.append(f'<text x="36" y="{offset_y-20}" class="title">Provisional layout</text>')
         def xy(p): return (75+(p[0]-min(xs))*scale, offset_y+550-(p[1]-min(ys))*scale)
         for room in rooms:
             poly = room['boundary']
@@ -205,6 +272,6 @@ def render(plan, path):
                 wx,wy=xy(midpoint)
                 parts.append(f'<text x="{wx:.1f}" y="{wy:.1f}" class="small">{wall["length"]["value"]:.2f} m</text>')
             for opening in room['openings']:
-                parts.append(f'<text x="{cx:.1f}" y="{cy+24:.1f}" class="small">{html.escape(opening["kind"])}: {opening["width"]["value"] if opening["width"]["value"] is not None else "?"} m</text>')
+                parts.append(f'<text x="{cx:.1f}" y="{cy+24:.1f}" class="small">Possible {html.escape(opening["kind"])}: {opening["width"]["value"] if opening["width"]["value"] is not None else "?"} m wide, height unknown</text>')
     parts.append('</svg>')
     path.write_text('\n'.join(parts), encoding='utf-8')

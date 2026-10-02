@@ -337,6 +337,8 @@ def main():
     processor.add_argument("--tier", choices=("photo", "video", "lidar"), required=True)
     processor.add_argument("--property-id", required=True)
     processor.add_argument("--capture-id", required=True)
+    processor.add_argument("--room-id", help="optional known room label for a single-room video or LiDAR capture")
+    processor.add_argument("--room-kind", choices=("room", "connector", "stairs", "other"), default="room")
     processor.add_argument("--device-model")
     processor.add_argument("--ios-version")
     processor.add_argument("--capture-app")
@@ -344,6 +346,7 @@ def main():
     processor.add_argument("--device-has-lidar", choices=("true", "false", "unknown"), default="unknown")
     processor.add_argument("--max-video-frames", type=positive_int, default=24, help="maximum evenly spaced frames to decode for an ordinary video")
     processor.add_argument("--max-lidar-frames", type=positive_int, default=32, help="maximum evenly spaced depth frames for diagnostic geometry")
+    processor.add_argument("--lidar-drift", choices=("on", "off"), default="on", help="apply only geometrically verified LiDAR revisit correction")
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture
     processor.set_defaults(func=process_capture)
