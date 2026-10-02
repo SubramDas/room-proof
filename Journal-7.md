@@ -13,3 +13,4 @@ LiDAR export arrives, the next owner inputs are: an independently recaptured
 same-tier room; an independent room/opening/height/wall/footprint measurement
 sheet; two visible damage classes with reference regions and staging notes;
 and any difficult-surface examples. Keep truth outside capture input folders.
+The practical handoff is [docs/owner_benchmark_handoff.md](docs/owner_benchmark_handoff.md).
