@@ -7,6 +7,12 @@ Individual wall/opening reference rows, repeat capture, two labelled damage
 classes, and comparator exports are still
 required. Do not interpret the presence of this report as a passing gate.
 
+The optional local model pilot has paired photo/video model-on and model-off
+runs in [model_candidate_pilot.md](model_candidate_pilot.md). Both final plans
+remain unresolved. Candidate counts and timing are recorded, but no labelled
+precision/recall or metric plan improvement can yet be scored. LiDAR RGB
+inference is gated on verified RGB/depth/pose correspondence.
+
 ## Evidence ledger to complete
 
 | Tier | Capture ID | Run ID | Raw manifest SHA-256 | Plan SHA-256 | Status |

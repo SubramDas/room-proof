@@ -7,7 +7,31 @@ Components below are used by the Phase 1 format audit. They run locally in the p
 | imageio-ffmpeg | 0.6.0; [PyPI release](https://pypi.org/project/imageio-ffmpeg/), Linux x86-64 wheel SHA-256 `c7e46fcec401dd990405049d2e2f475e2b397779df2519b544b8aab515195282` | BSD-2-Clause for the Python wrapper | Provides a pinned FFmpeg binary interface to count and decode the Stray HEVC `rgb.mp4`. | Processing is local. No capture media is sent to a service. |
 | FFmpeg static binary bundled by imageio-ffmpeg | 7.0.2-static, reported by `imageio_ffmpeg.get_ffmpeg_version()` | `ffmpeg -L` reports GNU GPL version 3 or later for this build. | Decodes RGB video and reports actual decoded frame count. | Processing is local. The binary is installed in `.venv`; it is not tracked in Git. |
 
-A clean temporary environment installed the wheel using `pip --require-hashes`; the Linux wheel is 29.5 MB and the resulting virtual environment was 92 MB. A later image/model dependency needs its own version, source, license/terms, role, hash where practical, data handling, and measured size/runtime entry here before use.
+A clean temporary environment installed the wheel using `pip --require-hashes`; the Linux wheel is 29.5 MB and the resulting virtual environment was 92 MB.
+
+## Experimental local visual candidate stage
+
+`requirements-model.txt` pins hashes for the Ubuntu 24.04 / CPython 3.12
+x86-64 wheels. Installed versions in the pilot were onnxruntime 1.30.0,
+NumPy 2.3.3, Pillow 11.3.0, flatbuffers 25.12.19, packaging 26.3, and
+protobuf 7.36.2. The [ONNX Runtime package](https://pypi.org/project/onnxruntime/)
+is MIT licensed; the [NumPy package](https://pypi.org/project/numpy/) is BSD-3-Clause;
+the [Pillow package](https://pypi.org/project/pillow/) is HPND licensed.
+These run locally on CPU; no capture is uploaded. The current `.venv` is
+251 MB after installation, versus the earlier 92 MB decoder-only environment;
+this is an environment comparison, not an isolated package measurement.
+
+The optional 4,418,863-byte [quantized SegFormer B0 ADE20K ONNX checkpoint](https://huggingface.co/Xenova/segformer-b0-finetuned-ade-512-512/blob/main/onnx/model_quantized.onnx)
+has SHA-256 `9a98d6daf3d926869ab8cc4c2ed7374a2bc23b889bb7ca3b0915d15e3c4756bb`.
+`scripts/fetch_visual_model.py` downloads and verifies it into an ignored
+local directory. The [original SegFormer repository license](https://github.com/NVlabs/SegFormer/blob/master/LICENSE)
+restricts its use to research and evaluation. The checkpoint is an
+**experimental pilot only**; replace it or secure suitable rights before
+commercial use. A 30-photo pilot took 17.56 seconds for the model stage;
+24 video samples took 9.52 seconds on the current CPU. Peak memory and
+clean-machine model setup time remain unmeasured. See
+[the pilot](../reports/model_candidate_pilot.md) and
+[candidate contract](visual_candidates.md).
 
 ## Optional cloud candidate, not adopted
 

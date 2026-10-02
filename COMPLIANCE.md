@@ -35,7 +35,7 @@ Status as of 2 October 2026. `Complete` means the named evidence exists and has 
 | New walk-in capture processed without property setup | Planned cold rehearsal | None | not started |
 | No specialist rig, no reference truth as inference input | [docs/decisions.md](docs/decisions.md) | Design rule; no pipeline to test | partial |
 | Challenging surfaces and low light reported | Planned home benchmark and quality report | None | not started |
-| CPU/no-GPU local path, free dependencies, disclosed external components | [README.md](README.md), [docs/decisions.md](docs/decisions.md), [scripts/setup.sh](scripts/setup.sh) | Foundation CLI only | partial |
+| CPU/no-GPU local path, free dependencies, disclosed external components | [README.md](README.md), [docs/dependencies.md](docs/dependencies.md), [scripts/setup.sh](scripts/setup.sh) | Optional ONNX model pilot runs locally on CPU; research/evaluation license prevents commercial adoption; peak memory and clean setup unmeasured | partial |
 
 ## Eight required deliverables
 

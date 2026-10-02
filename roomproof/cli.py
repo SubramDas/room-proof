@@ -347,6 +347,9 @@ def main():
     processor.add_argument("--max-video-frames", type=positive_int, default=24, help="maximum evenly spaced frames to decode for an ordinary video")
     processor.add_argument("--max-lidar-frames", type=positive_int, default=32, help="maximum evenly spaced depth frames for diagnostic geometry")
     processor.add_argument("--lidar-drift", choices=("on", "off"), default="on", help="apply only geometrically verified LiDAR revisit correction")
+    processor.add_argument("--visual-model", choices=("on", "off"), default="off", help="run the local experimental semantic candidate stage")
+    processor.add_argument("--visual-model-path", help="local ONNX checkpoint; its SHA-256 must match the published checkpoint")
+    processor.add_argument("--max-model-frames", type=positive_int, default=24, help="maximum selected RGB frames passed to the visual model")
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture
     processor.set_defaults(func=process_capture)

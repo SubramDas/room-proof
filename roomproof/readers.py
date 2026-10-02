@@ -48,7 +48,8 @@ def read_photo_folders(root, capture_id, run_dir):
     return [{"path": str(index_path), "sha256": sha256(index_path)}]
 
 
-def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=24):
+def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=24,
+                       source_size=None):
     """Decode a bounded, even sample to downscaled RGB files with frame refs."""
     if frame_count < 1:
         raise ValueError("video has no frames to sample")
@@ -94,6 +95,8 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
                 "timestamp_seconds": round(index / fps, 6),
                 "width": 640,
                 "height": height,
+                "source_width": source_size[0] if source_size else None,
+                "source_height": source_size[1] if source_size else None,
                 "pixel_format": "rgb24",
                 "sampled_path": frame_path.name,
                 "sampled_sha256": sha256(frame_path),

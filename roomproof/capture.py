@@ -3,6 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
+import time
 
 from . import __version__
 from .cli import sha256, write_json
@@ -233,6 +234,7 @@ def process_capture(args, run_dir, run):
                 output_artifacts = read_video_samples(
                     source, args.capture_id, run_dir,
                     metrics["decoded_frames"], metrics["fps"], args.max_video_frames,
+                    source_size=(metrics["width"], metrics["height"]),
                 )
                 next_stage = "frames_indexed"
             else:
@@ -266,8 +268,50 @@ def process_capture(args, run_dir, run):
                 metrics["lidar_room_fit_status"] = geometry["room_fit"]["status"]
                 metrics["lidar_opening_candidate_count"] = len(geometry["room_fit"].get("opening_gap_candidates", []))
                 warnings.extend(geometry["warnings"])
+            if args.visual_model == "on":
+                model_started = time.monotonic()
+                if args.tier == "lidar":
+                    candidate_report = {
+                        "report_version": "0.1.0", "status": "skipped_rgb_pairing_unresolved",
+                        "capture_id": args.capture_id, "tier": args.tier, "model": None,
+                        "selection": {"available_frames": 0, "selected_frame_ids": [],
+                                      "maximum": args.max_model_frames,
+                                      "rule": "LiDAR RGB inference requires verified RGB/depth/pose correspondence"},
+                        "frames": [], "candidates": [],
+                        "warnings": ["Exact Stray RGB/depth pairing is unresolved; RGB candidates cannot be linked to metric walls."],
+                    }
+                    candidate_path = run_dir / "visual_candidates.json"
+                    write_json(candidate_path, candidate_report)
+                    output_artifacts.append({"path": str(candidate_path), "sha256": sha256(candidate_path)})
+                else:
+                    try:
+                        from .visual_candidates import generate_candidates
+                        candidate_report, candidate_artifacts = generate_candidates(
+                            source, index, run_dir, maximum=args.max_model_frames,
+                            model_path=args.visual_model_path)
+                        output_artifacts.extend(candidate_artifacts)
+                        run["model_or_api"] = candidate_report["model"]
+                    except Exception as model_error:
+                        candidate_report = {
+                            "report_version": "0.1.0", "status": "unavailable",
+                            "capture_id": args.capture_id, "tier": args.tier, "model": None,
+                            "selection": {"available_frames": len(index["frames"]),
+                                          "selected_frame_ids": [], "maximum": args.max_model_frames,
+                                          "rule": "model stage stopped before candidate output"},
+                            "frames": [], "candidates": [],
+                            "warnings": [f"Visual model unavailable: {type(model_error).__name__}: {model_error}"],
+                        }
+                        candidate_path = run_dir / "visual_candidates.json"
+                        write_json(candidate_path, candidate_report)
+                        output_artifacts.append({"path": str(candidate_path), "sha256": sha256(candidate_path)})
+                run["stage_seconds"]["visual_candidates"] = round(time.monotonic() - model_started, 6)
+                metrics["visual_model_status"] = candidate_report["status"]
+                metrics["visual_candidate_count"] = len(candidate_report["candidates"])
+                metrics["visual_model_selected_frame_ids"] = candidate_report["selection"]["selected_frame_ids"]
+                warnings.extend(candidate_report["warnings"])
             plan = build_plan(args, run["run_id"], index, warnings,
-                              geometry=geometry if args.tier == "lidar" else None)
+                              geometry=geometry if args.tier == "lidar" else None,
+                              candidates=candidate_report if args.visual_model == "on" else None)
             validation_errors = validate(plan)
             if validation_errors:
                 raise ValueError("property plan validation: " + "; ".join(validation_errors[:5]))

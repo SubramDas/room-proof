@@ -69,7 +69,7 @@ def _apply_lidar_room_fit(plan, index, fit):
                          'floor_area': _provisional(area, 'm2', floor_refs)})
 
 
-def build_plan(args, run_id, index, warnings, geometry=None):
+def build_plan(args, run_id, index, warnings, geometry=None, candidates=None):
     refs = [frame['source_ref'] for frame in index['frames'] if 'source_ref' in frame]
     if args.tier == 'lidar':
         refs = [index['rgb_source_ref'], index['odometry_source_ref'], index['camera_matrix_source_ref']]
@@ -88,6 +88,12 @@ def build_plan(args, run_id, index, warnings, geometry=None):
     plan = {'schema_version': '0.1.0', 'property_id': args.property_id, 'run_id': run_id, 'capture': {'capture_id': args.capture_id, 'tier': args.tier, 'device_model': args.device_model, 'ios_version': args.ios_version, 'capture_app': args.capture_app, 'capture_app_version': args.capture_app_version, 'source_refs': refs}, 'coordinate_system': {'unit': 'm', 'origin': 'capture_local', 'x_axis': 'right_on_plan', 'y_axis': 'up_on_plan'}, 'plan': {'status': 'unresolved', 'footprint': None, 'floor_area': unknown('m2', refs), 'rendered_plan_path': 'property_plan.svg'}, 'rooms': rooms, 'adjacency': [], 'placement_ambiguities': ambiguities, 'damage_regions': [], 'concealed_damage_flags': [], 'scope_items': [], 'warnings': list(warnings)}
     if args.tier == 'lidar' and geometry is not None:
         _apply_lidar_room_fit(plan, index, geometry['room_fit'])
+    if candidates is not None and candidates['status'] == 'proposals_only':
+        counts = {kind: sum(item['class'] == kind for item in candidates['candidates'])
+                  for kind in ('wall', 'floor', 'ceiling', 'door', 'window')}
+        plan['warnings'].append(
+            'Visual model proposals: ' + ', '.join(f'{count} {kind}' for kind, count in counts.items())
+            + '; see visual_candidates.json. Openings and room connections are unverified.')
     if plan['plan']['status'] == 'unresolved':
         plan['warnings'].append('Geometry, openings, damage, and room placement have not been inferred. Capture coverage does not establish absence of damage.')
     else:

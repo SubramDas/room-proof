@@ -1,8 +1,8 @@
 # RoomProof
 
-Status: input-validation foundation. The repository does **not** yet reconstruct plans or pass the benchmark gates. See [SPEC.md](SPEC.md), [TASK.md](TASK.md), and [COMPLIANCE.md](COMPLIANCE.md).
+Status: partial reconstruction pipeline. A labelled single-room LiDAR scan can produce a provisional plan; photo and video plans remain unresolved, and benchmark gates are not met. See [SPEC.md](SPEC.md), [TASK.md](TASK.md), and [COMPLIANCE.md](COMPLIANCE.md).
 
-Phase journals are [Journal-0.md](Journal-0.md) through [Journal-10.md](Journal-10.md). Phase 5 adds evidence-gated damage rules but no detector. The separate reference evaluator is invoked after prediction, once independent truth exists:
+Phase journals are [Journal-0.md](Journal-0.md) through [Journal-11.md](Journal-11.md). Phase 5 adds evidence-gated damage rules but no detector. The separate reference evaluator is invoked after prediction, once independent truth exists:
 
 An optional single-image [Gemini vision probe](roomproof/cloud_vision.py) is available with `GEMINI_API_KEY` set: `.venv/bin/python -m roomproof probe-vision PHOTO.jpeg`. It sends the original image to Google's API, stores model/response/usage/latency in an ignored run directory, and does not modify the property plan. Google's [pricing page](https://ai.google.dev/gemini-api/docs/pricing) currently lists a free tier for `gemini-3.5-flash-lite`; [image input documentation](https://ai.google.dev/gemini-api/docs/image-understanding) explains inline image transfer. Account quota and free availability must be rechecked at use time. No labelled cloud-versus-local accuracy result exists yet.
 
@@ -57,7 +57,32 @@ processing also writes `quality_report.json`, `property_plan.json`, and
 input still gets a failed run record. An accepted capture can produce an
 *unresolved* plan; this means the geometry gate remains unsatisfied.
 
-No neural-network weights are required for the current local processing path.
+An experimental local semantic candidate stage is available for photo and
+standalone video. It is off by default. Install its optional pinned Python
+dependencies and fetch the hash-checked checkpoint, then use the same
+`process-capture` command with `--visual-model on`:
+
+```bash
+.venv/bin/python -m pip install --require-hashes -r requirements-model.txt
+.venv/bin/python scripts/fetch_visual_model.py
+.venv/bin/python -m roomproof process-capture captures/my-photos --tier photo \
+  --property-id prop-home --capture-id cap-home-photo --visual-model on
+.venv/bin/python -m roomproof process-capture captures/my-video.mp4 --tier video \
+  --property-id prop-home --capture-id cap-home-video --visual-model on
+```
+
+The stage writes `visual_candidates.json` and source-linked mask PNGs before
+the plan stage. `--max-model-frames` bounds inference (default 24). Missing
+weights or inference failure writes a diagnosable `unavailable` report and
+keeps the plan unresolved. LiDAR currently reports
+`skipped_rgb_pairing_unresolved` because the Stray RGB/depth frame link has
+not been verified. Proposals do not establish metric dimensions or room
+adjacency. The [candidate contract](docs/visual_candidates.md),
+[pilot results](reports/model_candidate_pilot.md), and
+[owner review sheet](docs/model_label_review.md) record current evidence.
+The checkpoint is research/evaluation licensed and has not been adopted for
+commercial production.
+
 The optional cloud probe needs `GEMINI_API_KEY` in the environment and explicit
 approval before uploading any private interior photo. Its output is separate
 from `process-capture`. Keep raw captures and reference truth in the separate
