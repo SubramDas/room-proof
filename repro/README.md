@@ -5,7 +5,7 @@ RoomProof uses a local content-addressed bundle, kept outside ordinary Git. The 
 Import one capture folder with metadata (use the actual app/version when known):
 
 ```bash
-python3 -m roomproof import-capture single_room/c00a170fe1 \
+.venv/bin/python -m roomproof import-capture single_room/c00a170fe1 \
   --bundle repro/bundle --property-id prop-starter \
   --tier lidar --source-label supplied-single-room \
   --notes 'Starter export; device and app versions not yet verified'
@@ -14,20 +14,20 @@ python3 -m roomproof import-capture single_room/c00a170fe1 \
 The command prints a capture manifest path and a run manifest path. Check the recorded metadata before using it in a benchmark. Verify all imported bytes:
 
 ```bash
-python3 -m roomproof verify-capture --bundle repro/bundle \
+.venv/bin/python -m roomproof verify-capture --bundle repro/bundle \
   --manifest repro/bundle/captures/CAPTURE_ID.json
 ```
 
 After importing a new capture, regenerate the tracked index and commit the index change with the corresponding metadata decision:
 
 ```bash
-python3 -m roomproof index-bundle --bundle repro/bundle --index repro/manifest.json
+.venv/bin/python -m roomproof index-bundle --bundle repro/bundle --index repro/manifest.json
 ```
 
 To deliver the bundle, copy its **entire** directory (including `captures/` and `objects/`) to a separate local volume or archive; do not rely on `.gitignore` or a source folder existing on another machine. The tracked [manifest.json](manifest.json) lists expected capture-manifest SHA-256 hashes. On a clean directory, copy the bundle and run:
 
 ```bash
-python3 -m roomproof verify-bundle --bundle /path/to/copied/bundle --index repro/manifest.json
+.venv/bin/python -m roomproof verify-bundle --bundle /path/to/copied/bundle --index repro/manifest.json
 ```
 
 This checks the tracked manifest hashes and every raw object. Then run the documented prediction/scoring commands when they exist. Retain the original source folders separately until submission is verified.
