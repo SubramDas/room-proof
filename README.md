@@ -13,6 +13,6 @@ A fresh temporary-directory setup on the development machine took 3.07 seconds, 
 
 The CLI currently imports and verifies original capture files in a reproducible [local bundle](repro/README.md). It writes a run manifest for each import/verification attempt, including failures. The future `photo`, `video`, and `lidar` processing command, JSON/plan outputs, and evaluation remain open tasks.
 
-Run project CLI commands with `.venv/bin/python -m roomproof ...` after setup. The setup script uses system `python3` only to create that virtual environment.
+Run **every** project Python or CLI command through `.venv/bin/python` after setup. The setup script uses system `python3` only to create that virtual environment. Progress is recorded in [TASK.md](TASK.md) and a root-level journal for each numbered phase, beginning with [Journal-0.md](Journal-0.md).
 
 Working choices are in [docs/decisions.md](docs/decisions.md); stable IDs and manifests are in [docs/ids_and_manifests.md](docs/ids_and_manifests.md). Raw starter data and local environments are ignored by Git. Preserve raw interiors outside public Git until the owner chooses a submission destination and access level.

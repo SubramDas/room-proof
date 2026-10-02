@@ -4,6 +4,8 @@
 
 **People:** `Agent` = work I can do in this repository; `Owner` = phone capture, physical measurement, or account/device access that you provide; `Both` = coordinated work. The owner may send captures while agent work continues. **P0** items unlock a fresh capture at each tier; **P1** items satisfy the benchmark and scored gates; **P2** items package and defend the result. Every requirement remains mandatory even where a priority marks execution order.
 
+**Execution and journal rule:** After setup, run every project Python command through `.venv/bin/python`; system `python3` is used only to create the environment. Maintain a root-level `Journal-<phase number>.md` for each numbered section below. Record evidence as work lands and update the journal when that phase completes, including remaining failures and run IDs. [Journal-0.md](Journal-0.md) records the foundation work so far; Phase 0 remains open while T02 and T08 are unchecked.
+
 **Current evidence:** `SPEC.md` exists; `schema/property_plan.schema.json` version 0.1.0 and a validating synthetic example exist. The three ignored local LiDAR-style exports have been copied into a SHA-256 bundle and verified in a second directory, but their media alignment, units, geometry, and device metadata remain unaudited. They do not supply the required matched photo/video/home benchmark, ground truth, or comparator exports. Git has the initial spec, discovery, and foundation milestone commits. Do not present planning artifacts, synthetic example numbers, or byte-verification runs as benchmark results.
 
 ## Critical path and dependency map
