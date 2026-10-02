@@ -123,7 +123,7 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 - [ ] **T64 [Both]** Preselect two distinct benchmark rooms and the eligible wall/opening/height dimensions **before** seeing comparison errors. **Done when:** the frozen list and reference IDs are recorded.
 - [ ] **T65 [Owner]** Scan the two rooms with magicplan on the same phone/site visit, with no manual truth-based correction; save original exports and actions taken. **Done when:** both app exports and versions are in the raw benchmark bundle.
 - [ ] **T66 [Agent]** Build the dimension-by-dimension table with independent truth, our error, app error, win/tie/loss, omissions, and reported precision. **Done when:** both literal shared-only ≥70% score and the owner-requested expanded score (accurate ours-only dimensions may win) are reported separately.
-- [ ] **T67 [Agent]** Predeclare an absolute LiDAR wall-length accuracy limit for ours-only dimensions before the baseline; opening/height limits are already in the brief. **Done when:** the expanded score cannot select its tolerance after results are visible.
+- [x] **T67 [Agent]** Predeclare an absolute LiDAR wall-length accuracy limit for ours-only dimensions before the baseline; opening/height limits are already in the brief. **Done when:** the expanded score cannot select its tolerance after results are visible. Project working limit is 0.05 m absolute error in `roomproof/comparator.py`, frozen before benchmark results.
 
 ## 9. The scored fix loop — P1; must follow a complete baseline
 
