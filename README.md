@@ -2,6 +2,14 @@
 
 Status: input-validation foundation. The repository does **not** yet reconstruct plans or pass the benchmark gates. See [SPEC.md](SPEC.md), [TASK.md](TASK.md), and [COMPLIANCE.md](COMPLIANCE.md).
 
+Phase journals are [Journal-0.md](Journal-0.md) through [Journal-10.md](Journal-10.md). Phase 5 adds evidence-gated damage rules but no detector. The separate reference evaluator is invoked after prediction, once independent truth exists:
+
+```bash
+.venv/bin/python -m roomproof score-benchmark /path/to/benchmark_manifest.json
+```
+
+The manifest format is in [docs/benchmark_manifest.md](docs/benchmark_manifest.md). Keep this reference file outside the capture input tree; `process-capture` never reads it. The scorer currently covers measurement omissions/error and finite interval coverage, openings, ceiling accuracy, photo/video wall error, footprint area, and adjacency. Repeatability, shape alignment, drift ablation, and damage accuracy remain unfinished. [reports/benchmark.md](reports/benchmark.md) records the outstanding evidence.
+
 Ubuntu 24.04 with Python 3.12.3 is the tested platform. The pinned [requirements.txt](requirements.txt) now includes a free HEVC decoder for Stray Scanner export validation. Its Linux x86-64 wheel is about 29.5 MB. Set up a local environment and print the CLI version:
 
 ```bash
