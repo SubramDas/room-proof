@@ -69,14 +69,20 @@ dependencies and fetch the hash-checked checkpoint, then use the same
   --property-id prop-home --capture-id cap-home-photo --visual-model on
 .venv/bin/python -m roomproof process-capture captures/my-video.mp4 --tier video \
   --property-id prop-home --capture-id cap-home-video --visual-model on
+.venv/bin/python -m roomproof process-capture captures/my-extracted-stray --tier lidar \
+  --property-id prop-home --capture-id cap-home-lidar --room-id room-hall \
+  --room-kind connector --visual-model on
 ```
 
 The stage writes `visual_candidates.json` and source-linked mask PNGs before
 the plan stage. `--max-model-frames` bounds inference (default 24). Missing
 weights or inference failure writes a diagnosable `unavailable` report and
-keeps the plan unresolved. LiDAR currently reports
-`skipped_rgb_pairing_unresolved` because the Stray RGB/depth frame link has
-not been verified. Proposals do not establish metric dimensions or room
+keeps the plan unresolved. For LiDAR, the same flag produces independent RGB
+proposals plus `rgb_pairing.json` and `lidar_candidate_links.json`. The pairing
+stage compares nearby depth frames using RGB/depth boundaries; only sampled
+frames that pass this check receive registered candidate links. Door proposals
+must still match a supported depth gap and repeated views before affecting
+an opening. Proposals do not establish metric dimensions or room
 adjacency. The [candidate contract](docs/visual_candidates.md),
 [pilot results](reports/model_candidate_pilot.md), and
 [owner review sheet](docs/model_label_review.md) record current evidence.

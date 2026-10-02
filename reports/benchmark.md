@@ -11,7 +11,14 @@ The optional local model pilot has paired photo/video model-on and model-off
 runs in [model_candidate_pilot.md](model_candidate_pilot.md). Both final plans
 remain unresolved. Candidate counts and timing are recorded, but no labelled
 precision/recall or metric plan improvement can yet be scored. LiDAR RGB
-inference is gated on verified RGB/depth/pose correspondence.
+proposals remain separate from metric openings until registration and
+wall-gap correspondence are supported.
+
+The later [hall LiDAR RGB integration](lidar_rgb_candidate_integration.md)
+established a sampled one-frame RGB/depth offset and ran the local visual
+model on 24 RGB frames. Two door proposals failed the depth-gap location
+check; the final hall plan and its unverified opening were unchanged. This
+is not a scored model-on improvement.
 
 ## Evidence ledger to complete
 

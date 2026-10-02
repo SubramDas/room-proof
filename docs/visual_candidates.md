@@ -1,12 +1,12 @@
 # Experimental visual candidate contract
 
 `process-capture --visual-model on` writes `visual_candidates.json` after the
-photo/video reader and before `build_plan`. Version `0.1.0` records proposals,
-not verified geometry. The model is off by default. A failed or missing model
-writes `status: unavailable`; LiDAR writes
-`status: skipped_rgb_pairing_unresolved` until RGB/depth/pose correspondence is
-established. Both contain empty `candidates` and a reason, and leave the plan
-schema valid and unresolved wherever geometry is unsupported.
+reader and before `build_plan`. Version `0.1.0` records proposals, not
+verified geometry. The model is off by default. A failed or missing model
+writes `status: unavailable`, empty `candidates`, and a reason; it leaves the
+plan schema valid and unresolved where geometry is unsupported. LiDAR also
+writes `rgb_pairing.json`, `rgb_frames.json`, and
+`lidar_candidate_links.json` with timing and wall-link hypotheses.
 
 Each proposal has `candidate_id`, `class`, `status`, `status_reason`, `frame_id`,
 `source_ref`, `source_sha256`, optional `room_id` and `timestamp_seconds`, a
@@ -19,7 +19,7 @@ check `report_version` and frame references before use.
 
 Boxes use `[left, top, right, bottom]` with the right and bottom edges
 exclusive. For photos, `coordinate_space: source_photo` means the decoded
-original photo dimensions. For video, `coordinate_space: sampled_rgb_frame`
+original photo dimensions. For video and LiDAR RGB, `coordinate_space: sampled_rgb_frame`
 means the frame decoded by the existing reader at 640 pixels wide. The box
 also carries that sampled size and the original video frame size. Multiply x
 and y by `source_image_width / image_width` and
@@ -35,6 +35,24 @@ measurement interval. No door/window candidate is added to
 `property_plan.json` until its wall, repeated view, and geometry are checked.
 Photo folder IDs identify source groups only. A model failure does not imply
 that the capture is invalid or that an opening is absent.
+
+For Stray LiDAR, `rgb_pairing.json` preserves decoded MP4 presentation times
+and nearest relative odometry times, including residuals and unmatched
+frames. It tests nearby integer depth-frame offsets with RGB image gradients
+at measured depth discontinuities and shifted-pixel controls. A consistent
+offset across early, middle, and late sampled frames can support a scan-wide
+mapping; each sampled frame must also pass its own edge check to be marked
+`registered_candidate`. Unsampled frames retain timing-only status. The hall
+scan supported offset +1, leaving depth frame `000000` and two anomalous
+frames unpaired. This checks image/depth registration; it does not establish
+independent metric scale or prove every opening. `lidar_candidate_links.json`
+casts image rays through recorded intrinsics and poses and compares their
+nearest fitted-wall hits with depth-gap intervals. It records repeated-view
+groups separately. A ray hit does not verify an opening, and unsupported
+candidates cannot alter its status or dimensions. A depth-gap opening gains
+RGB source references and `inferred` status only if registered candidates
+from two independent camera positions agree on the same gap. Its width and
+offset still come from LiDAR and retain unbounded intervals.
 
 ## Current pilot limits
 

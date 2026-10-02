@@ -14,3 +14,4 @@
 /hall_video/
 __pycache__/
 *.py[cod]
+/:memory:.ses

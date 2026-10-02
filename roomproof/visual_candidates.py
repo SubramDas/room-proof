@@ -43,7 +43,7 @@ def _selected_frames(index, maximum):
 def _rgb_image(source, run_dir, tier, frame):
     from PIL import Image
 
-    if tier == "video":
+    if frame.get("sampled_path"):
         rgb = (run_dir / "frames" / frame["sampled_path"]).read_bytes()
         width, height = frame["width"], frame["height"]
     else:
@@ -113,6 +113,8 @@ def _frame_candidates(segmentation, probability, frame, mask_path):
                                "source_sha256": frame["source_sha256"],
                                "sampled_sha256": frame.get("sampled_sha256"),
                                "timestamp_seconds": frame.get("timestamp_seconds"),
+                               "depth_frame_id": frame.get("depth_frame_id"),
+                               "rgb_depth_pairing_status": frame.get("rgb_depth_pairing_status"),
                                "geometry": {"type": "box", "xyxy_px": box,
                                             "image_width": source_width, "image_height": source_height,
                                             "coordinate_space": "sampled_rgb_frame" if frame.get("sampled_path") else "source_photo",

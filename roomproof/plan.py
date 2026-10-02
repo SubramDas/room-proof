@@ -69,7 +69,37 @@ def _apply_lidar_room_fit(plan, index, fit):
                          'floor_area': _provisional(area, 'm2', floor_refs)})
 
 
-def build_plan(args, run_id, index, warnings, geometry=None, candidates=None):
+def _apply_supported_candidate_links(plan, candidate_links):
+    """Attach repeated visual support to an existing depth gap, never create a metric opening."""
+    if not plan['rooms'] or not candidate_links:
+        return
+    opening_by_number = {number: opening for number, opening in
+                         enumerate(plan['rooms'][0]['openings'], 1)}
+    for group in candidate_links.get('repeated_view_groups', []):
+        if not group['independent_views_supported'] or len(group['shared_depth_gap_ids']) != 1:
+            continue
+        gap_id = group['shared_depth_gap_ids'][0]
+        if not gap_id.startswith('opening-gap-'):
+            continue
+        try:
+            number = int(gap_id.removeprefix('opening-gap-'))
+        except ValueError:
+            continue
+        opening = opening_by_number.get(number)
+        if opening is None:
+            continue
+        supported = [record for record in candidate_links['records']
+                     if record['candidate_id'] in group['candidate_ids'] and
+                     record['status'] == 'supported_proposal' and
+                     record['class'] == opening['kind']]
+        if len(supported) < 2:
+            continue
+        opening['status'] = 'inferred'
+        opening['source_refs'] = sorted(set(opening['source_refs']) |
+                                        {record['source_ref'] for record in supported})
+
+
+def build_plan(args, run_id, index, warnings, geometry=None, candidates=None, candidate_links=None):
     refs = [frame['source_ref'] for frame in index['frames'] if 'source_ref' in frame]
     if args.tier == 'lidar':
         refs = [index['rgb_source_ref'], index['odometry_source_ref'], index['camera_matrix_source_ref']]
@@ -88,16 +118,26 @@ def build_plan(args, run_id, index, warnings, geometry=None, candidates=None):
     plan = {'schema_version': '0.1.0', 'property_id': args.property_id, 'run_id': run_id, 'capture': {'capture_id': args.capture_id, 'tier': args.tier, 'device_model': args.device_model, 'ios_version': args.ios_version, 'capture_app': args.capture_app, 'capture_app_version': args.capture_app_version, 'source_refs': refs}, 'coordinate_system': {'unit': 'm', 'origin': 'capture_local', 'x_axis': 'right_on_plan', 'y_axis': 'up_on_plan'}, 'plan': {'status': 'unresolved', 'footprint': None, 'floor_area': unknown('m2', refs), 'rendered_plan_path': 'property_plan.svg'}, 'rooms': rooms, 'adjacency': [], 'placement_ambiguities': ambiguities, 'damage_regions': [], 'concealed_damage_flags': [], 'scope_items': [], 'warnings': list(warnings)}
     if args.tier == 'lidar' and geometry is not None:
         _apply_lidar_room_fit(plan, index, geometry['room_fit'])
-    if candidates is not None and candidates['status'] == 'proposals_only':
+    if candidates is not None and candidates['status'].startswith('proposals'):
         counts = {kind: sum(item['class'] == kind for item in candidates['candidates'])
                   for kind in ('wall', 'floor', 'ceiling', 'door', 'window')}
         plan['warnings'].append(
             'Visual model proposals: ' + ', '.join(f'{count} {kind}' for kind, count in counts.items())
             + '; see visual_candidates.json. Openings and room connections are unverified.')
+    if candidate_links is not None:
+        _apply_supported_candidate_links(plan, candidate_links)
+        plan['warnings'].append(
+            f"LiDAR RGB candidate linkage: {candidate_links['projected_to_wall_count']} rays hit fitted walls, "
+            f"{candidate_links['gap_coincidence_count']} coincide with a depth gap, "
+            f"{candidate_links['supported_proposal_count']} have supported opening evidence; "
+            'see lidar_candidate_links.json. Only repeated registered gap matches can support a plan opening.')
     if plan['plan']['status'] == 'unresolved':
         plan['warnings'].append('Geometry, openings, damage, and room placement have not been inferred. Capture coverage does not establish absence of damage.')
     else:
-        plan['warnings'].append('Provisional LiDAR room layout; dimensions are not calibrated. Opening candidates are unverified; damage remains unresolved.')
+        opening_note = ('Some openings have repeated registered visual support; their metric dimensions remain uncalibrated.'
+                        if any(opening['status'] == 'inferred' for room in plan['rooms'] for opening in room['openings'])
+                        else 'Opening candidates are unverified.')
+        plan['warnings'].append('Provisional LiDAR room layout; dimensions are not calibrated. ' + opening_note + ' Damage remains unresolved.')
     return plan
 
 
@@ -246,7 +286,9 @@ def render(plan, path):
         area = room['floor_area']['value']
         area_label = f'{area:.2f} m²' if area is not None else 'unknown m²'
         opening_count = len(room['openings'])
-        opening_label = f'{opening_count} candidate(s), unverified' if opening_count else 'unassessed'
+        verified_count = sum(opening['status'] == 'inferred' for opening in room['openings'])
+        opening_label = (f'{opening_count} candidate(s), {verified_count} with repeated visual support'
+                         if opening_count else 'unassessed')
         damage_count = sum(item['room_id'] == room['id'] for item in plan['damage_regions'])
         parts += [f'<rect x="36" y="{y}" width="920" height="82" rx="8" fill="white" stroke="#94a3b8" stroke-dasharray="7 5"/>', f'<text x="55" y="{y+29}" class="body">{html.escape(room["name"])} ({html.escape(room["id"])})</text>', f'<text x="55" y="{y+55}" class="small">Area: {area_label} · Openings: {opening_label} · Damage regions: {damage_count} · {html.escape(room["status"])}</text>']
     y = 125 + 100*len(rooms)
@@ -278,6 +320,7 @@ def render(plan, path):
                 wx,wy=xy(midpoint)
                 parts.append(f'<text x="{wx:.1f}" y="{wy:.1f}" class="small">{wall["length"]["value"]:.2f} m</text>')
             for opening in room['openings']:
-                parts.append(f'<text x="{cx:.1f}" y="{cy+24:.1f}" class="small">Possible {html.escape(opening["kind"])}: {opening["width"]["value"] if opening["width"]["value"] is not None else "?"} m wide, height unknown</text>')
+                label = 'Supported candidate' if opening['status'] == 'inferred' else 'Possible'
+                parts.append(f'<text x="{cx:.1f}" y="{cy+24:.1f}" class="small">{label} {html.escape(opening["kind"])}: {opening["width"]["value"] if opening["width"]["value"] is not None else "?"} m wide, height unknown</text>')
     parts.append('</svg>')
     path.write_text('\n'.join(parts), encoding='utf-8')

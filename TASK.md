@@ -186,8 +186,10 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 
 **Phase 11 progress (2 October 2026):** T84 is implemented. An experimental
 model-on/off photo and video stage and paired unscored pilot runs address part
-of T86–T88 and T93; LiDAR visual proposals are explicitly gated pending
-frame correspondence (part of T89). See `Journal-11.md`,
+of T86–T88 and T93. LiDAR now proposes RGB candidates, audits relative timing
+and sampled pixel registration, and gates wall/depth-gap links (part of T89–T90).
+The hall scan supported a one-frame depth offset but neither model door
+proposal matched its provisional depth gap. See `Journal-11.md`,
 `reports/model_candidate_pilot.md`, and `docs/model_label_review.md`. T85 and
 T91 need owner labels, and T90/T92 still lack verified geometry, placement,
 and interval calibration. The current checkpoint is not adopted for a

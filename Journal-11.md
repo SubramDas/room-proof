@@ -5,8 +5,8 @@ semantic candidate stage to `process-capture` for photo and standalone video.
 It writes versioned, source-linked `visual_candidates.json` and mask PNGs;
 the plan records proposal counts but does not promote them to verified
 openings, links, or measurements. Missing weights and inference errors are
-reported as `unavailable`; LiDAR RGB is gated as
-`skipped_rgb_pairing_unresolved`. The stage is off by default and can be
+reported as `unavailable`. LiDAR RGB inference now runs independently, with
+timing and sampled spatial registration reports that gate any wall link. The stage is off by default and can be
 compared with the no-model path through the same CLI.
 
 The selected pilot is quantized SegFormer B0 ADE20K on ONNX Runtime CPU.
@@ -25,7 +25,7 @@ captures remain untouched.
 
 Open: owner-reviewed labels and splits; precision/recall and wall/door
 association scoring; a model choice justified by accuracy and license;
-RGB/depth/pose correspondence for Stray; candidate association, merging,
+full-frame RGB/depth/pose correspondence for Stray; candidate association, merging,
 rejection, and placement optimization; metric validation and calibrated
 intervals; visible damage examples; untouched all-tier evaluation. Current
 photo and video plans remain unresolved. A model-on run producing proposals
@@ -36,6 +36,10 @@ face each other and that the open kitchen doorway connects to the hall.
 These development labels are in `docs/model_label_review.md`. A hall-only
 model-on run across the seven `room-hall` photos, `hall.mp4`, and `hall.zip`
 is documented in `reports/hall_model_pipeline.md`. Photo/video plans remain
-unresolved; LiDAR produces the same provisional single-hall geometry and
-skips RGB model inference because exact pairing remains unresolved. The
-private output bundle is under ignored `runs/`.
+unresolved. The first LiDAR run skipped RGB model inference; the later
+implementation extracts RGB proposals and checks sampled RGB/depth alignment.
+The latest hall run `run-d421e1bc9d614527af63cfb6703dbfde` supported
+depth offset +1 from image boundaries. Its two door proposals miss the
+provisional depth-gap location, so the hall plan retains an unverified
+doorway. See `reports/lidar_rgb_candidate_integration.md`. Private run files
+remain under ignored `runs/`.
