@@ -61,6 +61,7 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 - [ ] **T26 [Agent]** Find and size wall openings, including doors/windows, using depth gaps and RGB evidence; keep missed/uncertain detections visible. **Done when:** each opening has a stable wall link, width, height, and offset measurement.
 - [ ] **T27 [Agent]** Detect room transitions and assemble a single plan for a multiroom LiDAR scan, including its connector. **Done when:** every captured room is placed once with candidate adjacency and no hidden hand placement.
 - [ ] **T28 [Agent]** Add accumulated-drift correction (for example loop closure/pose graph or shared-plane constraints) and an `on/off` switch. **Done when:** the same multiroom input produces two recorded stitched footprints and a quantitative ablation; poses used as-is alone are not the final method.
+  - [x] Record bounded pose-return candidates from the Flat-805 trajectory; no similar-orientation closure was supported, so no correction or ablation is claimed.
 - [ ] **T29 [Agent]** Preserve failures around glass, mirrors, wet-look surfaces, low light, tracking loss, and unobserved ceilings as warnings and wider intervals. **Done when:** these cases are traceable in plan/run quality reports rather than silently treated as valid depth.
   - [x] Record large consecutive pose jumps and weak sampled depth coverage in the geometry report and plan warnings.
   - [ ] Diagnose glass, mirrors, wet-look surfaces, low light, and unobserved ceilings from capture evidence; widen affected measurement intervals.

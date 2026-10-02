@@ -128,6 +128,34 @@ def _vertical_bins(observations, angle_step_degrees=5, distance_step=.1):
     return sorted(candidates, key=lambda item: (-item['supporting_frames'], -item['samples']))[:40]
 
 
+def _pose_revisits(frames, stride=15, min_separation_seconds=20, max_distance_m=.4,
+                   max_rotation_degrees=45):
+    """Unverified return-to-place candidates from recorded poses only."""
+    sampled = frames[::stride]
+    candidates = []
+    for first_index, first in enumerate(sampled):
+        a = first['pose']
+        for second in sampled[first_index+1:]:
+            b = second['pose']
+            separation = b['timestamp_seconds'] - a['timestamp_seconds']
+            if separation < min_separation_seconds:
+                continue
+            distance = math.dist(a['translation_m'], b['translation_m'])
+            if distance > max_distance_m:
+                continue
+            dot = abs(sum(x*y for x, y in zip(a['quaternion_xyzw'], b['quaternion_xyzw'])))
+            rotation = math.degrees(2*math.acos(min(1., dot)))
+            candidates.append({'first_frame_id': first['frame_id'],
+                               'second_frame_id': second['frame_id'],
+                               'separation_seconds': round(separation, 2),
+                               'pose_distance_m': round(distance, 3),
+                               'orientation_difference_degrees': round(rotation, 1),
+                               'similar_orientation': rotation <= max_rotation_degrees})
+    candidates.sort(key=lambda item: (item['pose_distance_m'], item['orientation_difference_degrees']))
+    return {'nearby_pose_pairs': candidates[:20],
+            'similar_view_pairs': [item for item in candidates if item['similar_orientation']][:20]}
+
+
 def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimum_confidence=1):
     """Write a bounded world-point PLY and candidate horizontal plane heights."""
     scan = Path(scan)
@@ -141,6 +169,7 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
     pose_positions = [frame['pose']['translation_m'] for frame in index['frames']]
     pose_jumps = [math.dist(a, b) for a, b in zip(pose_positions, pose_positions[1:])]
     jump_indices = [i+1 for i, jump in enumerate(pose_jumps) if jump > .10]
+    revisit_candidates = _pose_revisits(index['frames'])
     for frame_number in chosen:
         frame = index['frames'][frame_number]
         frame_id = frame['frame_id']
@@ -220,6 +249,10 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
         'confidence_counts_sampled': {str(k): v for k,v in sorted(confidence_counts.items())},
         'rejected_sample_counts': dict(rejection),
         'tracking_jump_frame_indices': jump_indices,
+        'pose_start_end_distance_m': math.dist(pose_positions[0], pose_positions[-1]),
+        'pose_return_candidates': revisit_candidates['nearby_pose_pairs'],
+        'pose_revisit_candidates': revisit_candidates['similar_view_pairs'],
+        'pose_revisit_warning': 'Pose proximity is not loop closure; depth/RGB correspondence must confirm the same surfaces before correcting drift.',
         'largest_pose_step_m': max(pose_jumps, default=0),
         'coordinate_extent_m': {'x': [min(xs), max(xs)], 'y': [min(ys), max(ys)], 'z': [min(zs), max(zs)]},
         'horizontal_y_peaks': sorted(_horizontal_bins(horizontal), key=lambda item: -item['samples'])[:8],
