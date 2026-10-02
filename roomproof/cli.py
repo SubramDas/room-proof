@@ -299,5 +299,15 @@ def main():
     auditor.add_argument("--runs-dir", default="runs")
     from .stray_audit import audit_stray
     auditor.set_defaults(func=audit_stray)
+    processor = subcommands.add_parser("process-capture", help="validate a photo, video, or LiDAR capture and create a run report")
+    processor.add_argument("capture", help="photo room folders, one video file, or extracted Stray Scanner folder")
+    processor.add_argument("--tier", choices=("photo", "video", "lidar"), required=True)
+    processor.add_argument("--property-id", required=True)
+    processor.add_argument("--capture-id", required=True)
+    processor.add_argument("--device-model")
+    processor.add_argument("--device-has-lidar", choices=("true", "false", "unknown"), default="unknown")
+    processor.add_argument("--runs-dir", default="runs")
+    from .capture import process_capture
+    processor.set_defaults(func=process_capture)
     args = parser.parse_args()
     return execute(args.command, args, args.func)

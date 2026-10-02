@@ -43,7 +43,7 @@ Status as of 2 October 2026. `Complete` means the named evidence exists and has 
 | --- | --- | --- | --- | --- |
 | 1 | Compliance matrix | [COMPLIANCE.md](COMPLIANCE.md) | This audited matrix; update as runs exist | complete |
 | 2 | Tested capture guide and device matrix | [protocols/stock_capture.md](protocols/stock_capture.md), [docs/device_matrix.md](docs/device_matrix.md) | Owner app export validated; non-engineer timing/repeat incomplete | partial |
-| 3 | Runnable repository under 15 minutes, one command per capture | [README.md](README.md), [scripts/setup.sh](scripts/setup.sh); planned pipeline command | Foundation CLI runs; capture processing and timing absent | partial |
+| 3 | Runnable repository under 15 minutes, one command per capture | [README.md](README.md), [scripts/setup.sh](scripts/setup.sh); `process-capture` input checks | Setup and tier-aware input checks run; geometry processing and end-to-end timing absent | partial |
 | 4 | Reproduction bundle: exact raw files, references, code/models/settings | [repro/README.md](repro/README.md), local `repro/bundle/`; planned benchmark bundle | All three starter scans imported and clean-copy verified; home data, truth, models, replay absent | partial |
 | 5 | All-tier benchmark and gate report | Planned `reports/benchmark.md` | None | not started |
 | 6 | Fix-loop declaration, before/after and diff | Planned `fix_loop/` | None | not started |
@@ -74,3 +74,10 @@ Status as of 2 October 2026. `Complete` means the named evidence exists and has 
 | T12 non-engineer rehearsal | Owner reports total under five minutes | partial: breakdown, observed confusion, and repeat evidence pending |
 | T13 device matrix | [docs/device_matrix.md](docs/device_matrix.md) | complete; accuracy explicitly unmeasured |
 | T14 fallback decision | [Capture route guide](protocols/stock_capture.md), [format report](reports/device_format_dummy_room.md) | complete for free Stray capture/share/transfer/audit; mismatch explicitly documented, Scan4D fallback not triggered |
+
+## Phase 2 task evidence
+
+| Task | Evidence / run ID | Status |
+| --- | --- | --- |
+| T15 one-command capture entry point | [roomproof/capture.py](roomproof/capture.py), [README command](README.md) | photo `run-98c54ba0d00049e5a4015f22828b2468`, video `run-093977fb719c47bc8ee692c7f92bc0e4`, LiDAR `run-cb3603c144de470ab6b34c3aabd5809c`; all unique run reports under `/tmp/roomproof-runs/` |
+| T16 input rejection and low-confidence distinction | [roomproof/capture.py](roomproof/capture.py) | empty/missing folders `run-62a963c23a2d4f469cb23f9d9c8c21fb`, corrupt image `run-b2c25bd0192944b29c0f1eb405032ffa`, duplicate photo `run-aa4a1b1be38f4c29828c1c2d21e079c6`, empty clip `run-63bd26df1027415c977eebb689d70fc0`, unsupported LiDAR `run-2efbc50a6cca4fb0ac4dc6e5a39f0525`, missing LiDAR files `run-a76fc94ac2334894a1e8e807a5a23a6e`; owner frame mismatch is `valid_low_confidence` in `run-cb3603c144de470ab6b34c3aabd5809c` |

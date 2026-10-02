@@ -1,6 +1,6 @@
 # RoomProof execution tasks
 
-**Deadline:** 4 October 2026, 10:00 a.m. Asia/Kolkata. **Status:** planning and schema draft; no processing pipeline exists yet. This checklist implements [SPEC.md](SPEC.md). It is a work tracker, not evidence that a requirement has passed. Tick an item only after its stated output exists and has been checked.
+**Deadline:** 4 October 2026, 10:00 a.m. Asia/Kolkata. **Status:** input quality checks exist; geometry reconstruction and scored outputs are not implemented. This checklist implements [SPEC.md](SPEC.md). It is a work tracker, not evidence that a requirement has passed. Tick an item only after its stated output exists and has been checked.
 
 **People:** `Agent` = work I can do in this repository; `Owner` = phone capture, physical measurement, or account/device access that you provide; `Both` = coordinated work. The owner may send captures while agent work continues. **P0** items unlock a fresh capture at each tier; **P1** items satisfy the benchmark and scored gates; **P2** items package and defend the result. Every requirement remains mandatory even where a priority marks execution order.
 
@@ -40,8 +40,8 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 
 ## 2. Input contracts and one-command skeleton — P0
 
-- [ ] **T15 [Agent]** Implement one documented CLI entry point taking a capture path and tier (`photo`, `video`, `lidar`) and creating a unique run directory. **Done when:** the same command shape works for each tier without hidden manual preprocessing.
-- [ ] **T16 [Agent]** Accept/reject input explicitly: corrupt or duplicate media, missing photo folders, fewer than 2 or more than 8 photos per room, missing depth/pose samples, unsupported device/tier, and empty clips. **Done when:** a quality report distinguishes invalid input from a valid low-confidence result.
+- [x] **T15 [Agent]** Implement one documented CLI entry point taking a capture path and tier (`photo`, `video`, `lidar`) and creating a unique run directory. **Done when:** the same command shape works for each tier without hidden manual preprocessing. `process-capture PATH --tier ...` writes a unique run manifest and quality report for each tier.
+- [x] **T16 [Agent]** Accept/reject input explicitly: corrupt or duplicate media, missing photo folders, fewer than 2 or more than 8 photos per room, missing depth/pose samples, unsupported device/tier, and empty clips. **Done when:** a quality report distinguishes invalid input from a valid low-confidence result. Checked per-room image counts/signatures and duplicate hashes, full video decode, LiDAR required files/frame IDs, unsupported LiDAR flag, and the owner scan's one-frame warning. Failures and low-confidence input produce distinct statuses.
 - [ ] **T17 [Agent]** Implement the photo-folder reader using stills alone; folder names are IDs, not secretly supplied adjacency. **Done when:** it emits usable frames and source references without reading LiDAR/video/tape truth.
 - [ ] **T18 [Agent]** Implement an ordinary standalone MP4/MOV reader and bounded frame sampler. **Done when:** it handles a Camera walkthrough without sidecar depth or poses.
 - [ ] **T19 [Agent]** Implement the existing Stray-style scan reader for `rgb.mp4`, `camera_matrix.csv`, `odometry.csv`, `imu.csv`, and depth/confidence PNGs. **Done when:** all three supplied scans load, align by frame ID, and preserve original units and missing-data warnings.
