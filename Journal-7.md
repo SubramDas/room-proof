@@ -5,3 +5,11 @@ reference-only manifest draft in `docs/benchmark_manifest.md` fixes stable
 cross-tier IDs and keeps truth out of inference. Existing `Flat-805` photos and
 video remain original development inputs. No LiDAR, repeat room, scored damage,
 or tape/laser sheet has been supplied, so T54–T62 are not checked.
+
+The owner's four `Flat-805` photo folders and standalone video cover four
+named spaces, but folder name `room-hall` alone is not evidence that the hall
+is the required connector or that all spaces connect correctly. Once the
+LiDAR export arrives, the next owner inputs are: an independently recaptured
+same-tier room; an independent room/opening/height/wall/footprint measurement
+sheet; two visible damage classes with reference regions and staging notes;
+and any difficult-surface examples. Keep truth outside capture input folders.

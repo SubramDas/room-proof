@@ -50,7 +50,9 @@ def probe(image_path):
     openings, damages = parsed.get("visible_opening_types"), parsed.get("visible_damage_classes")
     if not isinstance(openings, list) or not isinstance(damages, list) or any(x not in allowed_openings for x in openings) or any(x not in allowed_damage for x in damages):
         raise ValueError("Gemini returned labels outside the pilot vocabulary")
-    return {"model": MODEL, "endpoint": ENDPOINT, "prompt": PROMPT,
+    return {"model": MODEL, "returned_model_version": payload.get("modelVersion"),
+            "endpoint": ENDPOINT, "prompt": PROMPT,
             "image_path": str(path), "image_bytes": len(raw), "latency_seconds": round(elapsed, 3),
             "usage_metadata": payload.get("usageMetadata"), "response": parsed,
+            "raw_api_response": payload,
             "third_party_data_transfer": "original image sent to Google Gemini API"}

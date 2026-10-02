@@ -1,12 +1,20 @@
 """Reference-only evaluation; this module is never imported by capture inference."""
 
 import json
-import math
+import hashlib
 from pathlib import Path
 
 from .plan import validate
 
 SCORER_VERSION = "0.1.0"
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _measurement_rows(plan, truth):
@@ -186,13 +194,15 @@ def evaluate(manifest_path):
         plans.append(plan)
         capture_results.append({"capture_id": capture["capture_id"], "run_id": plan["run_id"],
                                 "tier": plan["capture"]["tier"], "plan_path": str(path),
+                                "plan_sha256": _sha256(path),
                                 "measurements": rows, "summary": _summary(rows),
                                 "opening_gate": _opening_score(plan, manifest["truth"]),
                                 "geometry_gates": _geometry_score(plan, manifest["truth"], rows),
                                 "damage_gate": _damage_score(plan, manifest["truth"]),
                                 "execution_gate": {"schema_valid": True, "rendered_plan_exists": (path.parent / plan["plan"]["rendered_plan_path"]).is_file()}})
     return {"scorer_version": SCORER_VERSION, "property_id": manifest["property_id"],
-            "reference_manifest": str(manifest_path), "captures": capture_results,
+            "reference_manifest": str(manifest_path), "reference_manifest_sha256": _sha256(manifest_path),
+            "captures": capture_results,
             "repeatability": _repeatability(plans, manifest),
             "limitations": ["No interval calibration claim without a property-held-out split.",
                             "Footprint shape alignment, drift ablation, and damage polygon scoring are pending."]}

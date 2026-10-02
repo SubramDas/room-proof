@@ -21,13 +21,13 @@ Status as of 2 October 2026. `Complete` means the named evidence exists and has 
 | Multiroom geometry and correct adjacency at all tiers | Planned benchmark outputs | None | not started |
 | Opening width ≤2 cm on ≥85%, with missed/phantom accounting | [roomproof/benchmark.py](roomproof/benchmark.py) | Scorer written; no independent truth | partial |
 | Ceiling height absolute error ≤1.5 cm per room | [roomproof/benchmark.py](roomproof/benchmark.py) | Scorer written; no independent truth | partial |
-| Ceiling height repeat spread ≤1 cm | Planned repeated capture and scorer | None | not started |
-| Wall repeatability within 1 cm or 0.5% per wall | Planned repeated capture and scorer | None | not started |
+| Ceiling height repeat spread ≤1 cm | [roomproof/benchmark.py](roomproof/benchmark.py) | Per-room scorer exists; repeated capture absent | partial |
+| Wall repeatability within 1 cm or 0.5% per wall | [roomproof/benchmark.py](roomproof/benchmark.py) | Both interpretations scored per wall; repeated capture absent | partial |
 | LiDAR drift correction and on/off stitched footprints | Planned geometry module and ablation report | None | not started |
 | Photo adjacency/no overlap/footprint ±8% | Planned scorer and matched home capture | None | not started |
 | Photo wall lengths ±8% | [roomproof/benchmark.py](roomproof/benchmark.py) | Scorer written; no independent truth | partial |
 | Video wall lengths ±3% | [roomproof/benchmark.py](roomproof/benchmark.py) | Scorer written; no independent truth | partial |
-| Two damage classes in a furnished room | Planned home benchmark | None | not started |
+| Two damage classes in a furnished room | [docs/damage_vocabulary.md](docs/damage_vocabulary.md) | Vocabulary draft exists; owner classes/labels absent | partial |
 | 90% proposed interval coverage, width and unknown-rate report | [roomproof/benchmark.py](roomproof/benchmark.py), [docs/decisions.md](docs/decisions.md) | Summary logic exists; no held-out calibration | partial |
 | At least three rooms plus connector, all three tiers, one repeat, tape/laser truth | Planned `benchmark/` bundle | Starter scans do not qualify | not started |
 | Two-room consumer-app comparison and ≥70% shared-dimension wins/ties | [roomproof/comparator.py](roomproof/comparator.py), [docs/comparator_protocol.md](docs/comparator_protocol.md) | Scorer and 5 cm ours-only wall limit frozen; app exports absent | partial |

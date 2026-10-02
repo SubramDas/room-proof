@@ -90,18 +90,24 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 - [ ] **T40 [Agent]** Compare a simple local image method with a free disclosed cloud vision model on labelled samples; measure class/region quality, cost/quota, latency, and data handling. **Done when:** a chosen live path is justified by measured evidence, with its exact model/API version logged.
 - [ ] **T41 [Agent]** Find visible damage regions and map image pixels to the correct room surface; derive metric width/height/area (and crack length where applicable). **Done when:** each reported region has class, surface ID, evidence, and an interval on every extent.
 - [ ] **T42 [Agent]** Implement versioned concealed-damage rules with exact trigger evidence and cautious wording. **Done when:** each fired flag names a rule and surface and asserts suspicion rather than unseen fact; non-fired rules are auditable.
+  - [x] Add a versioned source-evidence-gated rule function; no live damage detector supplies it yet.
 - [ ] **T43 [Agent]** Implement surface-keyed scope items with work type, quantity, and conditional inspection/repair logic. **Done when:** items reference real surfaces/damage IDs, do not invent hidden repair quantities, and remain empty when unsupported.
+  - [x] Add conditional surface-linked items for supplied visible regions; live region input remains absent.
 
 ## 6. Uncertainty and evaluator — P1
 
-- [ ] **T44 [Agent]** Wrap every wall, ceiling, area, opening, and damage extent in the project measurement/interval representation; target proposed 90% coverage unless scorer instructions supersede it. **Done when:** no numeric physical measurement lacks units, bounds/method, status, and evidence references.
+- [x] **T44 [Agent]** Wrap every wall, ceiling, area, opening, and damage extent in the project measurement/interval representation; target proposed 90% coverage unless scorer instructions supersede it. **Done when:** no numeric physical measurement lacks units, bounds/method, status, and evidence references. `schema/property_plan.schema.json` and `roomproof/plan.py` enforce the representation, with unknown/unbounded values until calibrated.
 - [ ] **T45 [Agent]** Split calibration and held-out evaluation by **property**, not by frames or walls from the same home; fit tier/quantity-specific error margins and quality-based widening. **Done when:** run metadata proves reference values were never read by prediction and the calibration procedure is repeatable.
 - [ ] **T46 [Agent]** Report coverage, interval width, unbounded/unknown rate, sample counts, and point-estimate error for each tier and measurement type. **Done when:** an all-wide or all-unknown strategy cannot be presented as calibrated success.
 - [ ] **T47 [Agent]** Build a benchmark manifest joining raw capture IDs, room/surface/opening/damage IDs, app versions, tape/laser truth, and repeated captures. **Done when:** every reported number traces to a raw file and independent reference row.
 - [ ] **T48 [Agent]** Implement opening matching/scoring: one-to-one same-type/wall/position assignment, width ≤2 cm, missed and phantom counts, ≥85% denominator. **Done when:** the table lists every real, matched, over-tolerance, missed, and invented opening.
+  - [x] Add one-to-one matching and full outcome rows in the reference-only scorer; real truth remains pending.
 - [ ] **T49 [Agent]** Implement ceiling-height absolute error ≤1.5 cm **per room** and repeat spread ≤1 cm; distinguish biased from unrepeatable. **Done when:** both diagnostics appear for any repeat-captured room.
+  - [x] Add per-room reference error and repeat spread; repeated room capture remains pending.
 - [ ] **T50 [Agent]** Implement per-wall repeatability for two same-tier captures, reporting both interpretations of “1 cm or 0.5%” and the conservative working pass. **Done when:** all corresponding walls appear, not only an average.
+  - [x] Add per-wall strict and permissive rows; repeated room capture remains pending.
 - [ ] **T51 [Agent]** Implement photo/video wall-length gates (±8%/±3%), photo adjacency/no-overlap, and photo footprint area/shape checks. **Done when:** per-wall/room/property errors and the exact plan alignment are saved.
+  - [x] Add wall error, footprint area, and adjacency comparison; outline alignment and overlap checks remain pending.
 - [ ] **T52 [Agent]** Implement drift-ablation comparison, damage-class/surface/extent evaluation, schema/execution gate, and per-tier timing. **Done when:** a single benchmark command regenerates every gate table from frozen outputs and truth.
 - [ ] **T53 [Agent]** Publish working scorer definitions before the baseline and never change them after seeing results without preserving both versions. **Done when:** scorer code revision and definitions are linked in the benchmark report.
 
@@ -123,12 +129,14 @@ The deadline makes **early home capture and tape truth** the largest scheduling 
 - [ ] **T64 [Both]** Preselect two distinct benchmark rooms and the eligible wall/opening/height dimensions **before** seeing comparison errors. **Done when:** the frozen list and reference IDs are recorded.
 - [ ] **T65 [Owner]** Scan the two rooms with magicplan on the same phone/site visit, with no manual truth-based correction; save original exports and actions taken. **Done when:** both app exports and versions are in the raw benchmark bundle.
 - [ ] **T66 [Agent]** Build the dimension-by-dimension table with independent truth, our error, app error, win/tie/loss, omissions, and reported precision. **Done when:** both literal shared-only ≥70% score and the owner-requested expanded score (accurate ours-only dimensions may win) are reported separately.
+  - [x] Add both scoring paths, explicit omissions, and per-dimension rows; app export/truth values remain pending.
 - [x] **T67 [Agent]** Predeclare an absolute LiDAR wall-length accuracy limit for ours-only dimensions before the baseline; opening/height limits are already in the brief. **Done when:** the expanded score cannot select its tolerance after results are visible. Project working limit is 0.05 m absolute error in `roomproof/comparator.py`, frozen before benchmark results.
 
 ## 9. The scored fix loop — P1; must follow a complete baseline
 
 - [ ] **T68 [Agent]** Run the complete benchmark with frozen evaluator/scorer code and save all results, including failed runs. **Done when:** before run IDs, source revision, data hashes, plans, and every gate value are immutable.
 - [ ] **T69 [Agent]** Rank eligible failed gates by the predeclared relative-gap rule; if execution/schema fails, treat it as the blocking failure first. **Done when:** the single selected worst gate and its failing number can be independently recomputed.
+  - [x] Add deterministic numeric-gate ranking; the complete baseline and execution/schema blocker check remain pending.
 - [ ] **T70 [Agent]** Write and commit the **one-page fix declaration before editing the fix**: gate/failing number, root-cause hypothesis with evidence, intended fix, and one numeric after prediction. **Done when:** a dated source revision preserves the original prediction.
 - [ ] **T71 [Agent]** Implement the declared fix and commit it as a coherent milestone. **Done when:** code or capture protocol genuinely changes the identified failure path; diagnosis alone is insufficient.
 - [ ] **T72 [Agent]** Rerun the same raw inputs and truth with the same evaluator (or controlled paired recaptures for a protocol fix). **Done when:** after outputs, plans, timings, and metrics regenerate from documented commands.
