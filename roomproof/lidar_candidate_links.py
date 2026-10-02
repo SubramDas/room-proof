@@ -5,6 +5,8 @@ import math
 from pathlib import Path
 import statistics
 
+from PIL import Image
+
 from .cli import sha256, write_json
 from .lidar_geometry import rotate
 
@@ -53,16 +55,67 @@ def _candidate_wall_hit(frame, candidate, boundary):
     if count < 4:
         return None
     support = [hit for hit in present if hit["wall_index"] == wall_index]
+    edge_hits = [_wall_hit(frame, candidate, boundary, x, y)
+                 for x in (.1, .9) for y in (.1, .9)]
+    edge_heights = [hit["height_world_y_m"] for hit in edge_hits
+                    if hit is not None and hit["wall_index"] == wall_index]
     return {"wall_index": wall_index,
             "distance_from_camera_m": round(statistics.median(hit["distance_from_camera_m"] for hit in support), 3),
             "offset_along_wall_m": round(statistics.median(hit["offset_along_wall_m"] for hit in support), 3),
             "height_world_y_m": round(statistics.median(hit["height_world_y_m"] for hit in support), 3),
+            "projected_height_span_m": round(max(edge_heights)-min(edge_heights), 3) if len(edge_heights) >= 3 else None,
             "ray_support_count": count, "ray_count": len(hits),
             "offset_range_m": [min(hit["offset_along_wall_m"] for hit in support),
                                max(hit["offset_along_wall_m"] for hit in support)]}
 
 
-def link_lidar_candidates(index, geometry, candidates, pairing, run_dir):
+def _depth_evidence(scan, frame, candidate, boundary):
+    """Compare aligned measured depths with the wall predicted by the fitted plan.
+
+    Missing returns are reported separately: glass, dark surfaces, and occlusion
+    can all make a depth hole without there being a structural opening.
+    """
+    depth_path = Path(scan) / "depth" / f"{frame['frame_id']}.png"
+    confidence_path = Path(scan) / "confidence" / f"{frame['frame_id']}.png"
+    with Image.open(depth_path) as depth_image, Image.open(confidence_path) as confidence_image:
+        if depth_image.size != confidence_image.size:
+            raise ValueError(f"depth/confidence size mismatch: {frame['frame_id']}")
+        depth = depth_image.load()
+        confidence = confidence_image.load()
+        depth_width, depth_height = depth_image.size
+        counts = Counter()
+        examples = []
+        box = candidate["geometry"]["xyxy_px"]
+        for fy in (.3, .5, .7):
+            for fx in (.2, .4, .6, .8):
+                hit = _wall_hit(frame, candidate, boundary, fx, fy)
+                if hit is None:
+                    counts["no_wall_ray"] += 1
+                    continue
+                u = int((box[0] + fx * (box[2] - box[0])) * depth_width /
+                        candidate["geometry"]["image_width"])
+                v = int((box[1] + fy * (box[3] - box[1])) * depth_height /
+                        candidate["geometry"]["image_height"])
+                u = min(depth_width - 1, max(0, u))
+                v = min(depth_height - 1, max(0, v))
+                observed = depth[u, v] / 1000
+                predicted = hit["distance_from_camera_m"]
+                if confidence[u, v] < 1 or not .25 <= observed <= 6:
+                    kind = "missing_or_low_confidence"
+                elif observed > predicted + .25:
+                    kind = "behind_wall"
+                elif observed < predicted - .25:
+                    kind = "foreground_occlusion"
+                else:
+                    kind = "at_wall"
+                counts[kind] += 1
+                examples.append({"pixel_xy": [u, v], "observed_depth_m": round(observed, 3),
+                                 "predicted_wall_depth_m": predicted, "kind": kind})
+    return {"sample_count": 12, "counts": dict(counts), "samples": examples,
+            "method": "12 box-interior rays; depth beyond fitted wall by >0.25 m supports an opening, missing depth alone does not"}
+
+
+def link_lidar_candidates(scan, index, geometry, candidates, pairing, run_dir):
     """Record projected wall/gap matches; promote only after registration is verified."""
     fit = geometry["room_fit"]
     boundary = fit.get("boundary_xz_m")
@@ -70,12 +123,16 @@ def link_lidar_candidates(index, geometry, candidates, pairing, run_dir):
     frames = {frame["frame_id"]: frame for frame in index["frames"]}
     records = []
     for item in candidates["candidates"]:
-        if item["class"] not in ("door", "window"):
+        if item["class"] not in ("door", "doorway", "open_passage", "window"):
             continue
         record = {"candidate_id": item["candidate_id"], "class": item["class"],
                   "source_ref": item["source_ref"], "depth_frame_id": item.get("depth_frame_id"),
+                  "rgb_depth_pairing_status": item.get("rgb_depth_pairing_status"),
                   "status": "unresolved", "nearest_wall": None,
-                  "matching_depth_gap_ids": [], "reason": None}
+                  "matching_depth_gap_ids": [], "depth_evidence": None, "reason": None}
+        box = item["geometry"]["xyxy_px"]
+        record["box_area_fraction"] = round((box[2]-box[0])*(box[3]-box[1]) /
+                                            (item["geometry"]["image_width"]*item["geometry"]["image_height"]), 4)
         frame = frames.get(item.get("depth_frame_id"))
         if item.get("rgb_depth_pairing_status") != "registered_candidate" or frame is None:
             record["reason"] = "no RGB/depth frame with supported timing and sampled pixel registration"
@@ -87,21 +144,31 @@ def link_lidar_candidates(index, geometry, candidates, pairing, run_dir):
             if hit is None:
                 record["reason"] = "image ray does not intersect a fitted wall segment"
             else:
+                record["depth_evidence"] = _depth_evidence(scan, frame, item, boundary)
                 matching = []
                 for gap_index, gap in enumerate(gaps, 1):
-                    offset = hit["offset_along_wall_m"]
+                    left, right = hit["offset_range_m"]
                     if (gap["wall_index"] == hit["wall_index"] and
-                            gap["offset_along_wall_m"] - .1 <= offset <=
-                            gap["offset_along_wall_m"] + gap["width_m"] + .1 and
-                            frame["frame_id"] in gap["frame_ids"]):
+                            right >= gap["offset_along_wall_m"] - .1 and
+                            left <= gap["offset_along_wall_m"] + gap["width_m"] + .1):
                         matching.append(f"opening-gap-{gap_index}")
                 record["matching_depth_gap_ids"] = matching
                 if not matching:
-                    record["reason"] = "projected ray does not coincide with a depth gap supported by this frame"
+                    if record["depth_evidence"]["counts"].get("at_wall", 0) >= 10:
+                        record["status"] = "rejected_structural_opening"
+                        record["reason"] = "box projects to a fitted wall with at-wall depth in at least 10 of 12 samples"
+                    else:
+                        record["reason"] = "projected rays do not overlap a fitted wall depth gap"
                 elif not pairing["spatial_registration_verified"] or not pairing["frame_offset_supported_by_images"]:
                     record["reason"] = "projected gap agrees, but RGB/depth pixel registration or frame offset is unverified"
+                elif record["depth_evidence"]["counts"].get("behind_wall", 0) < 2:
+                    record["reason"] = "wall gap overlaps the image box, but this paired depth frame has fewer than two behind-wall returns"
+                elif hit["projected_height_span_m"] is None or hit["projected_height_span_m"] < 1.5:
+                    record["reason"] = "box does not span enough fitted wall height to establish a structural opening"
+                elif record["box_area_fraction"] >= .5:
+                    record["reason"] = "box covers at least half of the frame and is too broad for opening confirmation"
                 else:
-                    record["reason"] = "projected gap agrees; waiting for an independent repeated view"
+                    record["reason"] = "projected gap and paired depth agree; waiting for an independent repeated view"
         records.append(record)
     groups = []
     assigned = set()
@@ -131,18 +198,33 @@ def link_lidar_candidates(index, geometry, candidates, pairing, run_dir):
                  "independent_views_supported": separation >= .15}
         groups.append(group)
         assigned.update(group["candidate_ids"])
-        if (common_gaps and group["independent_views_supported"] and
+        supported_depth = [member for member in members if
+                           member["depth_evidence"] is not None and
+                           member["depth_evidence"]["counts"].get("behind_wall", 0) >= 2 and
+                           member["nearest_wall"]["projected_height_span_m"] is not None and
+                           member["nearest_wall"]["projected_height_span_m"] >= 1.5 and
+                           member["box_area_fraction"] < .5 and
+                           member["rgb_depth_pairing_status"] == "registered_candidate"]
+        supporting_positions = [frames[item["depth_frame_id"]]["pose"]["translation_m"]
+                                for item in supported_depth if item["depth_frame_id"] in frames]
+        supporting_separation = max((math.dist(a, b) for a in supporting_positions
+                                     for b in supporting_positions), default=0)
+        group["qualified_candidate_ids"] = [item["candidate_id"] for item in supported_depth]
+        group["qualified_view_separation_m"] = round(supporting_separation, 3)
+        if (common_gaps and len({item["depth_frame_id"] for item in supported_depth}) >= 2 and
+                supporting_separation >= .15 and
                 pairing["spatial_registration_verified"] and pairing["frame_offset_supported_by_images"]):
-            for member in members:
+            for member in supported_depth:
                 member["status"] = "supported_proposal"
-                member["reason"] = "timing, registered pixels, wall gap, and independent views agree"
+                member["reason"] = "registered pixels, paired behind-wall depth, fitted gap, and independent views agree"
     report = {"report_version": "0.1.0", "status": "hypotheses_only",
               "capture_id": index["capture_id"],
-              "projection_assumptions": "RGB intrinsics and pose applied to sampled RGB pixels after scale-up; rotation and pixel registration not yet independently checked",
+              "projection_assumptions": "RGB intrinsics and pose applied to sampled RGB pixels after scale-up; sampled edge alignment supports frame offset, but RGB/depth extrinsics and scale are not independently calibrated",
               "candidate_count": len(records),
               "projected_to_wall_count": sum(item["nearest_wall"] is not None for item in records),
               "gap_coincidence_count": sum(bool(item["matching_depth_gap_ids"]) for item in records),
               "supported_proposal_count": sum(item["status"] == "supported_proposal" for item in records),
+              "rejected_structural_opening_count": sum(item["status"] == "rejected_structural_opening" for item in records),
               "repeated_view_groups": groups,
               "records": records,
               "warnings": ["A 2D ray/wall hit is only a placement hypothesis; it does not validate RGB/depth registration or a metric opening."]}

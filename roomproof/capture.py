@@ -208,6 +208,8 @@ def process_capture(args, run_dir, run):
     if args.room_id is not None:
         valid_id(args.room_id, "room")
     device_has_lidar = args.device_has_lidar
+    if args.lidar_rgb_rotation and (args.tier != "lidar" or args.visual_backend != "owlv2"):
+        raise ValueError("--lidar-rgb-rotation requires --tier lidar and --visual-backend owlv2")
     inspectors = {"photo": inspect_photo, "video": inspect_video, "lidar": inspect_lidar}
     errors, warnings, metrics = inspectors[args.tier](source, device_has_lidar)
     status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"
@@ -272,7 +274,10 @@ def process_capture(args, run_dir, run):
             if args.visual_model == "on":
                 model_started = time.monotonic()
                 try:
-                    from .visual_candidates import generate_candidates
+                    if args.visual_backend == "owlv2":
+                        from .owlv2_candidates import generate_candidates
+                    else:
+                        from .visual_candidates import generate_candidates
                     if args.tier == "lidar":
                         from .lidar_rgb import read_lidar_rgb_samples
                         rgb_index, pairing_report, rgb_artifacts = read_lidar_rgb_samples(
@@ -280,7 +285,8 @@ def process_capture(args, run_dir, run):
                         output_artifacts.extend(rgb_artifacts)
                         candidate_report, candidate_artifacts = generate_candidates(
                             source, rgb_index, run_dir, maximum=args.max_model_frames,
-                            model_path=args.visual_model_path)
+                            model_path=args.visual_model_path,
+                            **({"rotation_degrees": args.lidar_rgb_rotation} if args.visual_backend == "owlv2" else {}))
                         candidate_report["status"] = (
                             "proposals_sampled_registration_supported"
                             if pairing_report["spatial_registration_verified"]
@@ -289,7 +295,7 @@ def process_capture(args, run_dir, run):
                         candidate_report["warnings"].extend(pairing_report["warnings"])
                         from .lidar_candidate_links import link_lidar_candidates
                         candidate_links, link_artifacts = link_lidar_candidates(
-                            index, geometry, candidate_report, pairing_report, run_dir)
+                            source, index, geometry, candidate_report, pairing_report, run_dir)
                         output_artifacts.extend(link_artifacts)
                         candidate_report["candidate_links_report"] = "lidar_candidate_links.json"
                         candidate_path = run_dir / "visual_candidates.json"

@@ -91,7 +91,8 @@ def _apply_supported_candidate_links(plan, candidate_links):
         supported = [record for record in candidate_links['records']
                      if record['candidate_id'] in group['candidate_ids'] and
                      record['status'] == 'supported_proposal' and
-                     record['class'] == opening['kind']]
+                     (record['class'] == opening['kind'] or
+                      (opening['kind'] == 'door' and record['class'] in ('doorway', 'open_passage')))]
         if len(supported) < 2:
             continue
         opening['status'] = 'inferred'
@@ -120,7 +121,7 @@ def build_plan(args, run_id, index, warnings, geometry=None, candidates=None, ca
         _apply_lidar_room_fit(plan, index, geometry['room_fit'])
     if candidates is not None and candidates['status'].startswith('proposals'):
         counts = {kind: sum(item['class'] == kind for item in candidates['candidates'])
-                  for kind in ('wall', 'floor', 'ceiling', 'door', 'window')}
+                  for kind in ('wall', 'floor', 'ceiling', 'door', 'doorway', 'open_passage', 'cabinet_door', 'window')}
         plan['warnings'].append(
             'Visual model proposals: ' + ', '.join(f'{count} {kind}' for kind, count in counts.items())
             + '; see visual_candidates.json. Openings and room connections are unverified.')

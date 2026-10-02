@@ -348,7 +348,10 @@ def main():
     processor.add_argument("--max-lidar-frames", type=positive_int, default=32, help="maximum evenly spaced depth frames for diagnostic geometry")
     processor.add_argument("--lidar-drift", choices=("on", "off"), default="on", help="apply only geometrically verified LiDAR revisit correction")
     processor.add_argument("--visual-model", choices=("on", "off"), default="off", help="run the local experimental semantic candidate stage")
-    processor.add_argument("--visual-model-path", help="local ONNX checkpoint; its SHA-256 must match the published checkpoint")
+    processor.add_argument("--visual-backend", choices=("segformer", "owlv2"), default="segformer", help="local RGB candidate backend")
+    processor.add_argument("--visual-model-path", help="local SegFormer ONNX checkpoint or OWLv2 checkpoint directory")
+    processor.add_argument("--lidar-rgb-rotation", type=int, choices=(0, 90, 180, 270), default=0,
+                           help="clockwise display rotation for OWLv2 on LiDAR RGB only; boxes map back to raw pixels")
     processor.add_argument("--max-model-frames", type=positive_int, default=24, help="maximum selected RGB frames passed to the visual model")
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture

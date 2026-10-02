@@ -33,6 +33,33 @@ clean-machine model setup time remain unmeasured. See
 [the pilot](../reports/model_candidate_pilot.md) and
 [candidate contract](visual_candidates.md).
 
+## Optional OWLv2 opening candidate pilot
+
+`--visual-backend owlv2` uses the local
+[google/owlv2-base-patch16-ensemble](https://huggingface.co/google/owlv2-base-patch16-ensemble)
+checkpoint at revision `cfd3195ba4ea9592eec887ded089f4c08eff231d`.
+The model card lists Apache-2.0. `scripts/fetch_owlv2_model.py` downloads the
+pinned revision into the ignored `.room-proof/models/` directory. The
+`model.safetensors` file is 619,918,824 bytes with SHA-256
+`e1e130b9e404cf91a75ad45644c1da9d7fa5284085eecc864266a6923efb99e7`.
+The local pilot uses PyTorch 2.8.0+cpu, Transformers 4.57.1, SciPy 1.16.2,
+and Hugging Face Hub 0.36.2. These packages and weights are optional and are not
+included in `requirements-model.txt`; install them into the local environment
+before using this backend. The run report records all local model file hashes,
+package versions, prompts, threshold, selected frame IDs, and CPU timing.
+For the tested Python 3.12 environment, provisioning commands were:
+
+```bash
+.venv/bin/python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+.venv/bin/python -m pip install 'transformers==4.57.1' 'scipy==1.16.2'
+.venv/bin/python scripts/fetch_owlv2_model.py
+```
+
+Model loading uses `local_files_only=True`; capture images remain local. The
+box detector proposes visible objects only. The paired depth and fitted-wall
+checks can reject or leave those proposals unresolved; they do not turn its
+score into a metric uncertainty interval.
+
 ## Optional cloud candidate, not adopted
 
 `roomproof.cloud_vision` contains a single-image adapter for Google's

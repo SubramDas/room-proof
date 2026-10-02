@@ -26,7 +26,7 @@ def _selected_frames(index, maximum):
     frames = index["frames"]
     if len(frames) <= maximum:
         return list(frames)
-    if index["tier"] == "video":
+    if index["tier"] in ("video", "lidar"):
         positions = sorted({i * (len(frames) - 1) // (maximum - 1) for i in range(maximum)}) if maximum > 1 else [0]
         return [frames[i] for i in positions]
     groups = {room_id: [] for room_id in index["room_ids"]}
@@ -149,7 +149,7 @@ def validate_candidate_report(report, index):
         if (item["capture_id"] != index["capture_id"] or item["tier"] != index["tier"] or
                 item["model_id"] != report["model"]["id"] or
                 item["model_sha256"] != report["model"]["sha256"] or
-                item["preprocessing_version"] != "segformer-rgb-512-imagenet-v1"):
+                item["preprocessing_version"] != report["model"]["preprocessing_version"]):
             raise ValueError(f"visual candidate provenance mismatch: {item['candidate_id']}")
         if item["candidate_id"] in seen:
             raise ValueError(f"duplicate visual candidate ID: {item['candidate_id']}")
@@ -157,7 +157,7 @@ def validate_candidate_report(report, index):
         source = frames.get(item["frame_id"])
         if source is None or item["source_ref"] != source["source_ref"]:
             raise ValueError(f"visual candidate has an invalid frame reference: {item['candidate_id']}")
-        if item["class"] not in ("wall", "floor", "ceiling", "door", "window"):
+        if item["class"] not in ("wall", "floor", "ceiling", "door", "window", "doorway", "open_passage", "cabinet_door"):
             raise ValueError(f"unknown visual candidate class: {item['class']}")
         box = item["geometry"]["xyxy_px"]
         width, height = source["width"], source["height"]
@@ -173,8 +173,9 @@ def validate_candidate_report(report, index):
         if (not item["status_reason"] or not isinstance(item["supporting_evidence"], list) or
                 not isinstance(item["conflicting_evidence"], list) or
                 not 0 <= item["raw_model_score"] <= 1 or
-                not item["mask_ref"].startswith("candidate_masks/") or
-                ".." in Path(item["mask_ref"]).parts):
+                (item.get("mask_ref") is not None and
+                 (not item["mask_ref"].startswith("candidate_masks/") or
+                  ".." in Path(item["mask_ref"]).parts))):
             raise ValueError(f"invalid visual candidate evidence: {item['candidate_id']}")
 
 
@@ -230,6 +231,7 @@ def generate_candidates(source, index, run_dir, maximum=24, model_path=None):
     report = {"report_version": "0.1.0", "status": "proposals_only",
               "capture_id": index["capture_id"], "tier": index["tier"],
               "model": {"id": MODEL_ID, "sha256": digest, "path": str(model_path),
+                        "preprocessing_version": "segformer-rgb-512-imagenet-v1",
                         "runtime": "onnxruntime CPU", "runtime_version": ort.__version__,
                         "numpy_version": np.__version__, "input_size": [512, 512],
                         "component_rule": "4-connected; minimum 0.2% image for door/window, 2% for wall/floor/ceiling; max 5 opening and 2 wall components per label",
