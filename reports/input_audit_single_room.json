@@ -1,0 +1,279 @@
+{
+  "app_name": "Stray Scanner",
+  "app_version": "unknown",
+  "camera_matrix": [
+    [
+      1599.6957,
+      0.0,
+      955.5105
+    ],
+    [
+      0.0,
+      1599.6957,
+      717.8084
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "counts": {
+    "confidence_pngs": 1715,
+    "depth_pngs": 1715,
+    "imu_rows": 3689,
+    "pose_rows": 1715
+  },
+  "depth_unit": "millimetres per developer format; no independent scale check",
+  "device_model": "unknown",
+  "distortion_rows_with_center": 0,
+  "export_internal_alignment": "needs_attention",
+  "format_source": "https://github.com/strayrobots/scanner/blob/main/docs/format.md",
+  "frame_ids": {
+    "confidence_match_pose": true,
+    "depth_match_pose": true,
+    "pose_first": 0,
+    "pose_last": 1714
+  },
+  "generated_at_utc": "2026-10-02T09:46:33.898428+00:00",
+  "imu_timing": {
+    "duration_seconds": 37.12949570833007,
+    "first_seconds": 65575.69622129167,
+    "largest_step_seconds": 0.01006937499914784,
+    "last_seconds": 65612.825717,
+    "median_step_seconds": 0.010067999988677911,
+    "non_increasing_steps": 0
+  },
+  "ios_version": null,
+  "max_interframe_translation_metres": 0.024706429312824792,
+  "original_archive": null,
+  "per_frame_intrinsics": {
+    "cx": {
+      "first": 955.3694,
+      "last": 955.5105,
+      "maximum": 955.8416,
+      "minimum": 955.2815
+    },
+    "cy": {
+      "first": 717.7071,
+      "last": 717.8084,
+      "maximum": 718.04395,
+      "minimum": 717.6407
+    },
+    "fx": {
+      "first": 1597.8881,
+      "last": 1599.6957,
+      "maximum": 1617.7719,
+      "minimum": 1586.5905
+    },
+    "fy": {
+      "first": 1597.8881,
+      "last": 1599.6957,
+      "maximum": 1617.7719,
+      "minimum": 1586.5905
+    }
+  },
+  "png_layouts": {
+    "confidence": [
+      [
+        256,
+        192,
+        8,
+        0
+      ]
+    ],
+    "depth": [
+      [
+        256,
+        192,
+        16,
+        0
+      ]
+    ]
+  },
+  "pose_quaternion_norm": {
+    "maximum": 1.0000001175907007,
+    "minimum": 0.9999998619738751
+  },
+  "pose_rotation_fields": "qx,qy,qz,qw; coordinate handedness and camera-to-world direction not independently verified",
+  "pose_timing": {
+    "duration_seconds": 37.17236916699039,
+    "first_seconds": 65575.597600791,
+    "largest_step_seconds": 0.050007957994239405,
+    "last_seconds": 65612.769969958,
+    "median_step_seconds": 0.01666929198836442,
+    "non_increasing_steps": 0
+  },
+  "pose_translation_unit": "metres per developer format; no independent scale check",
+  "report_version": "0.1.0",
+  "sampled_pngs": [
+    {
+      "confidence": {
+        "bit_depth": 8,
+        "color_type": 0,
+        "height": 192,
+        "max": 2,
+        "median_nonzero": 2.0,
+        "min": 0,
+        "pixel_count": 49152,
+        "value_counts": {
+          "0": 70,
+          "1": 644,
+          "2": 48438
+        },
+        "width": 256,
+        "zero_pixels": 70
+      },
+      "depth": {
+        "bit_depth": 16,
+        "color_type": 0,
+        "height": 192,
+        "max": 1688,
+        "median_nonzero": 938.0,
+        "min": 506,
+        "pixel_count": 49152,
+        "width": 256,
+        "zero_pixels": 0
+      },
+      "frame_id": "000000"
+    },
+    {
+      "confidence": {
+        "bit_depth": 8,
+        "color_type": 0,
+        "height": 192,
+        "max": 2,
+        "median_nonzero": 2.0,
+        "min": 0,
+        "pixel_count": 49152,
+        "value_counts": {
+          "0": 36,
+          "1": 564,
+          "2": 48552
+        },
+        "width": 256,
+        "zero_pixels": 36
+      },
+      "depth": {
+        "bit_depth": 16,
+        "color_type": 0,
+        "height": 192,
+        "max": 1692,
+        "median_nonzero": 937.0,
+        "min": 510,
+        "pixel_count": 49152,
+        "width": 256,
+        "zero_pixels": 0
+      },
+      "frame_id": "000001"
+    },
+    {
+      "confidence": {
+        "bit_depth": 8,
+        "color_type": 0,
+        "height": 192,
+        "max": 2,
+        "median_nonzero": 2.0,
+        "min": 0,
+        "pixel_count": 49152,
+        "value_counts": {
+          "0": 1156,
+          "1": 5809,
+          "2": 42187
+        },
+        "width": 256,
+        "zero_pixels": 1156
+      },
+      "depth": {
+        "bit_depth": 16,
+        "color_type": 0,
+        "height": 192,
+        "max": 3418,
+        "median_nonzero": 1740.0,
+        "min": 516,
+        "pixel_count": 49152,
+        "width": 256,
+        "zero_pixels": 0
+      },
+      "frame_id": "000857"
+    },
+    {
+      "confidence": {
+        "bit_depth": 8,
+        "color_type": 0,
+        "height": 192,
+        "max": 2,
+        "median_nonzero": 2.0,
+        "min": 0,
+        "pixel_count": 49152,
+        "value_counts": {
+          "0": 724,
+          "1": 2051,
+          "2": 46377
+        },
+        "width": 256,
+        "zero_pixels": 724
+      },
+      "depth": {
+        "bit_depth": 16,
+        "color_type": 0,
+        "height": 192,
+        "max": 3732,
+        "median_nonzero": 1674.0,
+        "min": 1136,
+        "pixel_count": 49152,
+        "width": 256,
+        "zero_pixels": 0
+      },
+      "frame_id": "001713"
+    },
+    {
+      "confidence": {
+        "bit_depth": 8,
+        "color_type": 0,
+        "height": 192,
+        "max": 2,
+        "median_nonzero": 2.0,
+        "min": 0,
+        "pixel_count": 49152,
+        "value_counts": {
+          "0": 768,
+          "1": 2059,
+          "2": 46325
+        },
+        "width": 256,
+        "zero_pixels": 768
+      },
+      "depth": {
+        "bit_depth": 16,
+        "color_type": 0,
+        "height": 192,
+        "max": 3732,
+        "median_nonzero": 1676.0,
+        "min": 1137,
+        "pixel_count": 49152,
+        "width": 256,
+        "zero_pixels": 0
+      },
+      "frame_id": "001714"
+    }
+  ],
+  "scan_path": "/home/subramd/CozmoAI/single_room/c00a170fe1",
+  "timestamp_alignment": "Pose/depth linked by frame ID; exact RGB-to-pose offset unavailable without per-frame video timestamps",
+  "transfer_completeness": "unverified_or_mismatch",
+  "video": {
+    "codec": "hevc",
+    "counted_frames": 1714,
+    "counted_seconds": 37.16,
+    "decoded_frames": 1714,
+    "decoder_package": "imageio-ffmpeg 0.6.0",
+    "duration_seconds": 37.17,
+    "ffmpeg_version": "7.0.2-static",
+    "fps": 46.12,
+    "height": 1440,
+    "width": 1920
+  },
+  "warnings": [
+    "RGB frames (1714) differ from pose/depth frames (1715)"
+  ]
+}

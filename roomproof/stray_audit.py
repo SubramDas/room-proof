@@ -227,7 +227,7 @@ def audit_stray(args, run_dir, run):
     video = {"decoder_package": "imageio-ffmpeg 0.6.0", "ffmpeg_version": imageio_ffmpeg.get_ffmpeg_version()}
     try:
         counted_frames, counted_seconds = imageio_ffmpeg.count_frames_and_secs(str(scan / "rgb.mp4"))
-        frames = imageio_ffmpeg.read_frames(str(scan / "rgb.mp4"), pix_fmt="rgb24")
+        frames = imageio_ffmpeg.read_frames(str(scan / "rgb.mp4"), pix_fmt="rgb24", output_params=["-vsync", "0"])
         metadata = next(frames)
         decoded_frames = sum(1 for _ in frames)
         video.update({"codec": metadata.get("codec"), "width": metadata["size"][0], "height": metadata["size"][1],

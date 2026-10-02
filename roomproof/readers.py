@@ -60,7 +60,7 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
     out_dir = run_dir / "frames"
     out_dir.mkdir(parents=True, exist_ok=True)
     stream = imageio_ffmpeg.read_frames(
-        str(path), pix_fmt="rgb24", output_params=["-vf", "scale=640:-2"],
+        str(path), pix_fmt="rgb24", output_params=["-vf", "scale=640:-2", "-vsync", "0"],
     )
     header = next(stream, None)
     if header is None:
@@ -105,3 +105,78 @@ def read_video_samples(path, capture_id, run_dir, frame_count, fps, max_frames=2
         {"path": str(frame_path), "sha256": sha256(frame_path)}
         for frame_path in sorted(out_dir.glob("*.rgb"))
     ] + [{"path": str(index_path), "sha256": sha256(index_path)}]
+
+
+def read_stray_scan(root, capture_id, run_dir, rgb_frame_count):
+    """Build a lossless-reference index for Stray fields without guessing RGB pairing."""
+    import csv
+
+    from .stray_audit import csv_rows, png_info
+
+    root = Path(root)
+    pose_rows = csv_rows(root / "odometry.csv")
+    imu_rows = csv_rows(root / "imu.csv")
+    depth_by_id = {path.stem: path for path in (root / "depth").glob("*.png")}
+    confidence_by_id = {path.stem: path for path in (root / "confidence").glob("*.png")}
+    camera_rows = []
+    with (root / "camera_matrix.csv").open(newline="", encoding="utf-8") as stream:
+        for row in csv.reader(stream, skipinitialspace=True):
+            camera_rows.append([float(value) for value in row])
+    frames = []
+    for row in pose_rows:
+        frame_id = f"{int(row['frame']):06d}"
+        depth_path = depth_by_id.get(frame_id)
+        confidence_path = confidence_by_id.get(frame_id)
+        if depth_path is None or confidence_path is None:
+            raise ValueError(f"missing depth/confidence for pose frame {frame_id}")
+        depth_info = png_info(depth_path)
+        confidence_info = png_info(confidence_path)
+        frames.append({
+            "frame_id": frame_id,
+            "rgb_frame_index": None,
+            "rgb_pairing_status": "unresolved",
+            "pose": {
+                "timestamp_seconds": float(row["timestamp"]),
+                "translation_m": [float(row[key]) for key in ("x", "y", "z")],
+                "quaternion_xyzw": [float(row[key]) for key in ("qx", "qy", "qz", "qw")],
+                "intrinsics_px": {key: float(row[key]) for key in ("fx", "fy", "cx", "cy")},
+            },
+            "depth": {
+                "source_ref": f"{capture_id}/depth/{depth_path.name}",
+                "unit": "mm per Stray format documentation; no independent scale validation",
+                "width": depth_info["width"],
+                "height": depth_info["height"],
+                "bit_depth": depth_info["bit_depth"],
+            },
+            "confidence": {
+                "source_ref": f"{capture_id}/confidence/{confidence_path.name}",
+                "width": confidence_info["width"],
+                "height": confidence_info["height"],
+                "bit_depth": confidence_info["bit_depth"],
+                "codes_semantics": "raw app codes; not interpreted here",
+            },
+            "pose_source_ref": f"{capture_id}/odometry.csv#frame={frame_id}",
+        })
+    imu = [{key: float(value) for key, value in row.items()} for row in imu_rows]
+    index = {
+        "index_version": "0.1.0",
+        "tier": "lidar",
+        "capture_id": capture_id,
+        "rgb_source_ref": f"{capture_id}/rgb.mp4",
+        "rgb_decoded_frame_count": rgb_frame_count,
+        "rgb_pairing_status": "unresolved; no offset inferred from count",
+        "camera_matrix": camera_rows,
+        "camera_matrix_source_ref": f"{capture_id}/camera_matrix.csv",
+        "odometry_source_ref": f"{capture_id}/odometry.csv",
+        "imu_source_ref": f"{capture_id}/imu.csv",
+        "imu_sample_count": len(imu),
+        "imu_fields": list(imu_rows[0]) if imu_rows else [],
+        "imu_records": imu,
+        "depth_unit_basis": "Stray format documentation; physical scale not independently validated",
+        "pose_translation_unit": "m per Stray format documentation; physical scale not independently validated",
+        "frame_count": len(frames),
+        "frames": frames,
+    }
+    index_path = run_dir / "lidar_frames.json"
+    write_json(index_path, index)
+    return [{"path": str(index_path), "sha256": sha256(index_path)}]

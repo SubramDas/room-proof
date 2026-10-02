@@ -93,7 +93,7 @@ def inspect_video(root, device_has_lidar):
     try:
         import imageio_ffmpeg
 
-        metadata = imageio_ffmpeg.read_frames(str(root), pix_fmt="rgb24")
+        metadata = imageio_ffmpeg.read_frames(str(root), pix_fmt="rgb24", output_params=["-vsync", "0"])
         header = next(metadata, None)
         if header is None or not header.get("size") or not header.get("fps"):
             errors.append("video has no decodable frame metadata")
@@ -170,7 +170,7 @@ def inspect_lidar(root, device_has_lidar):
                         errors.append(f"unsupported {label} PNG layout {layout}: {path.relative_to(root).as_posix()}")
         import imageio_ffmpeg
 
-        stream = imageio_ffmpeg.read_frames(str(root / "rgb.mp4"), pix_fmt="rgb24")
+        stream = imageio_ffmpeg.read_frames(str(root / "rgb.mp4"), pix_fmt="rgb24", output_params=["-vsync", "0"])
         header = next(stream, None)
         if header is None:
             errors.append("rgb.mp4 contains no decodable frame")
@@ -210,17 +210,21 @@ def process_capture(args, run_dir, run):
     source_revision = hashlib.sha256(json.dumps(source_files, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     output_artifacts = []
     next_stage = "not_implemented"
-    if not errors and args.tier in ("photo", "video"):
+    if not errors:
         try:
-            from .readers import read_photo_folders, read_video_samples
+            from .readers import read_photo_folders, read_stray_scan, read_video_samples
             if args.tier == "photo":
                 output_artifacts = read_photo_folders(source, args.capture_id, run_dir)
-            else:
+                next_stage = "frames_indexed"
+            elif args.tier == "video":
                 output_artifacts = read_video_samples(
                     source, args.capture_id, run_dir,
                     metrics["decoded_frames"], metrics["fps"], args.max_video_frames,
                 )
-            next_stage = "frames_indexed"
+                next_stage = "frames_indexed"
+            else:
+                output_artifacts = read_stray_scan(source, args.capture_id, run_dir, metrics["rgb_frames"])
+                next_stage = "frames_indexed"
         except Exception as error:
             errors.append(f"frame reader failed: {type(error).__name__}: {error}")
     status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"
