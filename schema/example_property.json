@@ -1,0 +1,516 @@
+{
+  "schema_version": "0.1.0",
+  "property_id": "synthetic-property",
+  "run_id": "synthetic-run",
+  "capture": {
+    "capture_id": "synthetic-capture",
+    "tier": "photo",
+    "device_model": "iPhone 15 Pro Max",
+    "ios_version": null,
+    "capture_app": "Camera",
+    "capture_app_version": null,
+    "source_refs": [
+      "demo-frame"
+    ]
+  },
+  "coordinate_system": {
+    "unit": "m",
+    "origin": "capture_local",
+    "x_axis": "right_on_plan",
+    "y_axis": "up_on_plan"
+  },
+  "plan": {
+    "status": "inferred",
+    "footprint": [
+      [
+        0,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        0,
+        3
+      ]
+    ],
+    "floor_area": {
+      "value": 12,
+      "unit": "m2",
+      "interval": {
+        "lower": 11.2,
+        "upper": 12.8,
+        "coverage": 0.9,
+        "method": "illustrative_only"
+      },
+      "status": "inferred",
+      "source_refs": [
+        "demo-frame"
+      ]
+    },
+    "rendered_plan_path": "plan.svg"
+  },
+  "rooms": [
+    {
+      "id": "room-1",
+      "name": "Example room",
+      "floor_id": "floor-1",
+      "kind": "room",
+      "status": "inferred",
+      "boundary": [
+        [
+          0,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "floor_area": {
+        "value": 12,
+        "unit": "m2",
+        "interval": {
+          "lower": 11.2,
+          "upper": 12.8,
+          "coverage": 0.9,
+          "method": "illustrative_only"
+        },
+        "status": "inferred",
+        "source_refs": [
+          "demo-frame"
+        ]
+      },
+      "ceiling_height": {
+        "value": 2.6,
+        "unit": "m",
+        "interval": {
+          "lower": 2.5,
+          "upper": 2.7,
+          "coverage": 0.9,
+          "method": "illustrative_only"
+        },
+        "status": "inferred",
+        "source_refs": [
+          "demo-frame"
+        ]
+      },
+      "surfaces": [
+        {
+          "id": "wall-1",
+          "kind": "wall",
+          "status": "inferred",
+          "line": [
+            [
+              0,
+              0
+            ],
+            [
+              4,
+              0
+            ]
+          ],
+          "length": {
+            "value": 4,
+            "unit": "m",
+            "interval": {
+              "lower": 3.85,
+              "upper": 4.15,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "area": {
+            "value": 10.4,
+            "unit": "m2",
+            "interval": {
+              "lower": 9.9,
+              "upper": 10.9,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "source_refs": [
+            "demo-frame"
+          ]
+        },
+        {
+          "id": "wall-2",
+          "kind": "wall",
+          "status": "inferred",
+          "line": [
+            [
+              4,
+              0
+            ],
+            [
+              4,
+              3
+            ]
+          ],
+          "length": {
+            "value": 3,
+            "unit": "m",
+            "interval": {
+              "lower": 2.85,
+              "upper": 3.15,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "area": {
+            "value": 7.800000000000001,
+            "unit": "m2",
+            "interval": {
+              "lower": 7.300000000000001,
+              "upper": 8.3,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "source_refs": [
+            "demo-frame"
+          ]
+        },
+        {
+          "id": "wall-3",
+          "kind": "wall",
+          "status": "inferred",
+          "line": [
+            [
+              4,
+              3
+            ],
+            [
+              0,
+              3
+            ]
+          ],
+          "length": {
+            "value": 4,
+            "unit": "m",
+            "interval": {
+              "lower": 3.85,
+              "upper": 4.15,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "area": {
+            "value": 10.4,
+            "unit": "m2",
+            "interval": {
+              "lower": 9.9,
+              "upper": 10.9,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "source_refs": [
+            "demo-frame"
+          ]
+        },
+        {
+          "id": "wall-4",
+          "kind": "wall",
+          "status": "inferred",
+          "line": [
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          "length": {
+            "value": 3,
+            "unit": "m",
+            "interval": {
+              "lower": 2.85,
+              "upper": 3.15,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "area": {
+            "value": 7.800000000000001,
+            "unit": "m2",
+            "interval": {
+              "lower": 7.300000000000001,
+              "upper": 8.3,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "source_refs": [
+            "demo-frame"
+          ]
+        },
+        {
+          "id": "floor-1",
+          "kind": "floor",
+          "status": "inferred",
+          "area": {
+            "value": 12,
+            "unit": "m2",
+            "interval": {
+              "lower": 11.2,
+              "upper": 12.8,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "source_refs": [
+            "demo-frame"
+          ]
+        },
+        {
+          "id": "ceiling-1",
+          "kind": "ceiling",
+          "status": "inferred",
+          "area": {
+            "value": 12,
+            "unit": "m2",
+            "interval": {
+              "lower": 11.2,
+              "upper": 12.8,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "source_refs": [
+            "demo-frame"
+          ]
+        }
+      ],
+      "openings": [
+        {
+          "id": "door-1",
+          "kind": "door",
+          "surface_id": "wall-1",
+          "status": "inferred",
+          "width": {
+            "value": 0.8,
+            "unit": "m",
+            "interval": {
+              "lower": 0.73,
+              "upper": 0.87,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "height": {
+            "value": 2,
+            "unit": "m",
+            "interval": {
+              "lower": 1.94,
+              "upper": 2.06,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "offset_along_wall": {
+            "value": 1,
+            "unit": "m",
+            "interval": {
+              "lower": 0.9,
+              "upper": 1.1,
+              "coverage": 0.9,
+              "method": "illustrative_only"
+            },
+            "status": "inferred",
+            "source_refs": [
+              "demo-frame"
+            ]
+          },
+          "source_refs": [
+            "demo-frame"
+          ]
+        }
+      ],
+      "source_refs": [
+        "demo-frame"
+      ]
+    }
+  ],
+  "adjacency": [],
+  "damage_regions": [
+    {
+      "id": "damage-1",
+      "room_id": "room-1",
+      "surface_id": "wall-1",
+      "class": "example_water_stain",
+      "status": "inferred",
+      "region": [
+        [
+          0.2,
+          0.1
+        ],
+        [
+          0.7,
+          0.1
+        ],
+        [
+          0.7,
+          0.5
+        ],
+        [
+          0.2,
+          0.5
+        ]
+      ],
+      "width": {
+        "value": 0.5,
+        "unit": "m",
+        "interval": {
+          "lower": 0.4,
+          "upper": 0.6,
+          "coverage": 0.9,
+          "method": "illustrative_only"
+        },
+        "status": "inferred",
+        "source_refs": [
+          "demo-frame"
+        ]
+      },
+      "height": {
+        "value": 0.4,
+        "unit": "m",
+        "interval": {
+          "lower": 0.3,
+          "upper": 0.5,
+          "coverage": 0.9,
+          "method": "illustrative_only"
+        },
+        "status": "inferred",
+        "source_refs": [
+          "demo-frame"
+        ]
+      },
+      "area": {
+        "value": 0.2,
+        "unit": "m2",
+        "interval": {
+          "lower": 0.12,
+          "upper": 0.3,
+          "coverage": 0.9,
+          "method": "illustrative_only"
+        },
+        "status": "inferred",
+        "source_refs": [
+          "demo-frame"
+        ]
+      },
+      "source_refs": [
+        "demo-frame"
+      ]
+    }
+  ],
+  "concealed_damage_flags": [
+    {
+      "id": "flag-1",
+      "room_id": "room-1",
+      "surface_id": "wall-1",
+      "rule_id": "example_rule_visible_stain",
+      "reason": "Illustrative rule only; inspect behind visible stain.",
+      "evidence_refs": [
+        "demo-frame",
+        "damage-1"
+      ],
+      "status": "inferred"
+    }
+  ],
+  "scope_items": [
+    {
+      "id": "scope-1",
+      "room_id": "room-1",
+      "surface_id": "wall-1",
+      "damage_region_id": "damage-1",
+      "work_type": "example_inspection",
+      "description": "Illustrative inspection item, not a repair recommendation.",
+      "quantity": {
+        "value": 0.2,
+        "unit": "m2",
+        "interval": {
+          "lower": 0.12,
+          "upper": 0.3,
+          "coverage": 0.9,
+          "method": "illustrative_only"
+        },
+        "status": "inferred",
+        "source_refs": [
+          "demo-frame"
+        ]
+      },
+      "source_refs": [
+        "damage-1"
+      ]
+    }
+  ],
+  "warnings": [
+    "Synthetic schema example; measurements, damage, and rule are not real observations."
+  ]
+}
