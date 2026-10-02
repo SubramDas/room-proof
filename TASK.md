@@ -219,6 +219,18 @@ multiroom placement, calibrated intervals, and an untouched capture. T91
 still needs visible damage examples. Keep model scores out of measurement
 intervals and independent tape dimensions out of inference.
 
+**Measurement continuation (3 October 2026):** `lidar_pose_audit.json` now
+records exported pose and IMU timing continuity, motion steps, and closure
+status. `lidar_surface_diagnostics.json` records confidence-weighted
+within-frame point estimates, frame-balanced wall/floor/ceiling alternatives,
+surface residuals, and support frames. The hall has one unstable wall on its
+short-side axis. The alternative short side (3.4133 m) is worse against the
+separate 3.21 m laser value, so the plan remains at 3.3958 m with a warning.
+See `reports/hall_measurement_diagnostics.md`. These artifacts advance the
+audit portions of T94–T95 and the comparison in T98; they do not complete
+pose-graph correction, competing surface selection, calibration, or the
+non-rectangular/multiroom acceptance cases.
+
 ## Stop conditions and honest reporting
 
 - If an input tier cannot produce the complete schema and rendered whole-property plan, mark its execution gate **failing**. A local cache or hand-edited plan does not satisfy a fresh walk-in run.

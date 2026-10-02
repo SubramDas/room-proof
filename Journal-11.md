@@ -74,3 +74,20 @@ opening labels and an untouched property capture are still needed to score
 candidate precision/recall and interval coverage. ESANet and SAM 2 remain
 unadopted candidates; photo/video geometry, property placement, and damage
 evaluation remain unresolved.
+
+## Measurement diagnostic continuation — 3 October 2026
+
+After the OWLv2 checkpoint was pushed, added `lidar_pose_audit.json` and
+`lidar_surface_diagnostics.json` to the same LiDAR command. The pose audit
+records timestamp continuity, nearest IMU timing, camera motion, quaternion
+norms, and verified closure count without claiming new VIO. The surface
+diagnostic preserves per-frame wall and horizontal-surface estimates,
+confidence-weighted within-frame medians, equal-frame aggregate alternatives,
+support counts, and residuals. It flags unstable wall support in the plan.
+
+The hall run `run-f701a6cf5c9241cd8792b2be12c91713` found no verified
+closure and one unstable wall (axis 1, side 1). Existing room lengths remain
+3.9260 × 3.3958 m. A frame-balanced diagnostic would produce
+3.9308 × 3.4133 m, making the short-side laser error worse (+0.2033 m versus
++0.1858 m). It was therefore **not** promoted into the plan. See
+`reports/hall_measurement_diagnostics.md` for exact metrics and command.

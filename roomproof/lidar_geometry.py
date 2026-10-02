@@ -367,6 +367,10 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
         raise ValueError('no usable depth points at the selected confidence/depth thresholds')
     sampled_frames = [index['frames'][number] for number in chosen]
     corrected_points, ablation = _drift_ablation(sampled_frames, frame_points, drift_correction)
+    from .lidar_pose_audit import audit_pose_imu
+    pose_report = audit_pose_imu(index, ablation['candidate_count'])
+    pose_path = run_dir / 'lidar_pose_audit.json'
+    write_json(pose_path, pose_report)
     frame_offsets = {}
     closure = ablation['applied_constraint']
     for sample_index, frame in enumerate(sampled_frames):
@@ -392,6 +396,10 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
                                 statistics.median(position[1] for position in pose_positions), pose_positions)
                 if single_room else {'status': 'unresolved', 'warnings': [
                     'Single-room rectangular fitting requires an explicit --room-id; multiroom segmentation is not yet validated.']})
+    from .lidar_surface_diagnostics import surface_diagnostics
+    surface_report = surface_diagnostics(points, frame_offsets, room_fit)
+    surface_path = run_dir / 'lidar_surface_diagnostics.json'
+    write_json(surface_path, surface_report)
     light_audit = _rgb_light_audit(scan, index['rgb_decoded_frame_count'])
     ply = run_dir / 'lidar_points.ply'
     with ply.open('w', encoding='ascii') as stream:
@@ -432,7 +440,9 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
         'pose_revisit_candidates': revisit_candidates['similar_view_pairs'],
         'pose_revisit_warning': 'Pose proximity is not loop closure; overlapping 3D surfaces must confirm the same view before correcting drift.',
         'drift_ablation': ablation,
+        'pose_audit_path': pose_path.name,
         'room_fit': room_fit,
+        'surface_diagnostics_path': surface_path.name,
         'rgb_light_audit': light_audit,
         'largest_pose_step_m': max(pose_jumps, default=0),
         'coordinate_extent_m': {'x': [min(xs), max(xs)], 'y': [min(ys), max(ys)], 'z': [min(zs), max(zs)]},
@@ -443,6 +453,8 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
         'warnings': ['Candidate plane heights are not a calibrated floor/ceiling estimate.',
                      'Reflective surface type cannot be diagnosed from sparse depth alone; inspect RGB and revisit weak-depth areas.']
     }
+    report['warnings'].extend(surface_report.get('warnings', [])[2:])
+    report['warnings'].extend(pose_report.get('warnings', [])[:-1])
     if not drift_correction:
         report['warnings'].append('Drift correction is disabled; recorded poses are used as exported.')
     elif ablation['applied_constraint'] is None:
@@ -473,4 +485,5 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
         report['warnings'].append(f'{len(weak_frames)} sampled depth frames have fewer than 500 retained points')
     report_path = run_dir / 'lidar_geometry.json'
     write_json(report_path, report)
-    return report, [{'path': str(path), 'sha256': sha256(path)} for path in (ply, corrected_ply, report_path)]
+    return report, [{'path': str(path), 'sha256': sha256(path)}
+                    for path in (ply, corrected_ply, pose_path, surface_path, report_path)]
