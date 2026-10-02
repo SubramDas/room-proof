@@ -105,27 +105,44 @@ def _wall_pair(vertical, angle, floor_y, ceiling_y):
     return walls
 
 
-def _opening_gap_candidates(frame_points, boundary, floor_y, ceiling_y):
+def _opening_gap_candidates(frame_points, boundary, floor_y, ceiling_y,
+                            camera_positions=None):
     """Find wall-plane holes only as unverified depth-gap hypotheses."""
     candidates = []
-    for wall_index in range(4):
+    for wall_index in range(len(boundary)):
         start, end = boundary[wall_index], boundary[(wall_index+1) % 4]
         length = math.dist(start, end)
         count = max(1, round(length/.1))
         bins = [[0, 0, 0] for _ in range(count)]
         frame_ids = [set() for _ in range(count)]
+        side_frame_ids = [set() for _ in range(count)]
+        behind_counts = [0 for _ in range(count)]
+        behind_frames = [set() for _ in range(count)]
         ux, uz = (end[0]-start[0])/length, (end[1]-start[1])/length
+        camera_side = 1
+        if camera_positions:
+            signed = statistics.median((x-start[0])*(-uz)+(z-start[1])*ux
+                                       for x, _, z in camera_positions)
+            camera_side = 1 if signed >= 0 else -1
         for fid, points in frame_points.items():
             for x, y, z in points:
                 along = (x-start[0])*ux + (z-start[1])*uz
-                distance = abs((x-start[0])*(-uz)+(z-start[1])*ux)
+                signed_distance = (x-start[0])*(-uz)+(z-start[1])*ux
+                distance = abs(signed_distance)
                 height = y-floor_y
-                if not 0 <= along < length or distance > .1 or not .1 < height < ceiling_y-floor_y-.1:
+                if not 0 <= along < length or not .1 < height < ceiling_y-floor_y-.1:
                     continue
                 cell = min(count-1, int(along/length*count))
+                if camera_side*signed_distance < -.25 and distance < 3.0 and height < 2.1:
+                    behind_counts[cell] += 1
+                    behind_frames[cell].add(fid)
+                if distance > .1:
+                    continue
                 level = 0 if height < .6 else 1 if height < 2.1 else 2
                 bins[cell][level] += 1
                 frame_ids[cell].add(fid)
+                if level in (0, 1):
+                    side_frame_ids[cell].add(fid)
         if count < 12:
             continue
         medians = [statistics.median([row[level] for row in bins if row[level] > 0])
@@ -135,7 +152,9 @@ def _opening_gap_candidates(frame_points, boundary, floor_y, ceiling_y):
         def supported(cell):
             return bins[cell][0] >= .3*medians[0] and bins[cell][1] >= .3*medians[1]
         gap = [bins[i][0] < .15*medians[0] and bins[i][1] < .15*medians[1]
-               and bins[i][2] >= .3*medians[2] for i in range(count)]
+               and (bins[i][2] >= .3*medians[2] or
+                    (behind_counts[i] >= 5 and len(behind_frames[i]) >= 2))
+               for i in range(count)]
         index = 0
         while index < count:
             if not gap[index]:
@@ -145,17 +164,31 @@ def _opening_gap_candidates(frame_points, boundary, floor_y, ceiling_y):
             while end_index < count and gap[end_index]:
                 end_index += 1
             width = (end_index-index)*length/count
-            left = any(supported(cell) for cell in range(max(0,index-3), index))
-            right = any(supported(cell) for cell in range(end_index,min(count,end_index+3)))
+            left_cells = [cell for cell in range(max(0,index-3), index) if supported(cell)]
+            right_cells = [cell for cell in range(end_index,min(count,end_index+3)) if supported(cell)]
+            left = bool(left_cells)
+            right = bool(right_cells)
             # An open passage can span most of a short wall. Width alone is
             # not evidence that a hole is a doorway, so retain it unverified.
-            if .35 <= width <= min(3.2, .9*length) and index >= 2 and end_index <= count-2 and left and right:
+            if .35 <= width <= min(3.2, .95*length) and index >= 1 and end_index <= count-1 and left and right:
                 evidence = sorted(set().union(*frame_ids[max(0,index-3):min(count,end_index+3)]))
+                side_views = sorted(set().union(*(side_frame_ids[cell] for cell in left_cells)) &
+                                    set().union(*(side_frame_ids[cell] for cell in right_cells)))
+                behind_views = sorted(set().union(*behind_frames[index:end_index]))
                 kind = 'wide_open_passage_depth_gap' if width > 1.6 else 'doorway_depth_gap'
                 candidates.append({'wall_index': wall_index, 'kind_hypothesis': kind,
                                    'status': 'unverified', 'offset_along_wall_m': round(index*length/count, 3),
                                    'width_m': round(width, 3), 'frame_ids': evidence,
-                                   'reason': 'low/mid wall returns absent beneath supported upper wall; RGB and occlusion checks pending'})
+                                   'left_edge_xz_m': [round(start[0]+ux*index*length/count, 3),
+                                                      round(start[1]+uz*index*length/count, 3)],
+                                   'right_edge_xz_m': [round(start[0]+ux*end_index*length/count, 3),
+                                                       round(start[1]+uz*end_index*length/count, 3)],
+                                   'edge_quantization_m': round(length/count, 3),
+                                   'left_wall_support_cells': left_cells,
+                                   'right_wall_support_cells': right_cells,
+                                   'both_edges_visible_frame_ids': side_views,
+                                   'behind_wall_frame_ids': behind_views,
+                                   'reason': 'two wall-side depth edges with low mid-height returns; behind-wall returns or upper lintel support are hypotheses until RGB and occlusion checks agree'})
             index = end_index
     return candidates
 
@@ -205,7 +238,8 @@ def fit_single_room(frame_points, horizontal, vertical, camera_y, camera_positio
                    'ceiling_height_m': round(ceiling_y-floor_y, 4),
                    'warnings': ['Rectangular LiDAR fit is provisional; scale and accuracy are uncalibrated.',
                                 'Openings are not yet detected; wall lines may cross doorways.']})
-    result['opening_gap_candidates'] = _opening_gap_candidates(frame_points, boundary, floor_y, ceiling_y)
+    result['opening_gap_candidates'] = _opening_gap_candidates(
+        frame_points, boundary, floor_y, ceiling_y, camera_positions)
     if result['opening_gap_candidates']:
         result['warnings'].append(f"{len(result['opening_gap_candidates'])} possible doorway depth gaps are unverified plan candidates; RGB/occlusion confirmation is needed.")
     if camera_positions:
@@ -220,3 +254,38 @@ def fit_single_room(frame_points, horizontal, vertical, camera_y, camera_positio
         if fraction < .9:
             result['warnings'].append('Some camera poses fall outside the fitted room; the scan may include doorway or adjacent-space views.')
     return result
+
+
+def fit_room(frame_points, horizontal, vertical, camera_y, camera_positions=None):
+    """Select a supported rectangle or convex irregular boundary.
+
+    The irregular alternative must independently close on depth-supported
+    walls. A scan spanning several rooms or a concave shape stays unresolved
+    when this evidence is insufficient.
+    """
+    rectangle = fit_single_room(frame_points, horizontal, vertical,
+                                camera_y, camera_positions)
+    heights = _height_pair(horizontal, camera_y)
+    from .lidar_irregular import fit_irregular_room
+    irregular = fit_irregular_room(vertical, heights[0] if heights else None,
+                                   heights[1] if heights else None,
+                                   camera_positions or [])
+    rectangle['irregular_alternative'] = irregular
+    if irregular['status'] != 'inferred':
+        return rectangle
+    choose = rectangle['status'] != 'inferred'
+    if rectangle['status'] == 'inferred' and len(irregular['boundary_xz_m']) >= 5:
+        area_change = abs(irregular['area_m2']-rectangle['area_m2'])/rectangle['area_m2']
+        choose = (area_change >= .12 and
+                  all(wall['edge_support_fraction'] >= .75
+                      for wall in irregular['walls_ordered']))
+    if not choose:
+        return rectangle
+    irregular.update({'floor': heights[0], 'ceiling': heights[1],
+                      'shape': 'supported_convex_irregular',
+                      'warnings': ['Convex multi-wall fit is provisional; concave or multiroom geometry is unresolved.',
+                                   'Scale and RGB/depth projection still require independent validation.']})
+    irregular['opening_gap_candidates'] = _opening_gap_candidates(
+        frame_points, irregular['boundary_xz_m'],
+        heights[0]['height_m'], heights[1]['height_m'], camera_positions)
+    return irregular

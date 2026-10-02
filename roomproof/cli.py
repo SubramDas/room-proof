@@ -146,11 +146,14 @@ def link_capture_runs(args, run_dir, run):
         args.photo_run, args.video_run, args.lidar_run,
         args.photo_source, args.lidar_source, run_dir,
         max_views=args.max_views, lidar_rgb_rotation=args.lidar_rgb_rotation,
-        match_backend=args.match_backend, model_root=args.model_root)
+        match_backend=args.match_backend, model_root=args.model_root,
+        calibration_path=args.calibration)
     source_revisions = []
     for path in (args.photo_run, args.video_run, args.lidar_run):
         source_run = json.loads((Path(path).resolve(strict=True)/'run.json').read_text())
         source_revisions.append(source_run['data_revision'])
+    if args.calibration:
+        source_revisions.append(sha256(Path(args.calibration).resolve(strict=True)))
     run['data_revision'] = hashlib.sha256(
         json.dumps(source_revisions, separators=(',', ':')).encode()).hexdigest()
     run['artifacts'] = artifacts
@@ -166,6 +169,21 @@ def link_capture_runs(args, run_dir, run):
                       'status': report['status'], 'fused_plan_path': 'property_plan.json'}
     run['warnings'].extend(report['warnings'])
     print(f"cross-capture links: {run_dir/'cross_capture_links.json'}")
+
+
+def assemble_property_runs(args, run_dir, run):
+    from .property_assembly import assemble_property
+    report, artifacts = assemble_property(args.linked_runs, run_dir)
+    revisions = [json.loads((Path(path).resolve(strict=True)/'run.json').read_text())['data_revision']
+                 for path in args.linked_runs]
+    run['data_revision'] = hashlib.sha256(
+        json.dumps(revisions, separators=(',', ':')).encode()).hexdigest()
+    run['artifacts'] = artifacts
+    run['metrics'] = {'linked_room_runs': len(args.linked_runs),
+                      'verified_connections': len(report['verified_connections']),
+                      'unplaced_rooms': len(report['placement']['unplaced_room_ids']),
+                      'status': report['status']}
+    print(f"property assembly: {run_dir/'property_assembly.json'}")
 
 
 def object_path(bundle, digest):
@@ -395,8 +413,14 @@ def main():
     linker.add_argument('--lidar-rgb-rotation', type=int, choices=(0, 90, 180, 270), default=0)
     linker.add_argument('--match-backend', choices=('patch', 'aliked-lightglue'), default='patch')
     linker.add_argument('--model-root', default='.room-proof/models')
+    linker.add_argument('--calibration', help='optional calibrated photo/video intrinsics and scan RGB-to-depth pixel map JSON')
     linker.add_argument('--runs-dir', default='runs')
     linker.set_defaults(func=link_capture_runs)
+    assembler = subcommands.add_parser('assemble-property',
+        help='combine separately linked metric room runs using shared calibrated openings')
+    assembler.add_argument('--linked-run', action='append', dest='linked_runs', required=True)
+    assembler.add_argument('--runs-dir', default='runs')
+    assembler.set_defaults(func=assemble_property_runs)
     benchmark = subcommands.add_parser("score-benchmark", help="score frozen plans against separate reference truth")
     benchmark.add_argument("manifest")
     benchmark.add_argument("--runs-dir", default="runs")

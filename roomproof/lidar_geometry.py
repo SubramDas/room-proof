@@ -391,9 +391,9 @@ def extract_geometry(scan, index, run_dir, max_frames=32, pixel_stride=4, minimu
     corrected_vertical = [(x+frame_offsets[frame_id][0], y+frame_offsets[frame_id][1],
                            z+frame_offsets[frame_id][2], nx, nz, frame_id)
                           for x, y, z, nx, nz, frame_id in vertical]
-    from .lidar_room import fit_single_room
-    room_fit = (fit_single_room(corrected_frame_points, corrected_horizontal, corrected_vertical,
-                                statistics.median(position[1] for position in pose_positions), pose_positions)
+    from .lidar_room import fit_room
+    room_fit = (fit_room(corrected_frame_points, corrected_horizontal, corrected_vertical,
+                         statistics.median(position[1] for position in pose_positions), pose_positions)
                 if single_room else {'status': 'unresolved', 'warnings': [
                     'Single-room rectangular fitting requires an explicit --room-id; multiroom segmentation is not yet validated.']})
     from .lidar_surface_diagnostics import surface_diagnostics

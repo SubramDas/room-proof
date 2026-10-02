@@ -31,12 +31,13 @@ def _apply_lidar_room_fit(plan, index, fit):
     height = fit['ceiling_height_m']
     floor_refs = refs(fit['floor']['frame_ids'])
     ceiling_refs = refs(fit['ceiling']['frame_ids'])
-    wall_evidence = [fit['walls'][1][0], fit['walls'][0][1],
-                     fit['walls'][1][1], fit['walls'][0][0]]
+    wall_evidence = (fit['walls_ordered'] if fit.get('walls_ordered') else
+                     [fit['walls'][1][0], fit['walls'][0][1],
+                      fit['walls'][1][1], fit['walls'][0][0]])
     slug = room['id'].removeprefix('room-')
     surfaces = []
     for number, evidence in enumerate(wall_evidence):
-        line = [boundary[number], boundary[(number+1) % 4]]
+        line = [boundary[number], boundary[(number+1) % len(boundary)]]
         length = math.dist(*line)
         wall_refs = refs(evidence['frame_ids'])
         surfaces.append({'id': f'surf-{slug}-wall-{number+1}', 'kind': 'wall',
@@ -88,6 +89,9 @@ def _apply_supported_candidate_links(plan, candidate_links, fit=None):
         opening = opening_by_number.get(number)
         if opening is None:
             continue
+        gaps = fit.get('opening_gap_candidates', []) if fit else []
+        if number > len(gaps) or len(gaps[number-1].get('both_edges_visible_frame_ids', [])) < 2:
+            continue
         supported = [record for record in candidate_links['records']
                      if record['candidate_id'] in group['candidate_ids'] and
                      record['status'] == 'supported_proposal' and
@@ -96,11 +100,9 @@ def _apply_supported_candidate_links(plan, candidate_links, fit=None):
             continue
         opening['status'] = 'inferred'
         opening['kind'] = ('open_passage' if group['class'] == 'open_passage' else 'door')
-        gaps = fit.get('opening_gap_candidates', []) if fit else []
-        if number <= len(gaps):
-            opening['width'] = _provisional(gaps[number-1]['width_m'], 'm', opening['source_refs'])
-            opening['offset_along_wall'] = _provisional(
-                gaps[number-1]['offset_along_wall_m'], 'm', opening['source_refs'])
+        opening['width'] = _provisional(gaps[number-1]['width_m'], 'm', opening['source_refs'])
+        opening['offset_along_wall'] = _provisional(
+            gaps[number-1]['offset_along_wall_m'], 'm', opening['source_refs'])
         opening['source_refs'] = sorted(set(opening['source_refs']) |
                                         {record['source_ref'] for record in supported})
 
@@ -268,17 +270,15 @@ def validate(plan):
         if poly is not None and room['floor_area']['value'] is not None and abs(area(poly)-room['floor_area']['value']) > max(.05, area(poly)*.05):
             errors.append(f'{room["id"]}: area disagrees with boundary')
     polygons = [(room['id'], room['boundary']) for room in plan.get('rooms', []) if room['boundary'] is not None]
-    def inside(point, polygon):
-        x, y = point; hit = False
-        for i, first in enumerate(polygon):
-            second = polygon[(i+1) % len(polygon)]
-            if (first[1] > y) != (second[1] > y):
-                cross_x = first[0] + (y-first[1])*(second[0]-first[0])/(second[1]-first[1])
-                if x < cross_x: hit = not hit
-        return hit
+    from .room_placement import _overlap_area, _triangles
+    for room_id, polygon in polygons:
+        if not _triangles(polygon):
+            errors.append(f'{room_id}: boundary cannot be triangulated as a simple polygon')
     for i, (first_id, first) in enumerate(polygons):
         for second_id, second in polygons[i+1:]:
-            if any(inside(point, second) for point in first) or any(inside(point, first) for point in second):
+            # Adjacent rooms may share an edge. A small intersection caused by
+            # four-decimal plan coordinates is not a room overlap.
+            if _overlap_area(first, second) > .02:
                 errors.append(f'{first_id} and {second_id}: room boundaries overlap')
     return errors
 

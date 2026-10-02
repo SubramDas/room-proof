@@ -139,3 +139,57 @@ mixed-pipeline pilot, not a complete property reconstruction.
 
 These run IDs refer to local ignored artifacts; raw kitchen media and model
 weights are not stored in Git.
+
+## Stages 2–6 integrated kitchen run
+
+After the earlier pilot, the updated LiDAR run
+`run-8bc96a7785874b168c202b0c681dee2a` processed 128 selected depth
+frames with OWLv2 on 12 scan-RGB views. Its repeated-plane irregular
+alternative found 12 candidate wall planes but rejected the resulting
+polygon because one edge lacked sufficient repeated wall support. The
+original rectangle stayed **2.4909 × 2.3777 m**, height **2.7781 m**. The
+depth stage still found only a separate **0.697 m** unverified gap; the new
+3D edge record shows both flanking wall sides in 17 sampled frames and
+behind-wall returns in five, but these do not identify it as the owner's
+2.26 m hall passage. The final plan keeps its width null.
+
+The final learned linker `run-dbe819d692074d83af4d698741ff5786` used
+the same eight photo and 12 model-video frames as the earlier pilot, added
+adjacent selected video pairs and within-photo pairs, and compared **375**
+view pairs. **172** passed 2D matching: 63 video/scan RGB, 48 photo/video,
+37 photo/scan RGB, 16 photo/photo, and 8 video/video. Its 69 matched
+image-region links formed 26 unverified opening tracks. It decoded **all
+1,270 standalone-video frames** for low-resolution optical flow, recording
+seven candidate-region continuity segments. Sparse video geometry supported
+seven ordered motion edges, all with **arbitrary scale and assumed
+intrinsics**. It recorded eight possible opening-transition tracks; none
+passed a calibrated wall-crossing test. Twenty-five assumed-focal camera
+poses appeared plausible and three agreed across separated scan views,
+but **no metric registration was accepted**. The kitchen had no calibration
+file for its independent camera or scan RGB-to-depth pixel mapping.
+
+The linked [property plan](../runs/run-dbe819d692074d83af4d698741ff5786/property_plan.json)
+is schema-valid: one provisional kitchen, **5.9226 m²** floor area,
+**2.7781 m** ceiling, one unresolved opening with null width, and **zero**
+adjacencies. The [visual room graph](../runs/run-dbe819d692074d83af4d698741ff5786/visual_room_graph.json),
+[LiDAR geometry](../runs/run-8bc96a7785874b168c202b0c681dee2a/lidar_geometry.json),
+and [placement report](../runs/run-dbe819d692074d83af4d698741ff5786/room_placement.json)
+retain the rejected or unresolved evidence. These links are local ignored
+artifacts and will not resolve on GitHub.
+
+The updated LiDAR and linker stages took **290.27 s** and **144.87 s**.
+With the prior photo and video model-on stages, the serial kitchen total is
+**1,076.13 s (17.9 minutes)**, still above the 15-minute target. The
+calibrated PnP path was exercised with controlled synthetic 3D landmarks:
+two separated scan views produced one accepted camera pose. Synthetic
+ordinary-image jamb rays also matched a supported one-metre scan gap and
+the calibrated video crossing gate identified a wall crossing. These
+checks exercise code paths; they are **not** measured accuracy on a real
+property. The
+multiroom placement path was exercised separately with a synthetic
+two-room, shared-opening fixture: one verified connection yielded two
+nonoverlapping placements and one adjacency in a schema-valid plan. This
+does not demonstrate accuracy on a real second scan. Without a real
+calibrated connection, `assemble-property` must leave the second room
+unplaced. Kitchen reference measurements are development evidence, not an
+untouched score for the new rules.

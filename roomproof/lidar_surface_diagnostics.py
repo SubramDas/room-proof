@@ -61,6 +61,10 @@ def surface_diagnostics(points, frame_offsets, fit):
     """Measure per-frame surface stability using confidence-filtered 3D points."""
     if fit.get("status") != "inferred":
         return {"status": "unavailable", "reason": "room fit is unresolved"}
+    if fit.get('shape') == 'supported_convex_irregular':
+        return {'status': 'unavailable',
+                'reason': 'rectangular axis-balanced diagnostic does not apply to a convex multi-wall room',
+                'warnings': ['Per-wall frame-balanced diagnostics are not yet available for irregular rooms.']}
     angles = [math.radians(fit["axes"]["first_angle_degrees"]),
               math.radians(fit["axes"]["second_angle_degrees"])]
     normals = [(math.cos(angle), math.sin(angle)) for angle in angles]

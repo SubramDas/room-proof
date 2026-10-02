@@ -81,12 +81,15 @@ def _analyze_sample(run_dir, frame, rotation=0):
 
 def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
                   run_dir, max_views=12, lidar_rgb_rotation=0,
-                  match_backend='patch', model_root='.room-proof/models'):
+                  match_backend='patch', model_root='.room-proof/models',
+                  calibration_path=None):
     """Compare bounded photo/video/scan-RGB views without claiming 3D registration."""
     if max_views < 9:
         raise ValueError('at least nine scan RGB views are required for the registration gate')
     if lidar_rgb_rotation not in (0, 90, 180, 270):
         raise ValueError('LiDAR RGB rotation must be 0, 90, 180, or 270 degrees')
+    if calibration_path and match_backend != 'aliked-lightglue':
+        raise ValueError('calibrated registration requires --match-backend aliked-lightglue')
     photo_dir, photo_quality, photo_index = _load_run(photo_run, 'photo')
     video_dir, video_quality, video_index = _load_run(video_run, 'video')
     lidar_dir, lidar_quality, lidar_index = _load_run(lidar_run, 'lidar')
@@ -98,6 +101,9 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
         raise ValueError('photo source differs from the photo run input')
     if lidar_quality['input_path'] != str(Path(lidar_source).resolve(strict=True)):
         raise ValueError('LiDAR source differs from the LiDAR run input')
+    video_path = Path(video_quality['input_path']).resolve(strict=True)
+    if sha256(video_path) != video_index['source_sha256']:
+        raise ValueError('standalone video changed since its source run')
     rgb_source_record = next((item for item in lidar_quality['source_files']
                               if item['path'] == 'rgb.mp4'), None)
     if rgb_source_record is None or sha256(Path(lidar_source)/'rgb.mp4') != rgb_source_record['sha256']:
@@ -131,29 +137,47 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
     proposals = {'photo': photo_proposals, 'video': video_proposals,
                  'scan_rgb': scan_proposals}
     records = []
+    pair_specs = []
     for left_name, right_name in (('photo', 'video'), ('photo', 'scan_rgb'),
                                   ('video', 'scan_rgb')):
-        for left in groups[left_name]:
-            for right in groups[right_name]:
-                baseline = compare(left, right)
-                if learned is None:
-                    result = baseline
-                else:
-                    result = learned.compare(left['_learned'], right['_learned'],
-                                             left['_size'], right['_size'])
-                    result['patch_baseline'] = {
-                        key: baseline[key] for key in
-                        ('matches', 'inliers', 'inlier_fraction', 'overlap_supported')}
-                records.append({'left_tier': left_name, 'right_tier': right_name,
-                                'left_frame_id': left['frame_id'],
-                                'right_frame_id': right['frame_id'],
-                                'left_image_size': list(left['_size']),
-                                'right_image_size': list(right['_size']),
-                                'left_source_ref': left['source_ref'],
-                                'right_source_ref': right['source_ref'],
-                                'left_opening_proposals': proposals[left_name].get(left['frame_id'], []),
-                                'right_opening_proposals': proposals[right_name].get(right['frame_id'], []),
-                                **result})
+        pair_specs.extend((left_name, right_name, left, right)
+                          for left in groups[left_name] for right in groups[right_name])
+    # Adjacent selected video views support a chronological opening track.
+    # Photo/photo matches can connect separate sightings without treating
+    # supplied room-folder names as adjacency evidence.
+    pair_specs.extend(('video', 'video', left, right)
+                      for left, right in zip(videos, videos[1:]))
+    pair_specs.extend(('photo', 'photo', left, right)
+                      for i, left in enumerate(photos) for right in photos[i+1:])
+    source_frames = {'photo': {frame['frame_id']: frame for frame in photo_index['frames']},
+                     'video': {frame['frame_id']: frame for frame in video_index['frames']},
+                     'scan_rgb': {frame['frame_id']: frame for frame in rgb_index['frames']}}
+    for left_name, right_name, left, right in pair_specs:
+        left_frame = source_frames[left_name][left['frame_id']]
+        right_frame = source_frames[right_name][right['frame_id']]
+        baseline = compare(left, right)
+        if learned is None:
+            result = baseline
+        else:
+            result = learned.compare(left['_learned'], right['_learned'],
+                                     left['_size'], right['_size'])
+            result['patch_baseline'] = {
+                key: baseline[key] for key in
+                ('matches', 'inliers', 'inlier_fraction', 'overlap_supported')}
+        records.append({'left_tier': left_name, 'right_tier': right_name,
+                        'left_frame_id': left['frame_id'],
+                        'right_frame_id': right['frame_id'],
+                        'left_room_label': left_frame.get('room_id'),
+                        'right_room_label': right_frame.get('room_id'),
+                        'left_source_frame_index': left_frame.get('source_frame_index'),
+                        'right_source_frame_index': right_frame.get('source_frame_index'),
+                        'left_image_size': list(left['_size']),
+                        'right_image_size': list(right['_size']),
+                        'left_source_ref': left['source_ref'],
+                        'right_source_ref': right['source_ref'],
+                        'left_opening_proposals': proposals[left_name].get(left['frame_id'], []),
+                        'right_opening_proposals': proposals[right_name].get(right['frame_id'], []),
+                        **result})
     records.sort(key=lambda item: (not item['overlap_supported'],
                                    -item['inliers'], -item['matches'],
                                    item['left_source_ref'], item['right_source_ref']))
@@ -180,16 +204,19 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
         'warnings': [
             '2D image overlap is a candidate correspondence, not verified cross-capture registration.',
             'No matched 3D landmarks, camera transform, shared doorway identity, or metric room connection is inferred.',
-            'Opening boxes on overlapping images are recorded but are not automatically matched as one physical opening.',
+            'Opening boxes are linked only as image-region tracks, not verified as one physical opening.',
             'Photo/video frames remain independent of scan RGB timestamps and frame indices.'
         ],
     }
     path = Path(run_dir)/'cross_capture_links.json'
     write_json(path, report)
+    calibration = None
     if learned is not None:
-        from .metric_registration import inspect_registration
+        from .metric_registration import inspect_registration, load_calibration
+        calibration = load_calibration(calibration_path) if calibration_path else None
         registration = inspect_registration(report, lidar_source, lidar_index,
-                                            pairing, rgb_index, lidar_rgb_rotation)
+                                            pairing, rgb_index, lidar_rgb_rotation,
+                                            calibration)
     else:
         registration = {'status': 'not_run_without_2d_keypoint_correspondences',
                         'pair_hypotheses': [], 'plausible_assumed_pose_count': 0,
@@ -201,12 +228,46 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
     opening_links = match_opening_regions(report['records'], lidar_rgb_rotation)
     opening_path = Path(run_dir)/'opening_correspondences.json'
     write_json(opening_path, opening_links)
+    if learned is not None:
+        from .video_temporal import trace_video
+        from .visual_odometry import estimate_video_trajectory
+        temporal = trace_video(video_quality['input_path'], video_index,
+                               opening_links, records)
+        visual_odometry = estimate_video_trajectory(records)
+    else:
+        temporal = {'status': 'not_run_without_optical_flow_backend',
+                    'decoded_frame_count': None, 'opening_track_segments': [],
+                    'continuous_region_segment_count': 0}
+        visual_odometry = {'status': 'not_run_without_keypoint_correspondences',
+                           'edges': [], 'supported_edge_count': 0}
+    temporal_path = Path(run_dir)/'video_motion_profile.json'
+    write_json(temporal_path, temporal)
+    odometry_path = Path(run_dir)/'visual_odometry.json'
+    write_json(odometry_path, visual_odometry)
+    from .registered_openings import link_registered_openings
+    lidar_link_path = lidar_dir/'lidar_candidate_links.json'
+    lidar_links = json.loads(lidar_link_path.read_text()) if lidar_link_path.is_file() else {}
+    registered_openings = link_registered_openings(
+        records, opening_links, registration, lidar_links,
+        geometry['room_fit'], calibration)
+    registered_path = Path(run_dir)/'registered_openings.json'
+    write_json(registered_path, registered_openings)
+    from .room_transitions import find_verified_crossings
+    transitions = find_verified_crossings(
+        registration, registered_openings, geometry['room_fit'])
+    transitions_path = Path(run_dir)/'room_transitions.json'
+    write_json(transitions_path, transitions)
     room_labels = {}
     for tier, source_dir in (('photo', photo_dir), ('video', video_dir), ('lidar', lidar_dir)):
         plan = json.loads((source_dir/'property_plan.json').read_text())
         room_labels[tier] = [room['id'] for room in plan['rooms']]
+    profile_path = video_dir/'coarse_scene_profile.json'
+    profile = json.loads(profile_path.read_text()) if profile_path.is_file() else {}
+    from .visual_room_map import build_visual_room_map
+    room_map = build_visual_room_map(records, opening_links, profile, room_labels,
+                                     temporal)
     graph = {
-        'report_version': '0.1.0', 'status': 'observation_graph_only',
+        'report_version': '0.2.0', 'status': 'visual_hypotheses_only',
         'property_id': report['property_id'], 'room_labels_by_capture': room_labels,
         'observations': [
             {'tier': tier, 'frame_id': item['frame_id'],
@@ -220,21 +281,37 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
             'inlier_coordinates': item.get('inlier_coordinates', [])}
             for item in records if item['overlap_supported']],
         'opening_hypotheses': opening_links['groups'],
+        'opening_tracks': room_map['opening_tracks'],
+        'transition_hypotheses': room_map['transition_hypotheses'],
+        'room_connection_hypotheses': room_map['room_connection_hypotheses'],
+        'full_video_frame_count': room_map['full_video_frame_count'],
+        'scene_change_candidate_count': room_map['scene_change_candidate_count'],
+        'video_motion_profile_path': 'video_motion_profile.json',
+        'visual_odometry_path': 'visual_odometry.json',
+        'arbitrary_scale_video_motion_edge_count': visual_odometry['supported_edge_count'],
+        'continuous_region_segment_count': temporal['continuous_region_segment_count'],
         'metric_pose_hypotheses': registration.get('cross_view_consistent_hypotheses', []),
         'inferred_room_adjacency': [],
-        'metric_registration': None,
+        'metric_registration': registration.get('accepted_camera_poses') or None,
         'metric_registration_hypotheses_path': 'cross_capture_registration.json',
         'opening_correspondence_hypotheses_path': 'opening_correspondences.json',
-        'warnings': ['Room labels are supplied capture metadata; 2D overlap alone does not place rooms or confirm a doorway.']
+        'registered_openings_path': 'registered_openings.json',
+        'room_transitions_path': 'room_transitions.json',
+        'verified_crossings': transitions['verified_crossings'],
+        'warnings': room_map['warnings']
     }
     graph_path = Path(run_dir)/'visual_room_graph.json'
     write_json(graph_path, graph)
     from .fused_plan import assemble_fused_plan
     fused, fused_artifacts = assemble_fused_plan(
         photo_dir, video_dir, lidar_dir, report, registration,
-        opening_links, run_dir)
+        opening_links, run_dir, registered_openings=registered_openings)
     return report, rgb_artifacts + [
         {'path': str(path), 'sha256': sha256(path)},
         {'path': str(registration_path), 'sha256': sha256(registration_path)},
         {'path': str(opening_path), 'sha256': sha256(opening_path)},
+        {'path': str(temporal_path), 'sha256': sha256(temporal_path)},
+        {'path': str(odometry_path), 'sha256': sha256(odometry_path)},
+        {'path': str(registered_path), 'sha256': sha256(registered_path)},
+        {'path': str(transitions_path), 'sha256': sha256(transitions_path)},
         {'path': str(graph_path), 'sha256': sha256(graph_path)}] + fused_artifacts

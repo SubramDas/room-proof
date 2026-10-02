@@ -96,14 +96,21 @@ To compare independently processed photo, standalone-video, and LiDAR RGB
 captures, use `link-captures` with their completed run directories and the
 original photo folder and extracted Stray folder. It writes
 `cross_capture_links.json`, `cross_capture_registration.json`,
-`opening_correspondences.json`, `visual_room_graph.json`, a conservative
-fused `property_plan.json`/SVG, and RGB pairing evidence.
+`opening_correspondences.json`, `registered_openings.json`,
+`room_transitions.json`,
+`video_motion_profile.json`, `visual_odometry.json`,
+`visual_room_graph.json`, `room_placement.json`, a conservative fused
+`property_plan.json`/SVG, and RGB pairing evidence.
 At least nine scan RGB views are required for its registration gate. The
 default patch matcher records 2D visual overlaps and opening proposals.
 `--match-backend aliked-lightglue` enables the optional local learned matcher
 after [provisioning](docs/dependencies.md); it also probes LiDAR-backed PnP
-poses with held-out reprojection checks. Unknown independent-camera
-calibration keeps those poses as hypotheses. The fused plan retains only
+poses with held-out reprojection checks. It decodes every standalone-video
+frame for low-resolution optical-flow diagnostics and links selected opening
+boxes through the intervening frames. Its sparse video camera path has
+arbitrary scale. An optional [calibration file](docs/cross_capture_calibration.md)
+can provide camera intrinsics and a scan RGB-to-depth pixel map; without
+these, PnP poses remain hypotheses. The fused plan retains only
 LiDAR-supported dimensions, carries unresolved rooms and openings, and does
 not infer adjacency merely from image matches.
 
@@ -117,6 +124,25 @@ not infer adjacency merely from image matches.
 
 Add `--match-backend aliked-lightglue` to compare the learned matcher with
 the patch baseline on the same selected view pairs.
+Use `--calibration /path/to/calibration.json` only with the learned matcher.
+It must describe the original cameras and scan pixel mapping independently
+of evaluator tape measurements. A calibrated pose still needs agreement from
+separated scan views before it can support a metric opening.
+
+When two or more rooms have separate completed `link-captures` runs, combine
+them with the **same property ID** and shared photo/video source IDs:
+
+```bash
+.venv/bin/python -m roomproof assemble-property \
+  --linked-run runs/ROOM_A_LINK_RUN --linked-run runs/ROOM_B_LINK_RUN
+```
+
+`property_assembly.json` records the shared visual candidates, accepted
+physical opening links, placement transforms, and rejection reasons. Rooms
+without a verified shared opening remain unplaced in the property plan;
+their capture-local measurements remain source-linked. The current geometry
+path supports supported convex irregular single-room boundaries as well as
+rectangles. Concave and unsegmented multiroom scans remain unresolved.
 
 The optional cloud probe needs `GEMINI_API_KEY` in the environment and explicit
 approval before uploading any private interior photo. Its output is separate

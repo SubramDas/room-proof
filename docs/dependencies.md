@@ -85,10 +85,12 @@ revision, weight hashes, model matches, and epipolar RANSAC inliers. Its
 result is a 2D correspondence. The later PnP probe records held-out
 reprojection error under explicitly assumed independent-camera focal
 lengths; it does not certify metric placement without calibration and
-cross-view agreement. The kitchen model-on stages plus learned linker took
-1,081.65 seconds (18.0 minutes) sequentially on this CPU, above the
-15-minute target, before provisioning or transfer. A complete clean-machine
-timing remains to be measured.
+cross-view agreement. The updated kitchen model-on stages plus learned
+linker took 1,076.13 seconds (17.9 minutes) sequentially on this CPU,
+above the 15-minute target, before provisioning or transfer. The learned
+linker also uses OpenCV for every-frame low-resolution optical flow and
+arbitrary-scale sparse video motion. A complete clean-machine timing
+remains to be measured.
 
 ## Optional cloud candidate, not adopted
 

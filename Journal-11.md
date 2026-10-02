@@ -175,7 +175,7 @@ in its coarse scene timeline before selecting detailed windows. Unverified
 LiDAR gap width and type now remain unknown in the plan.
 
 Ran OWLv2 on all eight kitchen photos, 12 selected standalone-video frames,
-and 12 scan-RGB views, along with 128 selected depth frames. The final
+and 12 scan-RGB views, along with 128 selected depth frames. An earlier
 learned linker run is `run-dc79cc91e51243fab3100e1018dfb6a3`. It found
 148 supported 2D view pairs from 336 tests, compared with five for the
 patch matcher on the same model-on source runs. It produced 52 constrained
@@ -184,8 +184,52 @@ hypotheses under assumed camera focal lengths. None established calibrated
 metric registration or adjacency. The owner later identified kitchen
 `IMG_0004.jpeg` as showing both edges of the hall-facing 2.26 m passage.
 One model box roughly covers that visible passage, but its jambs were not
-registered to the LiDAR wall. The final plan retains the 2.4909 × 2.3777 m
+registered to the LiDAR wall. That plan retained the 2.4909 × 2.3777 m
 provisional kitchen fit, 2.7781 m height, and an unresolved opening with
 null width. The serial model-on pass took 1,081.65 s (18.0 min) on this
 CPU, above the 15-minute target. See
 `reports/kitchen_pipeline_pilot.md` for run IDs, errors, and limits.
+
+## Visual map, irregular LiDAR, registration, and assembly pass — 3 October 2026
+
+Implemented stages 2–6 as evidence-gated paths. `video_temporal.py` decodes
+every standalone-video frame for low-resolution image motion and tracks
+opening-region texture between model-selected views. `visual_odometry.py`
+estimates sparse, arbitrary-scale camera motion on adjacent selected views.
+The visual graph now records opening tracks, possible transitions, room
+label hypotheses, and explicit unknown adjacency. `room_transitions.py`
+can accept a crossing only when calibrated video poses straddle a registered
+LiDAR opening on one wall.
+
+`lidar_irregular.py` fits a convex multi-wall boundary only when every side
+has repeated depth-plane evidence. The existing rectangular fit remains
+available, while unsupported concave or multiroom geometry stays unknown.
+Depth gaps now preserve left/right 3D edge locations, supporting frames,
+behind-wall evidence, and grid quantization. Width enters the plan only
+after repeated edge support and consistent registered RGB evidence.
+
+`metric_registration.py` now accepts optional explicit camera intrinsics
+and a scan-RGB-to-depth pixel mapping, checks 3D landmark spread and
+held-out PnP error, and seeks agreement across separated scan views.
+`registered_openings.py` compares ordinary-image jamb rays with the same
+LiDAR wall gap. `assemble-property` combines separate linked room scans
+only through shared calibrated opening evidence; its placement solver checks
+widths, opposing wall directions, overlap, and inconsistent connection
+cycles. An unplaced room retains local measurements but no property-frame
+boundary. A synthetic two-room fixture passed one supported connection,
+nonoverlapping placement, adjacency, and schema validation. Controlled
+synthetic 3D landmarks also passed calibrated PnP across two separated scan
+views, registered opening-ray agreement, and the wall-crossing gate. These
+exercise implementation branches, not real-property accuracy.
+
+The final kitchen LiDAR run is `run-8bc96a7785874b168c202b0c681dee2a`;
+the linker run is `run-dbe819d692074d83af4d698741ff5786`. It matched
+172 of 375 2D view pairs; all 1,270 video frames contributed to optical
+flow, seven opening segments had image-region continuity, and seven sparse
+motion edges had arbitrary scale. The irregular fit was rejected for an
+unsupported edge. No calibrated metric registration, wall crossing,
+adjacency, or 2.26 m hall-facing width was accepted. The fused kitchen
+plan remains schema-valid with provisional 2.4909 × 2.3777 × 2.7781 m
+geometry and an unresolved opening. Updated serial model-on time is
+1,076.13 s (17.9 min). Exact stage counts and limits are in
+`reports/kitchen_pipeline_pilot.md`.

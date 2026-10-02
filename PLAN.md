@@ -202,7 +202,7 @@ calibrated cross-capture registration, general multiroom placement, and
 held-out accuracy/runtimes are still required before the intended result
 is achieved.
 
-On the final kitchen pilot, the three model-on source runs and the learned
+On the earlier kitchen pilot, the three model-on source runs and the learned
 linker produced 148 supported 2D view pairs from 336 tests, versus five for
 the patch matcher on the same source runs. The linker retained 52 local
 opening-region links in 19 unverified groups and three cross-view-consistent
@@ -212,3 +212,51 @@ LiDAR-derived 2.4909 × 2.3777 × 2.7781 m kitchen fit is provisional, while
 the hall-facing 2.26 m reference opening remains a miss. The full serial
 model-on pass took about 18 minutes on this CPU, above the 15-minute target.
 See `reports/kitchen_pipeline_pilot.md` for exact run IDs and evidence.
+
+## Stages 2–6 implementation pass
+
+The learned linker now compares neighbouring selected video views and photo
+pairs in addition to the three cross-tier pair classes. It decodes every
+standalone-video frame at low resolution for optical-flow diagnostics,
+tracks candidate opening texture between selected model frames, and builds
+an arbitrary-scale sparse video-motion graph from epipolar matches. The
+visual room graph records opening tracks, possible transitions, conflicting
+room labels, and unresolved links. A room crossing is accepted only when
+calibrated video poses cross a registered LiDAR opening plane; a scene change
+or folder name never proves one.
+
+The LiDAR path independently fits repeated wall planes as a convex
+multi-sided alternative and selects it only when every edge has repeated
+depth support. It still retains the rectangular path and marks concave or
+unsegmented multiroom scans unresolved. Depth-gap candidates now include
+3D left/right wall-edge positions, quantization, shared supporting frames,
+and behind-wall depth evidence. A measured opening requires both edges to
+be seen repeatedly and agreement from registered RGB views.
+
+`link-captures --calibration` accepts independent-camera intrinsics and an
+explicit scan-RGB-to-depth pixel map. Its PnP stage checks 3D landmark
+spread, held-out reprojection, and agreement across separated scan views
+before accepting a camera pose. Registered ordinary-image opening rays are
+then checked against the same measured LiDAR gap; only repeated agreement
+may support a plan opening. Without that calibration, the kitchen poses
+remain hypotheses and no passage width is promoted.
+
+`assemble-property` combines separately linked metric room runs. It can place
+one connected set while leaving another room without property-frame
+coordinates. A shared
+ordinary-image candidate can connect two rooms only when each run has a
+registered, scan-supported opening. The placement solver aligns measured
+opening centers and outward wall directions, checks widths, overlap, and
+cycle consistency, and preserves unknown or conflicting placements. It
+cannot place unscanned walls or derive a concave whole-property outline.
+
+The integrated kitchen run `run-dbe819d692074d83af4d698741ff5786`
+processed all 1,270 video frames for low-resolution motion, supported 172
+of 375 2D view pairs, retained 26 unverified opening tracks, seven
+candidate-region continuity segments, and seven arbitrary-scale visual
+motion edges. The LiDAR fit remained 2.4909 × 2.3777 × 2.7781 m; a convex
+irregular alternative failed its wall-support gate. No calibrated camera
+pose, verified crossing, adjacency, or 2.26 m hall-passage width passed.
+The implementation now runs end to end with explicit unknown outputs;
+real multiroom accuracy and a finite width still require matching capture
+evidence, calibration, and an untouched benchmark.

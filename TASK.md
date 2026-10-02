@@ -285,7 +285,7 @@ T85–T90/T93–T98; none of their final done criteria are claimed without
 reviewed physical opening labels, calibrated registration, multiroom
 placement, untouched evaluation, and the end-to-end time gate.
 
-**Final kitchen pilot outcome:** Using the same three model-on source runs,
+**Earlier kitchen pilot outcome:** Using the same three model-on source runs,
 the learned linker `run-dc79cc91e51243fab3100e1018dfb6a3` supported
 148 of 336 2D view pairs, versus five for the patch baseline. Its 52
 opening-region links formed 19 unverified groups. Three pose hypotheses
@@ -299,6 +299,31 @@ unbounded opening width. The full serial model-on run took 1,081.65 s
 Open gates remain: reviewed physical-opening labels, calibrated independent
 camera-to-scan registration, multiroom placement, candidate precision and
 recall, runtime reduction, and evaluation on a separate untouched capture.
+
+**Stages 2–6 code pass:** Added full-decoded-video low-resolution optical
+flow, model-opening temporal tracks, sparse arbitrary-scale video odometry,
+and evidence-only room-transition hypotheses. Added repeated-plane convex
+irregular LiDAR fitting and explicit 3D depth-gap side evidence. Optional
+calibration gates independent-image PnP with held-out points and separated
+scan views; a registered ordinary-image opening must agree with a LiDAR gap
+before its width can enter the plan. Added `assemble-property` for separate
+metric room runs, with verified shared-opening constraints, overlap and cycle
+checks, alternatives, and unresolved placement. Connected rooms can still be
+placed if another room has no verified link. The kitchen run remains a
+single provisional room with no accepted metric registration or passage
+width. These implementations advance T90/T94–T96/T98; their real-world
+accuracy gates and unscanned/concave room cases remain open.
+
+The integrated kitchen runs are `run-8bc96a7785874b168c202b0c681dee2a`
+for LiDAR and `run-dbe819d692074d83af4d698741ff5786` for linking. All
+1,270 video frames contributed motion diagnostics; 172 of 375 image pairs
+passed 2D matching, seven opening-track segments and seven arbitrary-scale
+video motion edges survived, but zero calibrated camera poses, verified
+crossings, metric passage widths, or room connections passed. The irregular
+polygon failed repeated wall support; the rectangular fit remained. A
+synthetic two-room assembly fixture validated the accepted-connection path,
+but is not a real multiroom accuracy result. The serial kitchen model-on
+time is still 17.9 minutes.
 
 ## Stop conditions and honest reporting
 
