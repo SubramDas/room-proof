@@ -115,7 +115,7 @@ def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04,met
         rid=room_names[i] if room_names and i<len(room_names) else f'room_{i+1}'
         poly=np.array(c['polygon']);lo=poly.min(0);hi=poly.max(0)
         inside=(p[:,0]>=lo[0])&(p[:,0]<=hi[0])&(p[:,2]>=lo[1])&(p[:,2]<=hi[1])
-        local_h=plane_modes(p[inside&horizontal&(p[:,1]>floor+1.8),1]);ceil=ceiling
+        local_h=plane_modes(p[inside&horizontal&(p[:,1]>floor+1.8),1]);ceil=None
         if local_h:ceil=max(local_h,key=lambda y:np.sum(inside&horizontal&(abs(p[:,1]-y)<.045)))
         local_floor=floor
         if method=='planes':
@@ -123,6 +123,7 @@ def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04,met
             if local_floor_modes:
                 local_floor=max(local_floor_modes,key=lambda y:np.sum(inside&horizontal&(abs(p[:,1]-y)<.045)))
         h=ceil-local_floor if ceil is not None else None
+        if h is not None and (not np.isfinite(h) or h<=0):h=None;ceil=None
         walls=[]
         for j,(a,b) in enumerate(zip(poly,np.roll(poly,-1,axis=0))):
             sid=f'{rid}_wall_{j+1}';length=float(np.linalg.norm(b-a))
@@ -136,7 +137,7 @@ def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04,met
         rooms.append({'id':rid,'name':rid,'polygon':poly.tolist(),'walls':walls,'floor_y':float(local_floor),'ceiling_y':float(ceil) if ceil is not None else None,
             'ceiling_height':measure(h,half_width=.05 if tier=='lidar' else .45),'floor_area':measure(c['area'],'m2',half_width=c['area']*(.07 if tier=='lidar' else .4)),
             'extent_x':measure(hi[0]-lo[0],half_width=sigma if tier=='lidar' else .4),'extent_z':measure(hi[1]-lo[1],half_width=sigma if tier=='lidar' else .4),
-            'camera_visits':c['visits'],'status':'provisional','geometry_source':'observed_free_space_and_planes'})
+            'ceiling_observation':'local_horizontal_plane' if ceil is not None else 'unobserved','camera_visits':c['visits'],'status':'provisional','geometry_source':'observed_free_space_and_planes'})
     qa={'floor_y':float(floor),'method':method,'ceiling_y':ceiling,'horizontal_plane_modes':hm,'room_candidate_count':len(candidates),
         'warnings':['Room boundaries and interval calibration are provisional.','Watershed spaces require topology validation; no declared room count is forced.']}
     return {'rooms':rooms,'surfaces':surfaces,'adjacency':[],'openings':[],'layout_qa':qa,'raster':{'free':free,'hits':hits,'segments':segmented,'origin':origin,'cell':cell}}
