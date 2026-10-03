@@ -1,0 +1,21 @@
+Kitchen/room_1:
+height: 2.8 m
+length: 2.3 m
+breadth: 2.36 m
+doorway height: 2.26 m
+doorway width: 0.88 m
+
+Hall/room_2:
+height: 2.8 m
+length: 3.3 m
+breadth: 4.2 m
+doorway height: 2.26 m
+doorway width: 0.88 m
+
+room_3:
+height: 2.26 m
+length: 0.81 m
+breadth: 1.67 m
+doorway height: 2.26 m
+doorway width: 0.81 m
+
