@@ -1,0 +1,10 @@
+{
+  "description": "Assisted frame selection from the new whole-property scan. Names and ranges come from visual review of sampled RGB frames, not reference dimensions. Connector preserves the automatic candidate because a short trajectory segment includes views through adjoining doorways.",
+  "visual_evidence": "Source run keyframes: 000000/000704/001443/002181 bedroom; 002886/003625 doorway transition; 004363/005101 hall; 006545/007283/008022 kitchen. RGB timing QA remains unresolved.",
+  "spaces": [
+    {"name": "bedroom", "source_frame_range_inclusive": [0, 2450]},
+    {"name": "connector", "retain_automatic_room": "room_2"},
+    {"name": "hall", "source_frame_range_inclusive": [3300, 5500]},
+    {"name": "kitchen", "source_frame_range_inclusive": [6300, 8022]}
+  ]
+}
