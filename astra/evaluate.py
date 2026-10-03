@@ -7,18 +7,20 @@ from .io import write_json
 
 def read_measurements(path):
     rooms={};current=None
+    # Preserve stable benchmark IDs when the operator makes room names readable.
+    known={'kitchen':'room_1','hall':'room_2','connector':'room_3','bedroom':'bedroom'}
     for line in Path(path).read_text().splitlines():
         line=line.strip()
         if not line:continue
         if line.endswith(':'):
-            name=line[:-1];match=re.search(r'room_\d+',name);current=match.group(0) if match else name
+            name=line[:-1];match=re.search(r'room_\d+',name);current=match.group(0) if match else known.get(name.lower(),name)
             if current in rooms:raise ValueError(f'Duplicate ground-truth room: {current}')
             rooms[current]={}
         elif ':' in line and current:
             key,value=line.split(':',1);m=re.match(r'\s*([\d.]+)\s*m\s*$',value)
             if m:rooms[current][key.strip()]=float(m.group(1))
     return {'source':str(path),'instrument':'laser_user_reported','instrument_uncertainty_m':None,'rooms':rooms,
-            'reference_scope':'partial_room_dimensions_and_room_level_doorway_entries','adjacency':[['room_1','room_2'],['room_2','room_3']]}
+            'reference_scope':'partial_room_dimensions_and_room_level_doorway_entries','adjacency':[['room_1','room_2'],['room_2','room_3'],['room_3','bedroom']]}
 
 
 def score(result,truth,mapping):
@@ -55,7 +57,7 @@ def export_scores(scores,out):
     for r in records:
         pred='missing' if r['prediction_m'] is None else f"{r['prediction_m']:.3f}";err='missing' if r['absolute_error_m'] is None else f"{r['absolute_error_m']*100:.2f}";gate='not specified' if r['pass'] is None else ('pass' if r['pass'] else 'FAIL')
         lines.append(f"| {r['capture_id']} / {r['tier']} | {r['reference_room']} | {r['quantity']} | {r['truth_m']:.3f} | {pred} | {err} | {gate} |")
-    lines+=['','## Incomplete benchmark evidence','','Repeat scans are deferred by the user. Consumer-app exports, independent damage extents, official schema/round-one gates and independent calibration scenes were not supplied. The property contains two rooms plus a corridor, not the prescribed three rooms plus a connector. These omissions are not counted as passed gates.']
+    lines+=['','## Incomplete benchmark evidence','','An independent kitchen repeat and two Magicplan room exports are supplied separately. Full wall correspondence, independent damage extents, official schema/round-one gates and independent interval calibration remain unavailable. The expanded capture has three rooms plus a connector; its automatic segmentation merges hall and kitchen, and the assisted correction is labelled separately. These gaps are not counted as passed gates.']
     (out/'benchmark.md').write_text('\n'.join(lines)+'\n')
 
 

@@ -24,3 +24,5 @@ These are saved-run observations, not a general accuracy guarantee for the devic
 Horizontal axes are not explicitly matched to reference length/breadth labels. Three-room LiDAR height errors are approximately 4.1, 3.1 and 6.7 cm, respectively, exceeding the 1.5 cm gate. RGB physical stitching remains unresolved. The photo ±8% and video ±3% requirements have not been established. Intervals are provisional engineering ranges, not empirically calibrated confidence intervals. Missing ceiling observations must remain unavailable.
 
 Source run IDs: `kitchen_lidar_final`, `kitchen_photos_final`, `kitchen_video_final`, `three_room_lidar_final`; values read from each run's `result.json`. This is a documentation snapshot; later validated runs may supersede it.
+
+The replacement four-space LiDAR scan is separately documented under Part 2. Its automatic layout merges hall and kitchen; its named four-space plan uses visually reviewed frame ranges. This is a reconstruction limitation, not an input-tier or device-compatibility pass.

@@ -21,7 +21,7 @@ Open `runs/demo/report.html` in a browser. `result.json`, `plan.svg`, `plan.pdf`
 # RGB-only video: pass the MP4 itself. Sensor sidecars are not read.
 .venv/bin/python -m astra run --tier video --input three_room/lidar/rgb.mp4 --rotation 90 --max-frames 32 --output runs/video
 
-# Photos: folders room_1, room_2, room_3, each with 2–8 images
+# Photos: named room folders, each with 2–8 images
 .venv/bin/python -m astra run --tier photos --input three_room --output runs/photos
 
 # Explicit demonstration of user-declared black/brown staging props
@@ -32,7 +32,7 @@ Open `runs/demo/report.html` in a browser. `result.json`, `plan.svg`, `plan.pdf`
 .venv/bin/python -m astra evaluate --result runs/demo/result.json --truth measurements.txt --mapping '{"room_1":"room_2","room_2":"room_1","room_3":"room_3"}' --output runs/demo/evaluation
 ```
 
-LiDAR room IDs are ordered by observed camera visits, so mapping must be checked against the rendered plan for each capture. The example maps this supplied multi-room scan's kitchen to predicted room_2 and hall to predicted room_1. It is not used during inference.
+LiDAR room IDs are ordered by observed camera visits, so mapping must be checked against the rendered plan for each capture. The example refers to the earlier three-space scan. The current `three_room/` raw folder contains a replacement scan; use `three_room_original/` inside the Part 2 bundle to regenerate earlier saved results. Evaluation mappings never enter inference.
 
 `--depth-model depth-pro` selects the optional Apple model after downloading it. `--device cuda` selects a compatible GPU installation; CPU is the default. `--semantics off` runs geometry without the detector; it does not claim damage is absent. `--drift off` provides the LiDAR ablation. `--layout-method free-space` reproduces the earlier wall extraction method. `--schema path.json` additionally validates against an official schema if one becomes available. Use a new output directory for each experiment.
 
@@ -63,7 +63,7 @@ A fresh install in under 15 minutes is a target, **not yet verified**; download 
 
 ## Capture and evidence limitations
 
-The current benchmark has two rooms and a corridor, rather than the specified three rooms plus a connector. Consumer-app captures are unavailable tonight; repeat scans are deferred at the user's request. The kitchen stills duplicate the multi-room kitchen stills and are not an independent test set. The damage marks are staged props. Do not use the candidate flags as a diagnosis of concealed damage or automatically price repairs.
+The replacement benchmark capture has bedroom, kitchen, hall and a connector. Its automatic LiDAR segmentation merges hall and kitchen; the separate assisted plan uses visually reviewed frame ranges. Two Magicplan PDF exports and an independent kitchen repeat are included in the submission evidence. The kitchen stills in the earlier benchmark duplicate the standalone kitchen stills and are not an independent test set. The damage marks are staged props. Candidate flags are inspection prompts, not concealed-damage diagnoses or automatic repair prices.
 
 ## Development history
 
@@ -92,3 +92,5 @@ Progress is written to `progress.log`, with state in `run_status.json`. A discon
 ## Submission and process evidence
 
 See [submission index](docs/SUBMISSION_INDEX.md) for Parts 1–4 and [Part 5 history](docs/PART_5_PROCESS_EVIDENCE.md). Raw-data ZIPs are separate; the repository does not contain model binaries or credentials.
+
+The new four-space LiDAR output, measured errors, and reproducible assisted segmentation are documented in [expanded scan results](docs/THREE_ROOM_EXPANDED_RESULTS.md). Part 2 retains both the old and replacement raw scans with explicit input identity.

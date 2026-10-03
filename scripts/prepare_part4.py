@@ -72,8 +72,15 @@ project=Path('05_reproduction/project')
 for name in ['astra','requirements.txt','requirements-models.txt','schemas','models/README.md']:copy(name,project/name)
 for name in ['setup.sh','fetch_models.py','fetch_semantic_models.py','check_environment.py']:copy('scripts/'+name,project/'scripts'/name)
 for f in (ROOT/'models').glob('*.json'):copy(f.relative_to(ROOT),project/'models'/f.name)
-for name in ['kitchen','three_room']:copy(name,project/name)
-copy('measurements.txt',project/'measurements.txt')
+copy('kitchen',project/'kitchen')
+# Part 4 targets the earlier 5,351-frame scan. The workspace three_room/ path
+# now contains a replacement 8,023-frame scan, so retain the archived original.
+original=OUT/project/'three_room'
+if not (original/'lidar/odometry.csv').exists():
+ archived=ROOT/'submission/part_2/05_reproduction/project/three_room_original'
+ if not (archived/'lidar/odometry.csv').exists():raise FileNotFoundError('Historical three-room capture unavailable')
+ shutil.copytree(archived,original,dirs_exist_ok=True)
+if not (OUT/project/'measurements.txt').exists():copy('measurements.txt',project/'measurements.txt')
 write('05_reproduction/README.md','''# Reproduction
 
 Raw kitchen and three_room data are included in project/. Public model weights are fetched by scripts; no private API or credential is needed. Set up from this directory:
@@ -174,4 +181,20 @@ This is a navigation summary written after the runs, not a replacement or backda
 
 **Separate supporting result:** standalone kitchen height error improves 1.62 → 0.79 cm, but this was not the declared worst-gate prediction and drift settings changed.
 ''')
+replay=ROOT/'runs/three_room_photos_current_replay/result.json'
+if replay.exists():
+ copy('runs/three_room_photos_current_replay','02_runs/photos_current_source_replay')
+ snapshot=OUT/'05_reproduction/snapshots/photos_current_source_replay'
+ shutil.copytree(ROOT/'astra',snapshot/'astra',dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__'))
+ recorded=json.loads((ROOT/'runs/three_room_photos_current_replay/source_manifest_at_start.json').read_text())['files']
+ actual={str(p.relative_to(snapshot)):hashlib.sha256(p.read_bytes()).hexdigest() for p in (snapshot/'astra').glob('*.py')}
+ matched=actual==recorded
+ if not matched:raise RuntimeError('Current photo replay source hashes differ from source at run start')
+ write('05_reproduction/current_photo_replay_audit.json',json.dumps({'source_hashes_match':True,'files':len(actual),'result':'02_runs/photos_current_source_replay/result.json','snapshot':'05_reproduction/snapshots/photos_current_source_replay/astra'},indent=2))
+ with (OUT/'05_reproduction/reproduce_pairs.sh').open('a') as script:
+  script.write('\n# Source-frozen supplemental photo after run (exact source hashes match).\nmkdir -p "$REPRO_BASE/reruns/photos_current_source_replay/geometry/depth_cache"\ncp -a "$REPRO_BASE/../02_runs/photos_current_source_replay/geometry/depth_cache/." "$REPRO_BASE/reruns/photos_current_source_replay/geometry/depth_cache/"\nrun_snapshot photos_current_source_replay --tier photos --input "$REPRO_BASE/project/three_room" --output "$REPRO_BASE/reruns/photos_current_source_replay" --capture-id three_room_photos_current_replay --semantic-views 9 --depth-model depth-pro\n')
+ with (OUT/'03_comparison/POSTMORTEM.md').open('a') as report:
+  report.write('\n## Supplemental source-frozen photo after run\n\nA later photo after run on the same original capture is included under `02_runs/photos_current_source_replay/`. Its exact source files are included under `05_reproduction/snapshots/photos_current_source_replay/`, and all recorded source hashes match the snapshot. This supplements the historically unrecoverable photo-after source; it does not rewrite the original declaration or prove the earlier saved after numbers can be replayed exactly. Inspect the supplemental result and provenance for its measured values and physical stitch status.\n')
+ with (OUT/'README.md').open('a') as readme:
+  readme.write('\nA supplemental current-source photo after run and hash-matched source snapshot are included under `02_runs/photos_current_source_replay/` and `05_reproduction/snapshots/photos_current_source_replay/`. See the replay audit and post-mortem.\n')
 print('Part 4 assembled',flush=True)

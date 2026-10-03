@@ -10,9 +10,9 @@
 - `Capture_Protocol.md`: editable source of the same instructions.
 - `Device_Matrix.md`: supported inputs, tested hardware and observed accuracy limitations.
 
-The protocol covers installation, walking path, duration, precautions, damage views, file handoff and the three input tiers. It proposes a repeatable operator procedure; independent execution of this page by an evaluator has not yet been tested. The 2–4 minute duration is a recommendation, not the measured duration of every supplied recording.
+The protocol covers installation, walking path, duration, precautions, damage views, file handoff and the three input tiers. It proposes a repeatable operator procedure; independent execution of this page by an evaluator has not yet been tested. The 3–5 minute duration is a recommendation, not the measured duration of every supplied recording.
 
-The submitted setup contains kitchen, hall and corridor. It does not meet the separate benchmark composition requirement of three rooms plus a connector. Photo/video reconstruction accuracy and missing empirical interval calibration remain limitations; choosing this capture route does not establish those gates.
+The replacement capture contains bedroom, kitchen, hall and connector. Its raw composition meets the four-space benchmark requirement; automatic LiDAR segmentation merges hall and kitchen, and the assisted output is labelled accordingly. Photo/video reconstruction accuracy and missing empirical interval calibration remain limitations; choosing this capture route does not establish those gates.
 
 ## Evidence and references
 

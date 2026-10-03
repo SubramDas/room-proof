@@ -1,6 +1,6 @@
 # Submission evidence in this repository
 
-The development source, model-download scripts, reference measurements, consumer-app PDFs and selected small submission reports are tracked in Git. Large raw captures, model weights, run caches and full submission ZIPs are deliberately excluded by .gitignore. Obtain the accompanying submission archives for raw-input reproduction.
+The development source, model-download scripts, reference measurements, consumer-app PDFs and selected small submission reports are tracked in Git. Large raw captures, model weights, run caches and full submission ZIPs are excluded by .gitignore. Obtain the accompanying archives for raw-input reproduction. `submission/Astra_Final_Submission.zip` is the combined handoff and `submission/FINAL_MANIFEST.json` lists its files.
 
 - [Part 1 protocol](submission/part_1/Capture_Protocol.pdf)
 - [Part 2 requirement status](submission/part_2/00_REQUIREMENTS_AND_STATUS.md)
@@ -13,6 +13,8 @@ The files under docs/submission are selected evidence excerpts, not standalone r
 
 ## Snapshot chronology
 
-Reports in reports/ and the original Part 2 package were generated before later consumer-app exports and some photo jobs finished. They remain historical snapshots, not the latest status for every gate. Part 3 contains both magicplan exports (2026.38.0, automatic dimensions). Part 4 includes the completed three-room Depth Pro output and corrects the baseline worst extent error to 448.15%, improving to 176.54%. Independent kitchen repeat evidence is supplied, with failed longer-extent and height-spread comparisons. No overall gate pass is claimed.
+Part 2 now contains all 12 completed declared runs, the independent kitchen repeat, the earlier raw three-space scan under `three_room_original/`, and the replacement 8,023-frame bedroom/kitchen/hall/connector scan under `three_room/`. The replacement scan has separate automatic and visually assisted LiDAR plans. Automatic extraction merges hall and kitchen; assisted room selection is disclosed. The resulting plans are supplemental evidence, not a retroactive replacement for earlier benchmark numbers.
+
+Part 3 contains both magicplan exports (2026.38.0, automatic dimensions) and scores 2/6 shared linear dimensions in the pipeline's favour. Part 4 includes the completed earlier three-room Depth Pro output and corrects the baseline worst extent error to 448.15%, improving to 176.54%. Independent kitchen repeat evidence fails the longer-extent proxy and 1 cm height-spread gate. No overall gate pass is claimed.
 
 Original declarations are unchanged. Four historical photo-after source files cannot be recovered exactly; the Part 4 source audit records that reproduction limitation. The original baseline LiDAR/photo dimensions were reproduced from archived code.

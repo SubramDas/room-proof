@@ -7,11 +7,11 @@
 
 Install **Stray Scanner** by Kenneth Blomqvist from the App Store (app ID 1557051662); allow camera access. This submission uses **version 1.4**. Keep the existing 1.4 installation; if the store offers another version, record it and request a short compatibility check before the full capture. Charge the phone, check free storage, clean its rear lenses, switch on room lights and open connecting doors. Keep people and pets out of the walking path. Do a 10-second trial recording and confirm that the saved video plays before proceeding.
 
-## 2. Walk and record (30–60 seconds per room; 2–4 minutes here)
+## 2. Walk and record (30–60 seconds per room; about 3–5 minutes here)
 
 Hold the phone upright at chest height, with rear cameras and LiDAR uncovered. Start recording in the kitchen at a recognisable corner. Walk slowly around its accessible perimeter, aiming across the room at the walls; gently tilt down to show floor edges and up to show ceiling edges. Show every corner and the whole doorway, including both sides and the top.
 
-Follow one continuous route: **kitchen → hall → corridor → hall → kitchen**. Cover the hall and corridor in the same way. Pause briefly on each side of connecting doorways so the next space and shared features are visible. Finish by viewing the original kitchen corner, then stop and save. For another property, visit every room through its connecting passage and return to the start. Use extra time if coverage is incomplete.
+Follow one continuous route: **kitchen → hall → connector → bedroom → connector → hall → kitchen**. Cover each space in the same way. Pause briefly on both sides of connecting doorways so the next space and shared features are visible. Finish by viewing the original kitchen corner, then stop and save. For another property, visit every room through its connecting passage and return to the start. Use extra time if coverage is incomplete.
 
 ## 3. Precautions and damage views
 
