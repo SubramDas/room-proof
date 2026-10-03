@@ -20,8 +20,8 @@ def main():
     if lock.exists():
         rev=json.loads(lock.read_text())['revision']
     else:
-        with urllib.request.urlopen('https://api.github.com/repos/DepthAnything/Depth-Anything-V2/commits/main',timeout=30) as r:
-            rev=json.load(r)['sha']
+        # Use the source revision tested with the pinned runtime dependencies.
+        rev='a561b849ebae10a6f5ef49e26c83cbbcd36c71bf'
         lock.write_text(json.dumps({'revision':rev,'source':'https://github.com/DepthAnything/Depth-Anything-V2'},indent=2))
     archive=base/f'depth-anything-{rev}.tar.gz'
     download(f'https://codeload.github.com/DepthAnything/Depth-Anything-V2/tar.gz/{rev}',archive)
@@ -43,7 +43,7 @@ def depth_pro():
     lock=base/'depth_pro_source.json'
     if lock.exists():rev=json.loads(lock.read_text())['revision']
     else:
-        with urllib.request.urlopen('https://api.github.com/repos/apple-aiml-research/ml-depth-pro/commits/main',timeout=30) as r:rev=json.load(r)['sha']
+        rev='9e65e4dbe9568d23c546fcec53302b10445e109e'
         lock.write_text(json.dumps({'revision':rev,'source':'https://github.com/apple-aiml-research/ml-depth-pro'},indent=2))
     archive=base/f'depth-pro-{rev}.tar.gz'
     download(f'https://codeload.github.com/apple-aiml-research/ml-depth-pro/tar.gz/{rev}',archive)
