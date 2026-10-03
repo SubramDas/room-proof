@@ -14,7 +14,7 @@ def main():
     p=argparse.ArgumentParser(prog='astra',description='Local property reconstruction and evidence-linked assessment')
     sub=p.add_subparsers(dest='action',required=True)
     r=sub.add_parser('run');r.add_argument('--tier',choices=['lidar','photos','video'],required=True);r.add_argument('--input',required=True);r.add_argument('--output',required=True)
-    r.add_argument('--capture-id');r.add_argument('--max-frames',type=int,default=120);r.add_argument('--single-room',action='store_true');r.add_argument('--drift',choices=['on','off'],default='on')
+    r.add_argument('--depth-model',choices=['small','depth-pro'],default='small');r.add_argument('--layout-method',choices=['planes','free-space'],default='planes');r.add_argument('--capture-id');r.add_argument('--max-frames',type=int,default=120);r.add_argument('--single-room',action='store_true');r.add_argument('--drift',choices=['on','off'],default='on')
     r.add_argument('--semantics',choices=['on','off'],default='on');r.add_argument('--semantic-views',type=int,default=10);r.add_argument('--device',choices=['cpu','cuda'],default='cpu')
     r.add_argument('--rotation',type=int,choices=[0,90,180,270],default=0);r.add_argument('--staged-damage',action='store_true');r.add_argument('--schema',help='Optional official evaluator JSON schema')
     a=sub.add_parser('audit');a.add_argument('--input',required=True);a.add_argument('--output',required=True)

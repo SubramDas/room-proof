@@ -38,4 +38,24 @@ def main():
               'weights_url':url,'weights_sha256':hashlib.file_digest((base/name).open('rb'),'sha256').hexdigest()}
     (base/'depth_manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Metric depth ready:',base/name)
-if __name__=='__main__':main()
+def depth_pro():
+    base=ROOT/'models';base.mkdir(exist_ok=True)
+    lock=base/'depth_pro_source.json'
+    if lock.exists():rev=json.loads(lock.read_text())['revision']
+    else:
+        with urllib.request.urlopen('https://api.github.com/repos/apple-aiml-research/ml-depth-pro/commits/main',timeout=30) as r:rev=json.load(r)['sha']
+        lock.write_text(json.dumps({'revision':rev,'source':'https://github.com/apple-aiml-research/ml-depth-pro'},indent=2))
+    archive=base/f'depth-pro-{rev}.tar.gz'
+    download(f'https://codeload.github.com/apple-aiml-research/ml-depth-pro/tar.gz/{rev}',archive)
+    target=base/'depth-pro-source'
+    if not target.exists():
+        stage=base/'pro-source-stage';stage.mkdir(exist_ok=True)
+        with tarfile.open(archive) as tar:tar.extractall(stage,filter='data')
+        next(p for p in stage.iterdir() if p.is_dir()).rename(target);stage.rmdir()
+    download('https://ml-site.cdn-apple.com/models/depth-pro/depth_pro.pt',base/'depth_pro.pt')
+    (base/'depth_pro_manifest.json').write_text(json.dumps({'model':'Apple Depth Pro','source_revision':rev,'license':'Apple supplied license',
+        'weights_sha256':hashlib.file_digest((base/'depth_pro.pt').open('rb'),'sha256').hexdigest()},indent=2))
+    print('Depth Pro ready')
+if __name__=='__main__':
+    import sys
+    depth_pro() if '--depth-pro' in sys.argv else main()

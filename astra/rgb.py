@@ -2,7 +2,7 @@
 from pathlib import Path
 import cv2,numpy as np
 from .io import photo_groups,selected_video,mp4_info,write_json
-from .vision import MetricDepth,focal_guess
+from .vision import MetricDepth,DepthPro,focal_guess
 from .geometry import backproject,normal_map,transform,angle_from_normals,planar_rotation
 
 
@@ -47,11 +47,14 @@ def match_pair(a,b):
     return {'from':a['id'],'to':b['id'],'T_to_from':T,'inliers':int(count),'matches':len(good),'scale':scale,'scale_iqr':spread,'points_a':pa[use],'points_b':pb[use]}
 
 
-def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotation=0):
+def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotation=0,depth_model='small'):
     out=Path(out);out.mkdir(parents=True,exist_ok=True);views=prepare_views(path,tier,out,max_frames,rotation)
-    model=MetricDepth(models,device);sift=cv2.SIFT_create(nfeatures=1800)
+    model=(DepthPro(models,device) if depth_model=='depth-pro' else MetricDepth(models,device));sift=cv2.SIFT_create(nfeatures=1800)
     for v in views:
-        v['depth']=model.predict(v['bgr'],out/'depth_cache');v['keypoints'],v['desc']=sift.detectAndCompute(cv2.cvtColor(v['bgr'],cv2.COLOR_BGR2GRAY),None)
+        if depth_model=='depth-pro':
+            v['depth'],f=model.predict_with_focal(v['bgr'],out/'depth_cache');v['K'][0,0]=f;v['K'][1,1]=f;v['intrinsics_method']='DepthPro_learned_focal'
+        else:v['depth']=model.predict(v['bgr'],out/'depth_cache')
+        v['keypoints'],v['desc']=sift.detectAndCompute(cv2.cvtColor(v['bgr'],cv2.COLOR_BGR2GRAY),None)
         print(f'{tier}: depth and features {v["id"]+1}/{len(views)}',flush=True)
     edges=[]
     for i,a in enumerate(views):

@@ -52,7 +52,7 @@ def run(args):
         'Intervals are engineering ranges, not empirically calibrated confidence intervals.']
     views=[];files=[];extra={}
     if args.tier=='lidar':
-        g=reconstruct(args.input,out/'geometry',args.max_frames,args.drift=='on');layout=build_layout(g,single_room=args.single_room)
+        g=reconstruct(args.input,out/'geometry',args.max_frames,args.drift=='on');layout=build_layout(g,single_room=args.single_room,method=args.layout_method)
         raster=layout.pop('raster');np.savez_compressed(out/'layout_raster.npz',**raster)
         extra={'drift':g['drift'],'quality':g['qa']};indices=g['indices'];scan=g['scan']
         visual_ids=np.unique(np.linspace(0,len(indices)-1,min(args.semantic_views,len(indices)),dtype=int))
@@ -64,7 +64,7 @@ def run(args):
         files+=list((scan['root']/'depth').glob('*.png'))+list((scan['root']/'confidence').glob('*.png'));base=scan['root']
         warnings+=g['qa']['warnings']+layout['layout_qa']['warnings']
     else:
-        components,views,summary=reconstruct_rgb(args.input,args.tier,out/'geometry',device=args.device,max_frames=args.max_frames,rotation=args.rotation)
+        components,views,summary=reconstruct_rgb(args.input,args.tier,out/'geometry',device=args.device,max_frames=args.max_frames,rotation=args.rotation,depth_model=args.depth_model)
         layout={'rooms':[],'surfaces':[],'openings':[],'adjacency':[]};cursor=0.;component_offsets={}
         if args.tier=='photos':
             # One output room per source folder; choose its best-supported component.
@@ -77,7 +77,7 @@ def run(args):
                 remap={old:new for new,old in enumerate(selected)}
                 local={'points':g['points'][mask],'normals':g['normals'][mask],'frame_ids':np.array([remap[int(i)] for i in g['frame_ids'][mask]]),
                        'poses':g['poses'][selected]}
-                try:part=build_layout(local,args.tier,single_room=True,room_names=[room_name])
+                try:part=build_layout(local,args.tier,single_room=True,room_names=[room_name],method=args.layout_method)
                 except ValueError as e:warnings.append(f'{room_name}: {e}');continue
                 part.pop('raster')
                 if ci not in component_offsets:
@@ -90,7 +90,7 @@ def run(args):
                 layout['rooms']+=part['rooms'];layout['surfaces']+=part['surfaces'];cursor=max([np.max(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[cursor])+1.
         else:
             for ci,g in enumerate(components):
-                try:part=build_layout(g,args.tier,single_room=args.single_room)
+                try:part=build_layout(g,args.tier,single_room=args.single_room,method=args.layout_method)
                 except ValueError as e:warnings.append(f'Component {ci}: {e}');continue
                 part.pop('raster');low=min([np.min(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[0.]);offset=np.array([cursor-low,0.])
                 offset_layout(part,offset,f'component_{ci+1}_' if len(components)>1 else '')

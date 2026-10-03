@@ -18,7 +18,7 @@ def polygon_area(poly):
 def point_in_poly(point,poly):return cv2.pointPolygonTest(np.asarray(poly,np.float32),tuple(map(float,point)),False)>=0
 
 
-def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04):
+def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04,method='planes'):
     p=geo['points'];n=geo['normals'];poses=geo['poses'];fids=geo['frame_ids'];cam=poses[:,:3,3]
     if len(p)<100:raise ValueError('Insufficient geometry for a room layout')
     horizontal=abs(n[:,1])>.92;hm=plane_modes(p[horizontal,1]);camera_y=float(np.median(cam[:,1]))
@@ -82,6 +82,19 @@ def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04):
         poly=contour*cell+origin
         if len(poly)<3:continue
         area=polygon_area(poly)
+        if method=='planes':
+            seed_world=(poly.min(0)+poly.max(0))/2;enclosing=[]
+            # High wall observations reject most tables/counters and are present
+            # above door openings, where the free-space bottleneck is ambiguous.
+            for axis,other,centre,across in [(0,2,seed_world[0],seed_world[1]),(2,0,seed_world[1],seed_world[0])]:
+                wall_band=(abs(n[:,axis])>.95)&(p[:,1]>floor+1.85)&(abs(p[:,other]-across)<1.2)
+                vals=plane_modes(p[wall_band,axis]);left=[v for v in vals if v<centre-.25];right=[v for v in vals if v>centre+.25]
+                enclosing.append((max(left),min(right)) if left and right else None)
+            if all(e is not None for e in enclosing):
+                (x0,x1),(z0,z1)=enclosing;boxarea=(x1-x0)*(z1-z0)
+                # Only replace a basin with plausible observed enclosing walls.
+                if .4<boxarea<40 and .55<boxarea/max(area,1e-6)<2.5:
+                    poly=np.array([[x0,z0],[x1,z0],[x1,z1],[x0,z1]]);area=polygon_area(poly)
         # Infer a rectangle only where observed polygon strongly supports it.
         lo=poly.min(0);hi=poly.max(0);rect_area=float(np.prod(hi-lo));rectangularity=area/max(rect_area,1e-6)
         if rectangularity>.84:
@@ -104,21 +117,26 @@ def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04):
         inside=(p[:,0]>=lo[0])&(p[:,0]<=hi[0])&(p[:,2]>=lo[1])&(p[:,2]<=hi[1])
         local_h=plane_modes(p[inside&horizontal&(p[:,1]>floor+1.8),1]);ceil=ceiling
         if local_h:ceil=max(local_h,key=lambda y:np.sum(inside&horizontal&(abs(p[:,1]-y)<.045)))
-        h=ceil-floor if ceil is not None else None
+        local_floor=floor
+        if method=='planes':
+            local_floor_modes=plane_modes(p[inside&horizontal&(p[:,1]<camera_y-.45),1])
+            if local_floor_modes:
+                local_floor=max(local_floor_modes,key=lambda y:np.sum(inside&horizontal&(abs(p[:,1]-y)<.045)))
+        h=ceil-local_floor if ceil is not None else None
         walls=[]
         for j,(a,b) in enumerate(zip(poly,np.roll(poly,-1,axis=0))):
             sid=f'{rid}_wall_{j+1}';length=float(np.linalg.norm(b-a))
             edge={'surface_id':sid,'start':a.tolist(),'end':b.tolist(),'length':measure(length,half_width=max(sigma,length*(.025 if tier=='lidar' else .18)))}
-            walls.append(edge);surfaces.append({'id':sid,'room_id':rid,'kind':'wall','start':a.tolist(),'end':b.tolist(),'floor_y':float(floor),
+            walls.append(edge);surfaces.append({'id':sid,'room_id':rid,'kind':'wall','start':a.tolist(),'end':b.tolist(),'floor_y':float(local_floor),
                 'height':measure(h,half_width=.05 if tier=='lidar' else .45),'gross_area':measure(length*h if h else None,'m2',half_width=max(.1,length*(h or 0)*(.06 if tier=='lidar' else .4))),
                 'visibility':'partial','damage_ids':[]})
         for kind in ['floor','ceiling']:
-            surfaces.append({'id':f'{rid}_{kind}','room_id':rid,'kind':kind,'polygon':poly.tolist(),'y':float(floor) if kind=='floor' else (float(ceil) if ceil is not None else None),
+            surfaces.append({'id':f'{rid}_{kind}','room_id':rid,'kind':kind,'polygon':poly.tolist(),'y':float(local_floor) if kind=='floor' else (float(ceil) if ceil is not None else None),
                 'gross_area':measure(c['area'],'m2',half_width=c['area']*(.07 if tier=='lidar' else .4)),'visibility':'partial','damage_ids':[]})
-        rooms.append({'id':rid,'name':rid,'polygon':poly.tolist(),'walls':walls,'floor_y':float(floor),'ceiling_y':float(ceil) if ceil is not None else None,
+        rooms.append({'id':rid,'name':rid,'polygon':poly.tolist(),'walls':walls,'floor_y':float(local_floor),'ceiling_y':float(ceil) if ceil is not None else None,
             'ceiling_height':measure(h,half_width=.05 if tier=='lidar' else .45),'floor_area':measure(c['area'],'m2',half_width=c['area']*(.07 if tier=='lidar' else .4)),
             'extent_x':measure(hi[0]-lo[0],half_width=sigma if tier=='lidar' else .4),'extent_z':measure(hi[1]-lo[1],half_width=sigma if tier=='lidar' else .4),
             'camera_visits':c['visits'],'status':'provisional','geometry_source':'observed_free_space_and_planes'})
-    qa={'floor_y':float(floor),'ceiling_y':ceiling,'horizontal_plane_modes':hm,'room_candidate_count':len(candidates),
+    qa={'floor_y':float(floor),'method':method,'ceiling_y':ceiling,'horizontal_plane_modes':hm,'room_candidate_count':len(candidates),
         'warnings':['Room boundaries and interval calibration are provisional.','Watershed spaces require topology validation; no declared room count is forced.']}
     return {'rooms':rooms,'surfaces':surfaces,'adjacency':[],'openings':[],'layout_qa':qa,'raster':{'free':free,'hits':hits,'segments':segmented,'origin':origin,'cell':cell}}
