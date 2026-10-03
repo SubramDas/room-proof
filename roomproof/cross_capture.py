@@ -313,6 +313,8 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
     fused, fused_artifacts = assemble_fused_plan(
         photo_dir, video_dir, lidar_dir, report, registration,
         opening_links, run_dir, registered_openings=registered_openings)
+    from .dimension_summary import generate_dimension_summary
+    _, dimension_artifact = generate_dimension_summary(run_dir)
     return report, rgb_artifacts + [
         {'path': str(path), 'sha256': sha256(path)},
         {'path': str(registration_path), 'sha256': sha256(registration_path)},
@@ -321,4 +323,4 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
         {'path': str(odometry_path), 'sha256': sha256(odometry_path)},
         {'path': str(registered_path), 'sha256': sha256(registered_path)},
         {'path': str(transitions_path), 'sha256': sha256(transitions_path)},
-        {'path': str(graph_path), 'sha256': sha256(graph_path)}] + photo_guided_artifacts + fused_artifacts
+        {'path': str(graph_path), 'sha256': sha256(graph_path)}] + photo_guided_artifacts + fused_artifacts + [dimension_artifact]

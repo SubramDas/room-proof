@@ -376,6 +376,9 @@ def process_capture(args, run_dir, run):
             write_json(plan_path, plan)
             render(plan, svg_path)
             output_artifacts.extend({"path": str(path), "sha256": sha256(path)} for path in (plan_path, svg_path))
+            from .dimension_summary import generate_dimension_summary
+            _, dimension_artifact = generate_dimension_summary(run_dir)
+            output_artifacts.append(dimension_artifact)
             metrics["schema_valid"] = True
             metrics["semantic_valid"] = True
             next_stage = ("provisional_single_room_layout" if plan["plan"]["status"] == "inferred"

@@ -171,6 +171,19 @@ def link_capture_runs(args, run_dir, run):
     print(f"cross-capture links: {run_dir/'cross_capture_links.json'}")
 
 
+def summarize_dimensions_run(args, run_dir, run):
+    from .dimension_summary import generate_dimension_summary
+    source = Path(args.source_run).resolve(strict=True)
+    report, artifact = generate_dimension_summary(source, run_dir)
+    run['data_revision'] = sha256(source / 'property_plan.json')
+    run['artifacts'] = [artifact]
+    run['metrics'] = {'source_run_id': report['source_run_id'],
+                      'room_count': len(report['rooms']),
+                      'plan_opening_count': len(report['openings']),
+                      'provisional_opening_hypothesis_count': len(report['opening_hypotheses'])}
+    print(f"dimension summary: {artifact['path']}")
+
+
 def assemble_property_runs(args, run_dir, run):
     from .property_assembly import assemble_property
     report, artifacts = assemble_property(args.linked_runs, run_dir)
@@ -416,6 +429,11 @@ def main():
     linker.add_argument('--calibration', help='optional calibrated photo/video intrinsics and scan RGB-to-depth pixel map JSON')
     linker.add_argument('--runs-dir', default='runs')
     linker.set_defaults(func=link_capture_runs)
+    summary = subcommands.add_parser('summarize-dimensions',
+        help='create one consolidated dimension report from a completed run without rerunning models')
+    summary.add_argument('--source-run', required=True)
+    summary.add_argument('--runs-dir', default='runs')
+    summary.set_defaults(func=summarize_dimensions_run)
     opening_review = subcommands.add_parser('review-dino-openings',
         help='reuse a linked Grounding DINO run to find photo-to-scan passage correspondences')
     opening_review.add_argument('--linked-run', required=True)

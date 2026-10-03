@@ -312,3 +312,14 @@ give 1.788 and 1.751 m heights and 0.782 and 0.676 m widths. The accepted
 plan still has null opening width and height because the RGB/depth pairs and
 structural edges are unverified. Full run IDs and evaluation are in
 `reports/grounding_dino_kitchen_fresh_run.md`.
+
+## Pipeline-generated consolidated dimensions — 3 October 2026
+
+Added `dimensions_summary.json` to completed capture and linked runs. It
+collects room axes, wall lengths, ceiling height, floor area, unresolved plan
+openings, LiDAR gap hypotheses, and DINO box-edge estimates with explicit
+`provisional` status and source paths. Hypotheses remain separate from the
+accepted plan opening so a visual match does not silently change the plan.
+The `summarize-dimensions` CLI regenerates the report from completed output
+files without rerunning models. For the fresh kitchen linked run, its saved
+summary is in `runs/run-66736637b0594e719463a12d95878245/`.

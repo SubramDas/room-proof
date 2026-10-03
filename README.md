@@ -135,6 +135,14 @@ original photo folder and extracted Stray folder. It writes
 `video_motion_profile.json`, `visual_odometry.json`,
 `visual_room_graph.json`, `room_placement.json`, a conservative fused
 `property_plan.json`/SVG, and RGB pairing evidence.
+Each completed capture also writes `dimensions_summary.json`: a compact
+machine-readable view of room dimensions, plan opening fields, and any
+provisional LiDAR gap hypotheses. A completed `link-captures` run writes the
+same file after fusion and adds provisional DINO passage dimensions when
+available. Every estimate carries its status and source path; provisional
+opening hypotheses remain separate from accepted plan openings. To create
+this report from an older completed run without rerunning models, use
+`.venv/bin/python -m roomproof summarize-dimensions --source-run runs/RUN_ID`.
 At least nine scan RGB views are required for its registration gate. The
 default patch matcher records 2D visual overlaps and opening proposals.
 `--match-backend aliked-lightglue` enables the optional local learned matcher
