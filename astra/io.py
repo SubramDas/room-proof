@@ -129,22 +129,27 @@ def photo_groups(path):
 
 
 def selected_video(path, indices, output, max_width=960):
-    indices=set(map(int,indices));output=Path(output);output.mkdir(parents=True,exist_ok=True)
-    cap=cv2.VideoCapture(str(path)); selected=[];i=0
-    if not cap.isOpened():raise ValueError(f'Cannot decode video {path}')
-    try:
-        while i<=max(indices,default=-1):
-            ok=cap.grab()
-            if not ok:break
-            if i in indices:
-                ok,img=cap.retrieve()
-                if not ok:raise ValueError(f'Video decode failed at frame {i}')
-                if img.shape[1]>max_width:img=cv2.resize(img,(max_width,round(img.shape[0]*max_width/img.shape[1])))
-                dest=output/f'{i:06d}.jpg';cv2.imwrite(str(dest),img,[cv2.IMWRITE_JPEG_QUALITY,92])
-                selected.append({'frame_index':i,'image':str(dest),'decoder_pts_s':cap.get(cv2.CAP_PROP_POS_MSEC)/1000})
-            i+=1
-    finally:cap.release()
-    if len(selected)!=len(indices):raise ValueError(f'Expected {len(indices)} selected frames, decoded {len(selected)}')
+    """Decode sensor sample indices, bypassing MP4 presentation edit-list trimming."""
+    import subprocess,tempfile
+    import imageio_ffmpeg
+    ids=sorted(set(map(int,indices)));output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    if not ids:return []
+    meta=mp4_info(path)
+    if ids[0]<0 or ids[-1]>=meta['samples']:raise ValueError('Requested video index outside sample table')
+    selector='+'.join(f'eq(n\\,{i})' for i in ids)
+    with tempfile.TemporaryDirectory(prefix='decode-',dir=output) as stage:
+        pattern=str(Path(stage)/'%06d.jpg')
+        cmd=[imageio_ffmpeg.get_ffmpeg_exe(),'-v','error','-threads','4','-ignore_editlist','1','-noautorotate','-i',str(path),
+             '-an','-vf',f'select={selector},scale=min({max_width}\\,iw):-2','-fps_mode','passthrough','-q:v','2','-start_number','0',pattern]
+        proc=subprocess.run(cmd,capture_output=True,text=True)
+        if proc.returncode:raise ValueError('FFmpeg decode failed: '+proc.stderr[-1000:])
+        frames=sorted(Path(stage).glob('*.jpg'))
+        if len(frames)!=len(ids):raise ValueError(f'Expected {len(ids)} source frames, decoded {len(frames)}')
+        selected=[]
+        for i,source in zip(ids,frames):
+            dest=output/f'{i:06d}.jpg';source.replace(dest)
+            selected.append({'frame_index':i,'image':str(dest),'decoder_pts_s':meta['relative_pts_s'][i],
+                             'decode_method':'ffmpeg_ignore_editlist_sample_order'})
     return selected
 
 

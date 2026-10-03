@@ -74,6 +74,28 @@ def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotatio
             else:poses[i]=poses[j]@e['T_to_from'];component[i]=component[j]
             used.append(e)
         cid+=1
+    # Refine the connected pose graph with all verified relative-view factors.
+    # Weak scale factors remain learned priors; this does not create metric truth.
+    from scipy.optimize import least_squares
+    from scipy.spatial.transform import Rotation
+    refined=[]
+    for c in range(cid):
+        ids=[i for i,cc in enumerate(component) if cc==c];local={v:k for k,v in enumerate(ids)}
+        ce=[e for e in edges if component[e['from']]==c and component[e['to']]==c]
+        if len(ids)<3 or len(ce)<len(ids):continue
+        initial=np.array([np.r_[Rotation.from_matrix(poses[i][:3,:3]).as_rotvec(),poses[i][:3,3]] for i in ids])
+        def unpack(x):
+            x=x.reshape(-1,6);Ts=np.tile(np.eye(4),(len(ids),1,1));Ts[:,:3,:3]=Rotation.from_rotvec(x[:,:3]).as_matrix();Ts[:,:3,3]=x[:,3:];return Ts
+        def residual(x):
+            Ts=unpack(x);rr=[(x.reshape(-1,6)[0]-initial[0])*30]
+            for e in ce:
+                a,b=local[e['from']],local[e['to']];pred=np.linalg.inv(Ts[b])@Ts[a];target=e['T_to_from']
+                weight=min(2.,np.sqrt(e['inliers']/30)) / (1+e['scale_iqr']/max(e['scale'],1e-6))
+                rr.append(np.r_[Rotation.from_matrix(pred[:3,:3]@target[:3,:3].T).as_rotvec(),(pred[:3,3]-target[:3,3])*.3]*weight)
+            return np.concatenate(rr)
+        fit=least_squares(residual,initial.ravel(),loss='soft_l1',f_scale=.05,max_nfev=15)
+        for i,T in zip(ids,unpack(fit.x)):poses[i]=T
+        refined.append({'component':c,'edges':len(ce),'cost':float(fit.cost)})
     components=[]
     for c in range(cid):
         ids=[i for i,cc in enumerate(component) if cc==c];points=[];normals=[];fids=[]
@@ -85,7 +107,7 @@ def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotatio
         components.append({'points':p,'normals':n,'frame_ids':np.concatenate(fids).astype(int),'poses':ps,'view_ids':ids})
         for i,pose in zip(ids,ps):views[i]['pose']=pose;views[i]['component']=c
     summary={'model':model.description,'view_count':len(views),'connected_components':cid,'registered_edges':len(edges),
-        'pose_method':'essential_matrix_metric_depth_scaled_spanning_forest','scale_status':'learned_prior_not_survey_calibrated',
+        'pose_method':'essential_matrix_metric_depth_scaled_pose_graph','pose_graph_refinements':refined,'scale_status':'learned_prior_not_survey_calibrated',
         'views':[{'id':v['id'],'source':v['source'],'room_hint':v['room_hint'],'component':v['component'],'K':v['K'],'pose':v['pose'],'intrinsics_method':v['intrinsics_method']} for v in views],
         'edges':[{k:v for k,v in e.items() if k not in ['points_a','points_b']} for e in edges],
         'warnings':['Metric depth and focal priors may have large systematic scale bias.','Disconnected components have no observed relative placement.']}

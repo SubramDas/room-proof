@@ -65,14 +65,38 @@ def run(args):
         warnings+=g['qa']['warnings']+layout['layout_qa']['warnings']
     else:
         components,views,summary=reconstruct_rgb(args.input,args.tier,out/'geometry',device=args.device,max_frames=args.max_frames,rotation=args.rotation)
-        layout={'rooms':[],'surfaces':[],'openings':[],'adjacency':[]};cursor=0.
-        for ci,g in enumerate(components):
-            try:part=build_layout(g,args.tier,single_room=args.single_room or args.tier=='photos')
-            except ValueError as e:warnings.append(f'Component {ci}: {e}');continue
-            part.pop('raster');offset=np.array([cursor,0.]);offset_layout(part,offset,f'component_{ci+1}_' if len(components)>1 else '')
-            for vi in g['view_ids']:
-                views[vi]['pose'][0,3]+=offset[0];views[vi]['pose'][2,3]+=offset[1];views[vi]['room_ids']=[r['id'] for r in part['rooms']]
-            layout['rooms']+=part['rooms'];layout['surfaces']+=part['surfaces'];cursor=max([np.max(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[cursor])+1.
+        layout={'rooms':[],'surfaces':[],'openings':[],'adjacency':[]};cursor=0.;component_offsets={}
+        if args.tier=='photos':
+            # One output room per source folder; choose its best-supported component.
+            # A disconnected extra view must not create a duplicate physical room.
+            for room_name in sorted({v['room_hint'] for v in views}):
+                roomviews=[v for v in views if v['room_hint']==room_name]
+                counts={c:sum(v['component']==c for v in roomviews) for c in {v['component'] for v in roomviews}}
+                ci=max(counts,key=counts.get);g=components[ci];ids=[i for i in g['view_ids'] if views[i]['room_hint']==room_name]
+                selected=[g['view_ids'].index(i) for i in ids];mask=np.isin(g['frame_ids'],selected)
+                remap={old:new for new,old in enumerate(selected)}
+                local={'points':g['points'][mask],'normals':g['normals'][mask],'frame_ids':np.array([remap[int(i)] for i in g['frame_ids'][mask]]),
+                       'poses':g['poses'][selected]}
+                try:part=build_layout(local,args.tier,single_room=True,room_names=[room_name])
+                except ValueError as e:warnings.append(f'{room_name}: {e}');continue
+                part.pop('raster')
+                if ci not in component_offsets:
+                    low=min([np.min(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[0.]);component_offsets[ci]=np.array([cursor-low,0.])
+                offset=component_offsets[ci];offset_layout(part,offset,'')
+                for vi in ids:
+                    views[vi]['pose'][0,3]+=offset[0];views[vi]['pose'][2,3]+=offset[1];views[vi]['room_ids']=[r['id'] for r in part['rooms']]
+                for v in roomviews:
+                    if v['id'] not in ids:v['pose']=None;v['room_ids']=[]
+                layout['rooms']+=part['rooms'];layout['surfaces']+=part['surfaces'];cursor=max([np.max(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[cursor])+1.
+        else:
+            for ci,g in enumerate(components):
+                try:part=build_layout(g,args.tier,single_room=args.single_room)
+                except ValueError as e:warnings.append(f'Component {ci}: {e}');continue
+                part.pop('raster');low=min([np.min(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[0.]);offset=np.array([cursor-low,0.])
+                offset_layout(part,offset,f'component_{ci+1}_' if len(components)>1 else '')
+                for vi in g['view_ids']:
+                    views[vi]['pose'][0,3]+=offset[0];views[vi]['pose'][2,3]+=offset[1];views[vi]['room_ids']=[r['id'] for r in part['rooms']]
+                layout['rooms']+=part['rooms'];layout['surfaces']+=part['surfaces'];cursor=max([np.max(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[cursor])+1.
         if len(components)>1:warnings.append(f'{len(components)} disconnected RGB components placed schematically; physical stitching is unresolved.')
         extra={'rgb_reconstruction':summary};warnings+=summary['warnings']
         if args.tier=='photos':files=[v['image'] for v in views];base=Path(args.input)
