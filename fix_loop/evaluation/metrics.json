@@ -582,5 +582,151 @@
       "full_footprint",
       "adjacency_without_explicit_room_mapping"
     ]
+  },
+  {
+    "tier": "photos",
+    "capture_id": "three_room_photos_final",
+    "records": [
+      {
+        "reference_room": "room_1",
+        "predicted_room": "room_1",
+        "quantity": "short_extent",
+        "truth_m": 2.3,
+        "prediction_m": 2.6037667968600964,
+        "absolute_error_m": 0.30376679686009656,
+        "signed_error_m": 0.30376679686009656,
+        "relative_error": 0.13207252037395503,
+        "nominal_interval_coverage": true,
+        "gate_limit_m": 0.184,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_1",
+        "predicted_room": "room_1",
+        "quantity": "long_extent",
+        "truth_m": 2.36,
+        "prediction_m": 2.7722541161300414,
+        "absolute_error_m": 0.4122541161300415,
+        "signed_error_m": 0.4122541161300415,
+        "relative_error": 0.17468394751272945,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.1888,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_1",
+        "predicted_room": "room_1",
+        "quantity": "ceiling_height",
+        "truth_m": 2.8,
+        "prediction_m": 3.4073689516578503,
+        "absolute_error_m": 0.6073689516578504,
+        "signed_error_m": 0.6073689516578504,
+        "relative_error": 0.2169174827349466,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.015,
+        "pass": false,
+        "comparison_type": "height"
+      },
+      {
+        "reference_room": "room_2",
+        "predicted_room": "room_2",
+        "quantity": "short_extent",
+        "truth_m": 3.3,
+        "prediction_m": 7.28,
+        "absolute_error_m": 3.9800000000000004,
+        "signed_error_m": 3.9800000000000004,
+        "relative_error": 1.2060606060606063,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.264,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_2",
+        "predicted_room": "room_2",
+        "quantity": "long_extent",
+        "truth_m": 4.2,
+        "prediction_m": 7.6000000000000005,
+        "absolute_error_m": 3.4000000000000004,
+        "signed_error_m": 3.4000000000000004,
+        "relative_error": 0.8095238095238095,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.336,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_2",
+        "predicted_room": "room_2",
+        "quantity": "ceiling_height",
+        "truth_m": 2.8,
+        "prediction_m": 5.74697846653261,
+        "absolute_error_m": 2.9469784665326104,
+        "signed_error_m": 2.9469784665326104,
+        "relative_error": 1.0524923094759324,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.015,
+        "pass": false,
+        "comparison_type": "height"
+      },
+      {
+        "reference_room": "room_3",
+        "predicted_room": "room_3",
+        "quantity": "short_extent",
+        "truth_m": 0.81,
+        "prediction_m": 2.24,
+        "absolute_error_m": 1.4300000000000002,
+        "signed_error_m": 1.4300000000000002,
+        "relative_error": 1.7654320987654322,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.06480000000000001,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_3",
+        "predicted_room": "room_3",
+        "quantity": "long_extent",
+        "truth_m": 1.67,
+        "prediction_m": 3.1999999999999997,
+        "absolute_error_m": 1.5299999999999998,
+        "signed_error_m": 1.5299999999999998,
+        "relative_error": 0.9161676646706586,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.1336,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_3",
+        "predicted_room": "room_3",
+        "quantity": "ceiling_height",
+        "truth_m": 2.26,
+        "prediction_m": 3.215770370890457,
+        "absolute_error_m": 0.9557703708904572,
+        "signed_error_m": 0.9557703708904572,
+        "relative_error": 0.4229072437568395,
+        "nominal_interval_coverage": false,
+        "gate_limit_m": 0.015,
+        "pass": false,
+        "comparison_type": "height"
+      }
+    ],
+    "warnings": [
+      "Extent proxies are not the full per-wall benchmark; missing official Round 1 gates.",
+      "Ground-truth instrument uncertainty is unspecified.",
+      "Opening rows lack independent opening IDs/offsets; no complete opening detection score can be claimed.",
+      "Calibration dataset is too small/correlated for validated 95% coverage."
+    ],
+    "unscored": [
+      "opening_detection_and_width_gate",
+      "damage_extent_accuracy",
+      "concealed_damage_accuracy",
+      "scope_accuracy",
+      "full_footprint",
+      "adjacency_without_explicit_room_mapping"
+    ]
   }
 ]

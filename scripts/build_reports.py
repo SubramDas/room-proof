@@ -13,9 +13,20 @@ for item in config['runs']:
     if not path.exists():runs[name]={'state':'not_completed','tier':item['tier']};continue
     result=json.loads(path.read_text());validate(result);prov=json.loads((folder/'provenance.json').read_text());runs[name]={'state':'executed','result':result,'provenance':prov,'tier':item['tier']}
     if name in maps:scores.append(score(result,truth,maps[name]))
-    elif name=='three_room_video_final':scores.append(score(result,truth,{r:None for r in truth['rooms']}))
+    elif name=='three_room_video_final':scores.append(score(result,truth,{r:None for r in ['room_1','room_2','room_3']}))
     elif name=='kitchen_video_final':scores.append(score(result,truth,{'room_1':None}))
     timings.append({'run':name,'tier':item['tier'],'seconds':prov['wall_time_seconds'],'max_rss_mb':prov['max_rss_mb'],'device':prov['config']['device'],'code_revision':prov['code_revision']})
+supplemental=[('three_room_expanded_lidar','lidar'),('three_room_expanded_assisted','lidar'),('three_room_expanded_photos','photos'),('three_room_expanded_video','video')]
+for name,tier in supplemental:
+    folder=ROOT/'runs'/name;path=folder/'result.json'
+    if not path.exists():continue
+    result=json.loads(path.read_text());validate(result)
+    prov=json.loads((folder/'provenance.json').read_text()) if (folder/'provenance.json').exists() else None
+    runs[name]={'state':'supplemental_assisted' if 'assisted' in name else 'supplemental_executed','result':result,'provenance':prov,'tier':tier}
+    if name=='three_room_expanded_assisted':scores.append(score(result,truth,{'room_1':'kitchen','room_2':'hall','room_3':'room_2','bedroom':'bedroom'}))
+    if name=='three_room_expanded_photos':scores.append(score(result,truth,{'room_1':'kitchen','room_2':'hall','room_3':'connector','bedroom':'bedroom'}))
+    if prov and 'wall_time_seconds' in prov:
+        timings.append({'run':name,'tier':tier,'seconds':prov['wall_time_seconds'],'max_rss_mb':prov['max_rss_mb'],'device':prov['config']['device'],'code_revision':prov['code_revision']})
 export_scores(scores,out);write_json(out/'timing.json',timings)
 with (out/'benchmark.md').open('a') as f:
     f.write('\n## Execution and topology\n\n| Run | Execution | Rooms | Opening candidates | Damage regions | Layout status |\n|---|---|---:|---:|---:|---|\n')
@@ -25,7 +36,7 @@ with (out/'benchmark.md').open('a') as f:
     f.write('\nVideo rows with missing predictions indicate unresolved physical room correspondence, not zero-sized rooms. Candidate-room outputs remain available in each run. No dimension-based best-match assignment is used.\n')
     f.write('\n## CPU timing\n\nMeasured wall time includes the selected reconstruction and rendering stages. Some runs shared the laptop concurrently; cache reuse and changing source revisions are disclosed in provenance. These are not isolated hardware speed benchmarks.\n\n| Run | Seconds | Peak process RSS MB | Device |\n|---|---:|---:|---|\n')
     for t in timings:f.write(f"| {t['run']} | {t['seconds']:.1f} | {t['max_rss_mb']:.0f} | {t['device']} |\n")
-    f.write('\n## Required tables with unavailable evidence\n\n| Gate | Evidence | Status |\n|---|---|---|\n| Wall repeatability | Independent repeat scans deferred by user | Not measured |\n| Repeated ceiling spread | Independent repeat scans deferred | Not measured |\n| Consumer app, two rooms, 70% beat/tie | Exports unavailable tonight | Incomplete |\n| Calibrated intervals | No independent calibration/test properties | Not established |\n| Full opening detection and width | Missing unique reference opening IDs and exhaustive counts | Not scoreable completely |\n| Damage metric extents | No measured reference masks/prop dimensions | Not established |\n| Photo footprint + adjacency | Inspect layout quality and partial extent scores | No full gate pass claimed |\n')
+    f.write('\n## Required gates and evidence\n\n| Gate | Evidence | Status |\n|---|---|---|\n| Wall repeatability | Independent kitchen repeat, sorted extent proxy in Part 2 | Long side fails; matched walls unavailable |\n| Repeated ceiling spread | Kitchen repeat | 3.10 cm; fails 1 cm |\n| Consumer app, two rooms, 70% beat/tie | Part 3 Magicplan PDF exports and comparison | 2/6 shared linear dimensions; fails 70% |\n| Calibrated intervals | No independent calibration/test properties | Not established |\n| Full opening detection and width | Missing unique reference opening IDs and exhaustive counts | Not scoreable completely |\n| Damage metric extents | No measured reference masks/prop dimensions | Not established |\n| Photo footprint + adjacency | Three-room photo output | Physical stitch fails |\n| Three rooms plus connector | New 8,023-frame scan | Raw composition met; automatic segmentation merged hall and kitchen |\n')
 # Exact before/after same-room geometry comparison, with predictions retained.
 fixscores=[]
 for name in ['three_room_lidar','three_room_lidar_after','three_room_photos','three_room_photos_posefix','three_room_photos_final']:
@@ -33,8 +44,9 @@ for name in ['three_room_lidar','three_room_lidar_after','three_room_photos','th
     if path.exists():
         result=json.loads(path.read_text());result['capture_id']=name;fixscores.append(score(result,truth,maps[name]))
 export_scores(fixscores,ROOT/'fix_loop/evaluation')
-lines=['# Fix-loop post-mortem','','Declarations: `declaration.md` (early LiDAR subset), then `photo_declaration.md` (first complete photo run). Both preceded their proposed fixes. The early LiDAR declaration was not the single worst gate across a complete all-tier benchmark, so it does not fully satisfy that aspect of the rubric.','','The structural-plane change improves wall partitioning and supports both expected LiDAR connections. It does not establish the height gate. Full before/after numbers are in `evaluation/metrics.csv`; the actual original outputs remain in `runs/three_room_lidar` and `runs/three_room_photos`.','','The kitchen height prediction of ≤2 cm error was not met in the initial structural-plane after run; the corridor height regressed when the inferred room boundary selected a different dominant horizontal surface. The hypothesis explained a wall-partition error but did not explain all height bias. No reference-derived scale correction was applied.','','Photo changes address focal/depth priors, low-parallax pose estimation and gravity alignment. The initial small-model pose-only change did not resolve the whole-property stitch. The Depth Pro after result is included only when an actual completed result exists. The prediction in `photo_declaration.md` must be judged against that result, including connectivity rather than dimensions alone.','','See `reproduce_original_before.sh` for archived original-code runs and `reproduce.sh` for controlled method comparisons and `changes.diff` for the shipped source changes. Cached inference outputs are permitted for exact replay; the live path remains in the same code.']
-(ROOT/'fix_loop/postmortem.md').write_text('\n'.join(lines)+'\n')
+# The authoritative post-mortem is the corrected Part 4 artifact. Preserve its
+# actual predictions, regressions and historical-source caveat on regeneration.
+(ROOT/'fix_loop/postmortem.md').write_text((ROOT/'submission/part_4/03_comparison/POSTMORTEM.md').read_text())
 compliance=[
  ('Route 2 stock capture protocol','docs/CAPTURE_PROTOCOL.md','One-page operator instructions','Written; not independently followed by evaluator'),
  ('Device matrix','docs/DEVICE_MATRIX.md','Hardware/tier table','Written; actual tests limited to supplied device'),
@@ -44,20 +56,20 @@ compliance=[
  ('Correct stitched property from every tier','astra/quality.py; runs/*/layout_quality','Overlap, connectivity and component diagnostics','Partial: RGB physical stitch can fail'),
  ('Openings ≤2 cm on ≥85%, with misses/phantoms','astra/openings.py; semantics/candidates.json','Ray-supported and visual candidates','Not passed; exhaustive opening truth unavailable'),
  ('Height ≤1.5 cm','reports/metrics.csv','Laser comparison','Failed on current measured rooms'),
- ('Repeatability and repeated height spread','astra/evaluate.py; benchmarks/reference_notes.md','Repeat command and missing-evidence record','Deferred by user; no claimed result'),
+ ('Repeatability and repeated height spread','submission/part_2/03_evaluation/kitchen_repeat/','Independent kitchen capture and laser comparison','Height spread 3.10 cm fails; long extent proxy fails; physical walls unmatched'),
  ('Drift correction and ablation','runs/drift_ablation/ablation.json; footprint_comparison.svg','Verified ICP graph and actual on/off footprint','Implemented and executed'),
  ('Photo ±8% / video ±3% wall accuracy','reports/benchmark.md','Extent proxy scores and unmapped failures','Not established; full per-wall correspondence absent'),
  ('Calibrated intervals at every tier','docs/ARCHITECTURE.md; result.json','Explicit provisional ranges and coverage rows','Incomplete: no independent empirical calibration'),
  ('Surface damage classes and metric extent','astra/semantics.py; runs/damage_*','Wall-projected candidates, staging demo','Partial: natural recognition and extent accuracy unvalidated; generalized nonwall association incomplete'),
  ('Concealed flags with rules','astra/semantics.py; result.json','Visible-evidence inspection flags','Implemented as inspection rules; no hidden-damage diagnosis'),
  ('Scope lines keyed to surfaces','astra/semantics.py; result.json','Inspection quantity and rule IDs','Implemented inspection scope; full Round 1 contract unknown'),
- ('Three rooms plus connector benchmark','benchmarks/reference_notes.md','Kitchen + hall + corridor supplied','Dataset shortfall retained per user instruction'),
- ('Same spaces in all tiers','configs/benchmark.json','Photos, RGB exports and LiDAR runs','Execution tracked; video qualification as extracted RGB needs evaluator confirmation'),
- ('Two-room consumer app comparison','benchmarks/app_exports/README.md; scripts/compare_app.py','Comparator and missing-evidence table','Unavailable tonight per user'),
+ ('Three rooms plus connector benchmark','three_room/; runs/three_room_expanded_assisted/','Bedroom, kitchen, hall, connector raw; automatic and assisted plans','Raw composition met; automatic hall/kitchen merge; assisted result marked'),
+ ('Same spaces in all tiers','configs/benchmark.json; runs/three_room_expanded_*','Original and replacement photo/video/LiDAR outputs','Executed; replacement RGB physical stitching fails; video is Stray RGB export'),
+ ('Two-room consumer app comparison','submission/part_3/04_comparison/REPORT.md','Magicplan 2026.38.0 kitchen and hall PDF exports; scored table','2/6 linear dimensions, 33.3%; below 70%'),
  ('Fix declaration, before/after, diff','fix_loop/','Measured declarations and reproduction','Shipped fixes; predictions and shortcomings reported'),
- ('Incremental process history','submission/development.bundle; .history','Actual development commits','Recorded; protected .git required alternate metadata'),
+ ('Incremental process history','.history; submission/part_5/','Actual development commits and portable bundle','Recorded; bundle refreshed at final packaging'),
  ('Clean install under 15 minutes','scripts/setup.sh; README.md','Pinned environment and downloads','Not verified on clean machine; network-dependent'),
- ('Reproduction bundle','scripts/package_submission.py; submission/','Allowlisted source/raw/output/model archive','Generated by packaging script; inspect manifest'),
+ ('Reproduction bundle','submission/part_2/05_reproduction/; submission/part_4/05_reproduction/','Raw captures, source and historic snapshots; public model fetch','Prepared; clean-machine and exact photo-after replay not verified'),
  ('Technical report ≤6 pages','reports/technical_report.pdf','Six-page PDF','Generated from actual available evidence'),
  ('Unseen live walk-in','README.md; docs/CAPTURE_PROTOCOL.md','Same live CLI','Not tested on evaluator capture')]
 text=['# Compliance matrix','','Implementation and successful execution do not imply accuracy-gate compliance. Missing evidence is explicit.','','| Requirement | File path | Artifact | Status |','|---|---|---|---|']
@@ -67,7 +79,7 @@ text += ['| '+' | '.join(row)+' |' for row in compliance]
 import matplotlib;matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-executed=sum(r['state']=='executed' for r in runs.values())
+executed=sum(runs[item['id']]['state']=='executed' for item in config['runs'])
 pages=[
  ('1. Scope, architecture and output',[
  f'Astra local property reconstruction — 3 October 2026. {executed}/{len(runs)} declared runs have completed at report generation. This is a measured development submission; no blanket gate-pass claim is made.',
@@ -91,24 +103,24 @@ pages=[
  'Black/brown staging props are assessed only in explicit staged mode. They are not natural damage training examples. Metric wall regions are clipped and unioned; generalized floor/ceiling damage is incomplete. Flags recommend inspection using named rules. Scope items are inspection quantities, not diagnoses or priced repair orders.'
  ]),
  ('4. Benchmark, gates and uncertainty',[
- 'Dataset: kitchen, hall and corridor; furnished staged-damage capture; three evaluator sample scans. All supplied data are retained. This is two rooms plus a corridor, short of the required three rooms plus connector. Repeat scans are deferred; consumer-app exports are unavailable tonight.',
+ 'The newer scan contains bedroom, kitchen, hall and connector; raw data meets the composition requirement. Automatic LiDAR merges hall and kitchen. The visually assisted four-space plan is labelled. Its photo result has four disconnected rooms and a 4.139 m² overlap; RGB-only video has 22 fragments. Both fail physical stitching.',
  'Laser truth contains room length/breadth/height and room-level doorway entries. Wall identities, exhaustive opening IDs, global outline and damage reference extents are absent. Sorted extents are therefore proxies, not full per-wall scores. Video physical correspondence can remain unresolved and is not chosen to minimize error.',
  'See benchmark.md and metrics.csv for every measured row, including missing predictions. The early LiDAR after run estimated hall height 2.7687 m, kitchen 2.7591 m and corridor 2.1928 m against 2.8, 2.8 and 2.26 m. All miss the 1.5 cm gate. Later results are tabulated separately.',
  'Every measurement includes a nominal 95% engineering interval, explicitly marked uncalibrated. Unknown values and intervals are null. Detector scores and sensor confidence are not calibrated geometric intervals. Nominal coverage on this small correlated set is descriptive only.',
- 'Eight kitchen stills are duplicated across folders. No independent calibration/test split is claimed. Calibrated coverage requires separate properties, complete measurement correspondence, reference uncertainty and held-out validation. Missing repeatability/app/damage evidence is not a pass.'
+ 'The independent kitchen LiDAR repeat has height spread 3.10 cm and fails the 1 cm gate; the long horizontal extent proxy also fails. Magicplan 2026.38.0 exports exist for kitchen and hall; the pipeline wins/ties on 2/6 linear dimensions (33.3%), below 70%. Calibrated intervals still require a held-out set.'
  ]),
  ('5. Fix loop and engineering evidence',[
  'The first declaration targeted the worst measured LiDAR height error available at that time: kitchen error 4.65 cm. It hypothesized that global floor support and free-space partitioning contaminated room measurements. It predicted at most 2 cm kitchen/hall error after local structural-plane extraction.',
  'The shipped plane change substantially improves the kitchen/corridor boundaries and enables ray-supported adjacency. It misses the predicted height improvement; corridor height regresses. This supports the wall-partition diagnosis but leaves sensor/pose/surface-selection height bias unresolved. No laser scale fitting was used.',
- 'After the first complete photo baseline, a separate declaration identified a worse gate: corridor long-extent error about 232.9%, six disconnected components and no adjacency. The proposed fix changes focal/depth, pose estimation and gravity; the prediction is worst extent error below 100% plus one observed connection, still short of full compliance.',
- 'Before outputs, declarations, evaluation tables and readable code diff are retained in fix_loop. The reproduction script can regenerate the methods. The photo prediction is judged only when a completed after run exists. Failures are retained instead of replaced by a favourable subset.',
+ 'The photo declaration identified corridor long extent error 232.9% but missed the actual worst short extent error of 448.15%. The fix changes focal/depth, pose and gravity. The actual worst after error is 176.54%; prediction below 100% and one connection both fail. The original declaration remains unchanged.',
+ 'Part 4 retains original declarations, before/after outputs, input hashes, original-code before reruns and a readable diff. Four historical photo-after source hashes are unrecoverable. A supplemental source-frozen photo after run completes in 101 s with cached depth and matching dimensions, but no adjacency. Supporting standalone kitchen height improves 1.62 to 0.79 cm with multiple settings changed.',
  'Development commits use .history because this coding session mounts .git read-only. A standard Git bundle exports the actual incremental history. Unit/integration checks cover projection units, rigid alignment, gravity, masks, doorway evidence, topology and reference validation. Accuracy still requires physical benchmark evidence.'
  ]),
  ('6. Reproduction, defense and remaining risks',[
  'README supplies one command per tier/capture. setup.sh installs pinned packages and fetch scripts download public models; inference then runs offline. A fresh-machine setup under 15 minutes has not been measured. Download bandwidth and Depth Pro CPU inference are substantial costs.',
- 'The allowlisted reproduction archive contains source, declarations, raw data, measurements, outputs, manifests, history and optionally model weights. It excludes credentials and virtual environments. Exact-content caches speed replay while the live model path remains executable. Timings distinguish observed executions and cache reuse through provenance.',
+ 'The Part 2 and 4 bundles contain source, declarations, old and new raw scans, measurements, outputs, manifests and historical evidence. Public model weights are fetched by script; credentials and virtual environments are excluded. Old and replacement scans have separate names to preserve input identity.',
  'The stock capture page asks for slow overlapping views of floor/ceiling junctions, both sides of doorways and a return loop. The photos need parallax and shared doorway detail. Mirrors/glass, glossy or wet-looking finishes, motion blur and low light remain known failure modes, rather than solved claims.',
- 'Before a compliant submission: obtain official contract/schema, collect complete opening/wall/damage reference correspondence and independent calibration scenes, measure repeatability, acquire the two-room app exports, and test the capture instructions on an unseen property. The user has deferred physical additions for this iteration.',
+ 'Remaining external evidence: official contract/schema, exhaustive physical wall/opening/damage correspondences, held-out interval calibration, and an unseen evaluator capture. The two-room app exports and an independent kitchen repeat are now present; their gates are not passed. Clean setup under 15 minutes remains unverified.',
  'The delivered output must be read with its warnings: LiDAR geometry is useful but centimetre gates fail; RGB scale/stitching may fail; staged masks do not validate natural damage; concealed flags are inspection prompts. docs/COMPLIANCE.md maps every requirement to its artifact and actual status.'
  ])]
 md=['# Technical report (six-page PDF companion)','']

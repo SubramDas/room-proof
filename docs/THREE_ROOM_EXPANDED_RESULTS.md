@@ -2,7 +2,7 @@
 
 ## What was run
 
-The replacement whole-property LiDAR scan contains 8,023 paired frames over 152.893 seconds. The pipeline sampled 240 frames, reconstructed 1,234,031 points, and completed the automatic run in 241.8 seconds. All four photo folders are present (bedroom 8, kitchen 8, hall 8, connector 6); these outputs are LiDAR reconstructions, not new photo-only or video-only runs.
+The replacement whole-property LiDAR scan contains 8,023 paired frames over 152.893 seconds. The pipeline sampled 240 frames, reconstructed 1,234,031 points, and completed the automatic run in 241.8 seconds. All four photo folders are present (bedroom 8, kitchen 8, hall 8, connector 6); LiDAR, photo and RGB-only video results are reported separately.
 
 ## Automatic result
 
@@ -46,3 +46,18 @@ From the project root:
 ```
 
 Open `plan.pdf` or `plan.png` for the floor plan, `report.html` for measurements, and `dimensions_comparison.csv` for the reference comparison. Existing submission snapshots were not replaced by these new results.
+
+## Replacement scan RGB-only tiers
+
+The replacement per-room photo folders (8 bedroom, 6 connector, 8 hall and 8 kitchen images) completed with Apple Depth Pro on CPU. The result has four named room polygons, **zero adjacency links**, four disconnected components and a **4.139 m² overlap** between connector and hall. These are not a physical whole-property stitch. Predicted sorted extents and heights are:
+
+| Space | Photo short × long extent (m) | Photo height (m) | Laser short × long / height (m) |
+|---|---:|---:|---:|
+| Bedroom | 4.160 × 5.600 | 3.378 | 2.830 × 2.970 / 2.770 |
+| Connector | 3.280 × 4.000 | 2.922 | 0.810 × 1.670 / 2.260 |
+| Hall | 4.920 × 8.640 | 3.003 | 3.300 × 4.200 / 2.800 |
+| Kitchen | 2.615 × 2.769 | 3.375 | 2.300 × 2.360 / 2.800 |
+
+The RGB-only MP4 run completed with 22 disconnected candidate fragments and zero accepted adjacency links. No honest one-to-one physical room mapping is available for those video fragments. Both RGB tiers fail the required whole-property stitch; their nominal measurement intervals remain uncalibrated.
+
+Photo output: `runs/three_room_expanded_photos/`. Video output: `runs/three_room_expanded_video/`. Each includes its own `result.json`, `plan.pdf`, `report.html`, input manifest, source manifest and provenance. The LiDAR-assisted dimensions above must not be transferred to these RGB results.

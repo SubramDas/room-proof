@@ -12,19 +12,15 @@ Source: Applied_AI_Case_Study.pdf, Part 2, printed pages 1–2. Later consumer-a
 | Confidence interval for every measurement | Measurement interval objects in JSON | Engineering ranges, not empirically calibrated. Unobserved values are null. |
 | Published-schema JSON | `05_reproduction/project/schemas/result.schema.json`; validation table | Provisional local schema passes for packaged results; official schema unavailable. |
 | One command per capture and rendered plan | `05_reproduction/COMMANDS.md`; each completed output folder | Included. Missing-run entries have status documents only. |
-| ≥3 rooms plus connector | Raw `three_room/` and its outputs | Composition shortfall: kitchen + hall + corridor. |
+| ≥3 rooms plus connector | Raw `three_room/`, earlier `three_room_original/`, expanded LiDAR outputs | Raw composition now present; automatic segmentation merges hall and kitchen. Assisted four-space output supplied. |
 | Furnished room, staged damage in two classes | Raw `Crack_water/` and outputs | Black crack/brown waterlogging staging supplied; recognition accuracy unvalidated. |
-| Same spaces at all three tiers | Raw folders and execution.csv | Supplied RGB clips extracted from Stray exports; photo completions missing for two datasets. |
-| Independent repeats and laser/tape ground truth on everything | `01_reference/measurements.txt`; unavailable-evidence table | Partial laser room/doorway measurements. Kitchen repeat added; exhaustive surface/opening/damage truth absent. |
+| Same spaces at all three tiers | Raw folders and execution.csv | Earlier benchmark and replacement four-space runs completed at all tiers. Replacement photo/video physical stitching fails. |
+| Independent repeats and laser/tape ground truth on everything | `01_reference/measurements.txt`; kitchen_repeat; unavailable-evidence table | Independent kitchen repeat supplied. Partial laser room/doorway measurements; exhaustive surface/opening/damage truth absent. |
 | Openings ≤2 cm on ≥85%, misses/phantoms included | Candidate outputs; unavailable-evidence table | Not established; false candidates remain and exhaustive truth absent. |
-| Height ≤1.5 cm; repeated spread ≤1 cm | `03_evaluation/measured_scores/`; unavailable-evidence table | Multi-room and new kitchen height gates failed; kitchen height spread 3.10 cm exceeds 1 cm. |
-| Repeat wall agreement ≤1 cm or 0.5% | Unavailable-evidence table; implementation in project/astra/evaluate.py | Kitchen repeat added: sorted-extent proxies available; full matched-wall gate incomplete and longer-extent proxy fails. |
+| Height ≤1.5 cm; repeated spread ≤1 cm | `03_evaluation/measured_scores/`; kitchen_repeat | Multi-room LiDAR height gate failed; kitchen repeat height spread 3.10 cm fails. |
+| Repeat wall agreement ≤1 cm or 0.5% | kitchen_repeat; unavailable-evidence table | Extent proxy long side fails; full physical wall matching unavailable. |
 | Actual drift correction and on/off footprint | `04_drift_ablation/` | Executed and supplied; accuracy improvement not demonstrated. |
 | Photo footprint ±8%, correct adjacency, no overlaps | Plans/layout diagnostics | Not established. |
 | Photo walls ±8%; video walls ±3%; calibrated intervals | Proxy measurement table and raw results | Full gates not established; interval calibration incomplete. |
 
 Successful execution or JSON validation is not a geometry-accuracy pass. No missing result is replaced by a fabricated output.
-
-## Kitchen reproduction update
-
-Added `02_outputs/kitchen_reproduce/lidar/` and its verified raw LiDAR input. See `03_evaluation/kitchen_repeat/README.md` for the updated repeat evidence. same kitchen and laser dimensions confirmed by operator. Earlier deferred-repeat statements describe the original snapshot and are superseded by this update. This supplemental run does not complete the two missing photo benchmarks.

@@ -98,7 +98,7 @@ The script runs all three before/after pairs from separate source directories. T
 
 **Historical-source limitation:** four photo-after source files have hashes that cannot be recovered from the recorded commits or current files. That snapshot falls back to the recorded revision for those files and is explicitly not an exact reconstruction of the historical source. See source_audit.json. The current source is also included under project/astra for future reruns, but a new current-source run must not be represented as an exact replay of the saved photo-after numbers.
 
-Before LiDAR/photo runs were actually reproduced from original revision e3977de; outputs are included under 02_runs/original_reproduction_checks/. Their reported dimensions match the original before outputs. A future clean-machine rerun of all after snapshots has not been verified. Consequently the full regenerable-before/after rubric is only partially demonstrated. No exact reproduction claim is made for the photo-after result.
+Before LiDAR/photo runs were actually reproduced from original revision e3977de; outputs are included under 02_runs/original_reproduction_checks/. Their reported dimensions match the original before outputs. A future clean-machine rerun of all historical after snapshots has not been verified. No exact historical-source reproduction claim is made for the saved photo-after result. A supplemental current-source replay is included when its run is available.
 ''')
 write('05_reproduction/reproduce_pairs.sh','''#!/usr/bin/env bash
 set -euo pipefail
@@ -144,7 +144,7 @@ Same original kitchen capture; kitchen_reproduce is excluded. Height changes 2.7
 
 ## Rubric assessment
 
-Shipped changes and measured movement are supplied. The original LiDAR/photo before results were rerun successfully. Both declared predictions missed; photo stitching still fails. Full exact after-source regeneration is not demonstrated, especially for the photo after run. No full-mark or fail-to-pass claim is made for the originally declared worst gate. A controlled source-frozen after rerun is still needed to close the historical reproduction gap.
+Shipped changes and measured movement are supplied. The original LiDAR/photo before results were rerun successfully. Both declared predictions missed; photo stitching still fails. Full exact historical after-source regeneration is not demonstrated, especially for the original photo after run. No full-mark or fail-to-pass claim is made for the originally declared worst gate. A supplemental source-frozen replay is reported separately; it does not restore unavailable historical source bytes.
 ''')
 write('README.md','''# Part 4 — The fix loop
 
@@ -161,7 +161,7 @@ Read `03_comparison/POSTMORTEM.md` first. This folder reports actual improvement
 
 **Result:** measured photo worst extent error improves 448.15% → 176.54% (the original declaration misidentified the worst dimension as 232.93%), but target and stitch gate fail. Declared LiDAR kitchen height improves 4.65 → 4.09 cm and misses its prediction. Supporting standalone kitchen height improves 1.62 → 0.79 cm (local fail → pass), with drift settings also changed.
 
-**Reproduction caveat:** the original before runs were reproduced, but four historical photo-after source hashes cannot be recovered. Its supplied snapshot is a labelled revision fallback, not an exact replay guarantee. A new source-frozen after run remains necessary for full reproducibility. Original declaration chronology is preserved, not rewritten to predict observed successes.
+**Reproduction caveat:** the original before runs were reproduced, but four historical photo-after source hashes cannot be recovered. Its supplied snapshot is a labelled revision fallback, not an exact replay guarantee. A supplemental after run has a source-hash-matched snapshot; this does not restore the historical bytes. Original declaration chronology is preserved, not rewritten to predict observed successes.
 
 Model binaries are not embedded; public fetch scripts are included. There are no private API keys. Consumer-app comparison remains Part 3; complete development history is Part 5.
 ''')
@@ -190,11 +190,36 @@ if replay.exists():
  actual={str(p.relative_to(snapshot)):hashlib.sha256(p.read_bytes()).hexdigest() for p in (snapshot/'astra').glob('*.py')}
  matched=actual==recorded
  if not matched:raise RuntimeError('Current photo replay source hashes differ from source at run start')
- write('05_reproduction/current_photo_replay_audit.json',json.dumps({'source_hashes_match':True,'files':len(actual),'result':'02_runs/photos_current_source_replay/result.json','snapshot':'05_reproduction/snapshots/photos_current_source_replay/astra'},indent=2))
+ before_manifest=json.loads((ROOT/'runs/three_room_photos/input_manifest.json').read_text())
+ replay_manifest=json.loads((ROOT/'runs/three_room_photos_current_replay/input_manifest.json').read_text())
+ same_inputs={x['path']:x['sha256'] for x in before_manifest}=={x['path']:x['sha256'] for x in replay_manifest}
+ if not same_inputs:raise RuntimeError('Photo replay input files differ from baseline')
+ audit={'source_hashes_match':True,'input_hashes_match_baseline':True,'input_files':len(before_manifest),'files':len(actual),'result':'02_runs/photos_current_source_replay/result.json','snapshot':'05_reproduction/snapshots/photos_current_source_replay/astra'}
+ check=ROOT/'runs/three_room_photos_snapshot_verified/result.json'
+ if check.exists():
+  copy('runs/three_room_photos_snapshot_verified','02_runs/photos_source_snapshot_check')
+  expected=json.loads(replay.read_text())
+  observed=json.loads(check.read_text().replace(str(ROOT/'submission/part_4/05_reproduction/project/three_room'),'submission/part_4/05_reproduction/project/three_room'))
+  same=expected==observed
+  if not same:raise RuntimeError('Source snapshot replay changed result beyond input evidence path spelling')
+  check_manifest=json.loads((check.parent/'input_manifest.json').read_text())
+  if check_manifest!=replay_manifest:raise RuntimeError('Source snapshot replay input manifest differs')
+  audit.update({'separate_snapshot_rerun':'02_runs/photos_source_snapshot_check/result.json','result_equal_after_input_path_normalization':True,'input_manifest_equal':True,'unmodified_result_equal':json.loads(check.read_text())==expected})
+ write('05_reproduction/current_photo_replay_audit.json',json.dumps(audit,indent=2))
+ replay_result=json.loads(replay.read_text())
+ replay_rows=[]
+ reference={'room_1':(2.3,2.36,2.8),'room_2':(3.3,4.2,2.8),'room_3':(.81,1.67,2.26)}
+ for ref,(short,long,height) in reference.items():
+  room=next(r for r in replay_result['rooms'] if r['id']==ref)
+  predicted=sorted([room['extent_x']['value'],room['extent_z']['value']])+[room['ceiling_height']['value']]
+  for key,value,target in zip(['short_extent','long_extent','ceiling_height'],predicted,[short,long,height]):
+   replay_rows.append({'reference_room':ref,'measurement':key,'reference_m':target,'prediction_m':value,'absolute_error_cm':100*abs(value-target),'relative_error_percent':100*abs(value-target)/target})
+ with (OUT/'03_comparison/current_photo_replay_metrics.csv').open('w',newline='') as f:
+  w=csv.DictWriter(f,fieldnames=list(replay_rows[0]));w.writeheader();w.writerows(replay_rows)
  with (OUT/'05_reproduction/reproduce_pairs.sh').open('a') as script:
   script.write('\n# Source-frozen supplemental photo after run (exact source hashes match).\nmkdir -p "$REPRO_BASE/reruns/photos_current_source_replay/geometry/depth_cache"\ncp -a "$REPRO_BASE/../02_runs/photos_current_source_replay/geometry/depth_cache/." "$REPRO_BASE/reruns/photos_current_source_replay/geometry/depth_cache/"\nrun_snapshot photos_current_source_replay --tier photos --input "$REPRO_BASE/project/three_room" --output "$REPRO_BASE/reruns/photos_current_source_replay" --capture-id three_room_photos_current_replay --semantic-views 9 --depth-model depth-pro\n')
  with (OUT/'03_comparison/POSTMORTEM.md').open('a') as report:
-  report.write('\n## Supplemental source-frozen photo after run\n\nA later photo after run on the same original capture is included under `02_runs/photos_current_source_replay/`. Its exact source files are included under `05_reproduction/snapshots/photos_current_source_replay/`, and all recorded source hashes match the snapshot. This supplements the historically unrecoverable photo-after source; it does not rewrite the original declaration or prove the earlier saved after numbers can be replayed exactly. Inspect the supplemental result and provenance for its measured values and physical stitch status.\n')
+  report.write('\n## Supplemental source-frozen photo after run\n\nA later photo after run on the same original capture is included under `02_runs/photos_current_source_replay/`. Its exact source files are included under `05_reproduction/snapshots/photos_current_source_replay/`, and all recorded source hashes match the snapshot. The horizontal extents and heights match the earlier saved after output to displayed precision, including the 176.54% worst extent error. It still has zero adjacency links and an approximately 6.782 m² room overlap; the physical stitch fails. This supplements the historically unrecoverable photo-after source; it does not rewrite the original declaration or prove the earlier saved after source can be recovered exactly.\n')
  with (OUT/'README.md').open('a') as readme:
   readme.write('\nA supplemental current-source photo after run and hash-matched source snapshot are included under `02_runs/photos_current_source_replay/` and `05_reproduction/snapshots/photos_current_source_replay/`. See the replay audit and post-mortem.\n')
 print('Part 4 assembled',flush=True)

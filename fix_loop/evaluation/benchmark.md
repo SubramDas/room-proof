@@ -40,7 +40,16 @@ These results compare predictions with supplied laser dimensions. Extent compari
 | three_room_photos_posefix / photos | room_3 | short_extent | 0.810 | 3.720 | 291.00 | FAIL |
 | three_room_photos_posefix / photos | room_3 | long_extent | 1.670 | 5.440 | 377.00 | FAIL |
 | three_room_photos_posefix / photos | room_3 | ceiling_height | 2.260 | 6.383 | 412.34 | FAIL |
+| three_room_photos_final / photos | room_1 | short_extent | 2.300 | 2.604 | 30.38 | FAIL |
+| three_room_photos_final / photos | room_1 | long_extent | 2.360 | 2.772 | 41.23 | FAIL |
+| three_room_photos_final / photos | room_1 | ceiling_height | 2.800 | 3.407 | 60.74 | FAIL |
+| three_room_photos_final / photos | room_2 | short_extent | 3.300 | 7.280 | 398.00 | FAIL |
+| three_room_photos_final / photos | room_2 | long_extent | 4.200 | 7.600 | 340.00 | FAIL |
+| three_room_photos_final / photos | room_2 | ceiling_height | 2.800 | 5.747 | 294.70 | FAIL |
+| three_room_photos_final / photos | room_3 | short_extent | 0.810 | 2.240 | 143.00 | FAIL |
+| three_room_photos_final / photos | room_3 | long_extent | 1.670 | 3.200 | 153.00 | FAIL |
+| three_room_photos_final / photos | room_3 | ceiling_height | 2.260 | 3.216 | 95.58 | FAIL |
 
 ## Incomplete benchmark evidence
 
-Repeat scans are deferred by the user. Consumer-app exports, independent damage extents, official schema/round-one gates and independent calibration scenes were not supplied. The property contains two rooms plus a corridor, not the prescribed three rooms plus a connector. These omissions are not counted as passed gates.
+An independent kitchen repeat and two Magicplan room exports are supplied separately. Full wall correspondence, independent damage extents, official schema/round-one gates and independent interval calibration remain unavailable. The expanded capture has three rooms plus a connector; its automatic segmentation merges hall and kitchen, and the assisted correction is labelled separately. These gaps are not counted as passed gates.

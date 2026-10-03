@@ -1,0 +1,12 @@
+{
+  "source_hashes_match": true,
+  "input_hashes_match_baseline": true,
+  "input_files": 22,
+  "files": 16,
+  "result": "02_runs/photos_current_source_replay/result.json",
+  "snapshot": "05_reproduction/snapshots/photos_current_source_replay/astra",
+  "separate_snapshot_rerun": "02_runs/photos_source_snapshot_check/result.json",
+  "result_equal_after_input_path_normalization": true,
+  "input_manifest_equal": true,
+  "unmodified_result_equal": false
+}

@@ -21,6 +21,7 @@ entries = {
     'technical_report.pdf': ROOT / 'reports/technical_report.pdf',
     'technical_report.md': ROOT / 'reports/technical_report.md',
     'SUBMISSION_INDEX.md': ROOT / 'docs/SUBMISSION_INDEX.md',
+    'FINAL_REVIEW.md': ROOT / 'docs/FINAL_REVIEW.md',
 }
 for name, path in entries.items():
     if not path.is_file():

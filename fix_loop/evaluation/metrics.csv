@@ -35,3 +35,12 @@ three_room_photos_posefix,photos,room_2,room_2,ceiling_height,2.8,7.117730555632
 three_room_photos_posefix,photos,room_3,room_3,short_extent,0.81,3.72,2.91,2.91,3.5925925925925926,False,0.06480000000000001,False,axis_extent_proxy_not_per_wall
 three_room_photos_posefix,photos,room_3,room_3,long_extent,1.67,5.44,3.7700000000000005,3.7700000000000005,2.25748502994012,False,0.1336,False,axis_extent_proxy_not_per_wall
 three_room_photos_posefix,photos,room_3,room_3,ceiling_height,2.26,6.383393388017828,4.123393388017829,4.123393388017829,1.8245103486804553,False,0.015,False,height
+three_room_photos_final,photos,room_1,room_1,short_extent,2.3,2.6037667968600964,0.30376679686009656,0.30376679686009656,0.13207252037395503,True,0.184,False,axis_extent_proxy_not_per_wall
+three_room_photos_final,photos,room_1,room_1,long_extent,2.36,2.7722541161300414,0.4122541161300415,0.4122541161300415,0.17468394751272945,False,0.1888,False,axis_extent_proxy_not_per_wall
+three_room_photos_final,photos,room_1,room_1,ceiling_height,2.8,3.4073689516578503,0.6073689516578504,0.6073689516578504,0.2169174827349466,False,0.015,False,height
+three_room_photos_final,photos,room_2,room_2,short_extent,3.3,7.28,3.9800000000000004,3.9800000000000004,1.2060606060606063,False,0.264,False,axis_extent_proxy_not_per_wall
+three_room_photos_final,photos,room_2,room_2,long_extent,4.2,7.6000000000000005,3.4000000000000004,3.4000000000000004,0.8095238095238095,False,0.336,False,axis_extent_proxy_not_per_wall
+three_room_photos_final,photos,room_2,room_2,ceiling_height,2.8,5.74697846653261,2.9469784665326104,2.9469784665326104,1.0524923094759324,False,0.015,False,height
+three_room_photos_final,photos,room_3,room_3,short_extent,0.81,2.24,1.4300000000000002,1.4300000000000002,1.7654320987654322,False,0.06480000000000001,False,axis_extent_proxy_not_per_wall
+three_room_photos_final,photos,room_3,room_3,long_extent,1.67,3.1999999999999997,1.5299999999999998,1.5299999999999998,0.9161676646706586,False,0.1336,False,axis_extent_proxy_not_per_wall
+three_room_photos_final,photos,room_3,room_3,ceiling_height,2.26,3.215770370890457,0.9557703708904572,0.9557703708904572,0.4229072437568395,False,0.015,False,height

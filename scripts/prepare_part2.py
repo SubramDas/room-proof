@@ -178,7 +178,7 @@ write('03_evaluation/UNAVAILABLE_EVIDENCE.md','''# Evidence that is not establis
 | Damage class and extent accuracy | Staged black/brown props; no independent measured masks/prop extents; natural damage recognition unvalidated. |
 | Complete Round 1 contract / published schema | Not supplied; local provisional schema only. |
 | Three rooms plus connector | The newer raw scan contains bedroom, kitchen, hall and connector; automatic LiDAR extraction merged hall and kitchen. A visually assisted four-space output is supplied separately. |
-| Complete three-room and damage photo results | Earlier capture photo runs are complete, but physical multi-room stitching fails. The replacement photo result, if completed, is listed separately in execution.csv and must be assessed on its own stitch diagnostics. |
+| Complete three-room and damage photo results | Earlier capture and replacement photo runs complete, but physical multi-room stitching fails. The replacement photo result has four disconnected spaces and a 4.139 m² overlap. |
 | Full geometry/height truth for evaluator samples | Not supplied; execution evidence only. |
 
 The one standalone kitchen LiDAR height result is within 1.5 cm of its reference; all three heights in the earlier multi-room LiDAR result exceed 1.5 cm error. This is not an overall height-gate pass. No confidence-interval calibration, opening gate, or whole-property RGB gate is claimed as passed.
@@ -207,7 +207,7 @@ Source: Applied_AI_Case_Study.pdf, Part 2, printed pages 1–2. Later consumer-a
 | One command per capture and rendered plan | `05_reproduction/COMMANDS.md`; each completed output folder | Included. Missing-run entries have status documents only. |
 | ≥3 rooms plus connector | Raw `three_room/`, earlier `three_room_original/`, expanded LiDAR outputs | Raw composition now present; automatic segmentation merges hall and kitchen. Assisted four-space output supplied. |
 | Furnished room, staged damage in two classes | Raw `Crack_water/` and outputs | Black crack/brown waterlogging staging supplied; recognition accuracy unvalidated. |
-| Same spaces at all three tiers | Raw folders and execution.csv | Earlier benchmark tiers completed; new four-space capture has LiDAR and photos, but no separate completed photo/video reconstruction. |
+| Same spaces at all three tiers | Raw folders and execution.csv | Earlier benchmark and replacement four-space runs completed at all tiers. Replacement photo/video physical stitching fails. |
 | Independent repeats and laser/tape ground truth on everything | `01_reference/measurements.txt`; kitchen_repeat; unavailable-evidence table | Independent kitchen repeat supplied. Partial laser room/doorway measurements; exhaustive surface/opening/damage truth absent. |
 | Openings ≤2 cm on ≥85%, misses/phantoms included | Candidate outputs; unavailable-evidence table | Not established; false candidates remain and exhaustive truth absent. |
 | Height ≤1.5 cm; repeated spread ≤1 cm | `03_evaluation/measured_scores/`; kitchen_repeat | Multi-room LiDAR height gate failed; kitchen repeat height spread 3.10 cm fails. |

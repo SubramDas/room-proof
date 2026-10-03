@@ -13,6 +13,8 @@ Read `03_comparison/POSTMORTEM.md` first. This folder reports actual improvement
 
 **Result:** measured photo worst extent error improves 448.15% → 176.54% (the original declaration misidentified the worst dimension as 232.93%), but target and stitch gate fail. Declared LiDAR kitchen height improves 4.65 → 4.09 cm and misses its prediction. Supporting standalone kitchen height improves 1.62 → 0.79 cm (local fail → pass), with drift settings also changed.
 
-**Reproduction caveat:** the original before runs were reproduced, but four historical photo-after source hashes cannot be recovered. Its supplied snapshot is a labelled revision fallback, not an exact replay guarantee. A new source-frozen after run remains necessary for full reproducibility. Original declaration chronology is preserved, not rewritten to predict observed successes.
+**Reproduction caveat:** the original before runs were reproduced, but four historical photo-after source hashes cannot be recovered. Its supplied snapshot is a labelled revision fallback, not an exact replay guarantee. A supplemental after run has a source-hash-matched snapshot; this does not restore the historical bytes. Original declaration chronology is preserved, not rewritten to predict observed successes.
 
 Model binaries are not embedded; public fetch scripts are included. There are no private API keys. Consumer-app comparison remains Part 3; complete development history is Part 5.
+
+A supplemental current-source photo after run and hash-matched source snapshot are included under `02_runs/photos_current_source_replay/` and `05_reproduction/snapshots/photos_current_source_replay/`. See the replay audit and post-mortem.

@@ -20,4 +20,8 @@ Same original kitchen capture; kitchen_reproduce is excluded. Height changes 2.7
 
 ## Rubric assessment
 
-Shipped changes and measured movement are supplied. The original LiDAR/photo before results were rerun successfully. Both declared predictions missed; photo stitching still fails. Full exact after-source regeneration is not demonstrated, especially for the photo after run. No full-mark or fail-to-pass claim is made for the originally declared worst gate. A controlled source-frozen after rerun is still needed to close the historical reproduction gap.
+Shipped changes and measured movement are supplied. The original LiDAR/photo before results were rerun successfully. Both declared predictions missed; photo stitching still fails. Full exact historical after-source regeneration is not demonstrated, especially for the original photo after run. No full-mark or fail-to-pass claim is made for the originally declared worst gate. A supplemental source-frozen replay is reported separately; it does not restore unavailable historical source bytes.
+
+## Supplemental source-frozen photo after run
+
+A later photo after run on the same original capture is included under `02_runs/photos_current_source_replay/`. Its exact source files are included under `05_reproduction/snapshots/photos_current_source_replay/`, and all recorded source hashes match the snapshot. The horizontal extents and heights match the earlier saved after output to displayed precision, including the 176.54% worst extent error. It still has zero adjacency links and an approximately 6.782 m² room overlap; the physical stitch fails. This supplements the historically unrecoverable photo-after source; it does not rewrite the original declaration or prove the earlier saved after source can be recovered exactly.

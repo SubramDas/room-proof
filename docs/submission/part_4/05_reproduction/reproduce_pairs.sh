@@ -19,3 +19,8 @@ run_snapshot kitchen_supporting_after --tier lidar --input "$REPRO_BASE/project/
 run_snapshot photos_declared_before --tier photos --input "$REPRO_BASE/project/three_room" --output "$REPRO_BASE/reruns/photos_before" --capture-id three_room --semantic-views 9
 # WARNING: recorded-revision fallback for unrecoverable historical hashes; not exact replay.
 run_snapshot photos_declared_after --tier photos --input "$REPRO_BASE/project/three_room" --output "$REPRO_BASE/reruns/photos_after_revision_fallback" --capture-id three_room_photos_final --semantic-views 9 --depth-model depth-pro
+
+# Source-frozen supplemental photo after run (exact source hashes match).
+mkdir -p "$REPRO_BASE/reruns/photos_current_source_replay/geometry/depth_cache"
+cp -a "$REPRO_BASE/../02_runs/photos_current_source_replay/geometry/depth_cache/." "$REPRO_BASE/reruns/photos_current_source_replay/geometry/depth_cache/"
+run_snapshot photos_current_source_replay --tier photos --input "$REPRO_BASE/project/three_room" --output "$REPRO_BASE/reruns/photos_current_source_replay" --capture-id three_room_photos_current_replay --semantic-views 9 --depth-model depth-pro

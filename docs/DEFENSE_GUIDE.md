@@ -4,7 +4,7 @@
 
 This is an executable local pipeline with measured limitations. Do not say that all evaluator gates pass. Open `docs/COMPLIANCE.md` and `reports/benchmark.md`; distinguish a completed run, a valid JSON file, an accurate measurement, and a calibrated uncertainty interval.
 
-The declared property is kitchen + hall + corridor. It is not the prescribed three rooms plus connector. Repeat scans were deferred; the second-app comparison is missing. State those omissions directly.
+The replacement raw property contains bedroom, kitchen, hall and connector, meeting the capture composition requirement. Automatic LiDAR segmentation merges hall and kitchen; the four-space plan uses visually reviewed scan ranges and is labelled assisted. An independent kitchen repeat and Magicplan kitchen/hall exports are included. Their accuracy gates still fail; state those results directly.
 
 ## Preparation
 
@@ -18,12 +18,12 @@ Keep the pinned environment stable. No API key is required. Cached public weight
 ## Show the working LiDAR path
 
 ```bash
-.venv/bin/python -m astra run --tier lidar --input three_room/lidar --output runs/defense_lidar_new --max-frames 140 --semantic-views 12
+.venv/bin/python -m astra run --tier lidar --input three_room/lidar --output runs/defense_lidar_new --max-frames 240 --semantic-views 12
 ```
 
-Open `report.html`, then `result.json`, `geometry/drift.json`, and the input/provenance manifests. Show the inferred hall–kitchen and hall–corridor opening pairs. Explain that widths remain provisional and do not pass the 2 cm gate merely because adjacency is plausible. The IDs are in camera-visit order; use the explicit evaluation mapping to match physical room names.
+Open `report.html`, then `result.json`, `geometry/drift.json`, and the input/provenance manifests. This automatic run merges hall and kitchen. Show the separate `runs/three_room_expanded_assisted/plan.pdf` to explain the visually reviewed frame-range correction and its remaining connector error. Show the inferred bedroom–connector, connector–hall and hall–kitchen opening pairs as provisional candidates; widths do not pass the 2 cm gate merely because adjacency is plausible. The IDs are in camera-visit order; use the explicit evaluation mapping to match physical room names.
 
-Show `runs/drift_ablation/footprint_comparison.svg`. It is the same raw scan with correction toggled, not two independent captures. The algorithm verifies ICP factors and optimizes a correction graph; it does not use poses unchanged.
+Show `runs/drift_ablation/footprint_comparison.svg`. It uses the earlier three-space raw scan with correction toggled, not two independent captures. The algorithm verifies ICP factors and optimizes a correction graph; it does not use poses unchanged. The earlier raw scan is kept as `three_room_original/` inside Part 2.
 
 ## Show the two RGB paths
 

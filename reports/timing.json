@@ -24,6 +24,30 @@
     "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
   },
   {
+    "run": "three_room_photos_final",
+    "tier": "photos",
+    "seconds": 3951.4802942530077,
+    "max_rss_mb": 9550.71484375,
+    "device": "cpu",
+    "code_revision": "88179eaa8451d90e1ef2cbf6479bbe873822c42d"
+  },
+  {
+    "run": "kitchen_photos_final",
+    "tier": "photos",
+    "seconds": 33.48859786699177,
+    "max_rss_mb": 6093.35546875,
+    "device": "cpu",
+    "code_revision": "209371d7950965ccd1a45940e5e72d45696bbbfa"
+  },
+  {
+    "run": "damage_photos_final",
+    "tier": "photos",
+    "seconds": 1429.2532633980154,
+    "max_rss_mb": 9481.45703125,
+    "device": "cpu",
+    "code_revision": "209371d7950965ccd1a45940e5e72d45696bbbfa"
+  },
+  {
     "run": "three_room_video_final",
     "tier": "video",
     "seconds": 647.7991158950026,
@@ -70,5 +94,29 @@
     "max_rss_mb": 308.48828125,
     "device": "cpu",
     "code_revision": "b21e4ced844e6f0496b9200177de27e290313347"
+  },
+  {
+    "run": "three_room_expanded_lidar",
+    "tier": "lidar",
+    "seconds": 241.80781330700847,
+    "max_rss_mb": 2500.8359375,
+    "device": "cpu",
+    "code_revision": "97419965f2fa490fd30bdcdee9c0af42006e2509"
+  },
+  {
+    "run": "three_room_expanded_photos",
+    "tier": "photos",
+    "seconds": 1630.5848753280006,
+    "max_rss_mb": 9537.75390625,
+    "device": "cpu",
+    "code_revision": "8568825fcd8557b74e81551c30fab71f5783a297"
+  },
+  {
+    "run": "three_room_expanded_video",
+    "tier": "video",
+    "seconds": 364.8639217480086,
+    "max_rss_mb": 2868.89453125,
+    "device": "cpu",
+    "code_revision": "8568825fcd8557b74e81551c30fab71f5783a297"
   }
 ]

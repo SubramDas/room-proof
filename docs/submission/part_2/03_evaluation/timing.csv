@@ -1,13 +1,17 @@
-output_folder,runtime_seconds,peak_rss_mb,timing_context
-02_outputs/Crack_water/lidar,327.5044915199978,,saved run; caching/concurrent execution may apply
-02_outputs/Crack_water/lidar_later_candidate,664.7085175349785,,saved run; caching/concurrent execution may apply
-02_outputs/Crack_water/video,219.68098932801513,,saved run; caching/concurrent execution may apply
-02_outputs/evaluator_floor_only/lidar,11.17032146800193,,saved run; caching/concurrent execution may apply
-02_outputs/evaluator_single_room/lidar,13.795359554002061,,saved run; caching/concurrent execution may apply
-02_outputs/evaluator_with_ceiling/lidar,29.01069746000576,,saved run; caching/concurrent execution may apply
-02_outputs/kitchen/lidar,281.66448195200064,,saved run; caching/concurrent execution may apply
-02_outputs/kitchen/photos,372.55552271500346,,saved run; caching/concurrent execution may apply
-02_outputs/kitchen/video,387.8049516650208,,saved run; caching/concurrent execution may apply
-02_outputs/three_room/lidar,460.63317992698285,,saved run; caching/concurrent execution may apply
-02_outputs/three_room/video,647.7991158950026,,saved run; caching/concurrent execution may apply
-02_outputs/kitchen_reproduce/lidar,208.575388000987,2412.4140625,user-run reproduction; see provenance
+run,runtime_seconds,peak_rss_mb,timing_context
+three_room_lidar_final,460.63317992698285,2395.45703125,saved run; caching/concurrent execution may apply
+kitchen_lidar_final,281.66448195200064,2363.390625,saved run; caching/concurrent execution may apply
+damage_lidar_final,327.5044915199978,2370.2734375,saved run; caching/concurrent execution may apply
+three_room_photos_final,3951.4802942530077,9550.71484375,saved run; caching/concurrent execution may apply
+kitchen_photos_final,33.48859786699177,6093.35546875,saved run; caching/concurrent execution may apply
+damage_photos_final,1429.2532633980154,9481.45703125,saved run; caching/concurrent execution may apply
+three_room_video_final,647.7991158950026,2869.63671875,saved run; caching/concurrent execution may apply
+kitchen_video_final,387.8049516650208,2708.10546875,saved run; caching/concurrent execution may apply
+damage_video_final,219.68098932801513,2694.05078125,saved run; caching/concurrent execution may apply
+evaluator_single_room,13.795359554002061,255.33984375,saved run; caching/concurrent execution may apply
+evaluator_floor_only,11.17032146800193,265.4765625,saved run; caching/concurrent execution may apply
+evaluator_with_ceiling,29.01069746000576,308.48828125,saved run; caching/concurrent execution may apply
+three_room_expanded_lidar,241.80781330700847,2500.8359375,saved run; caching/concurrent execution may apply
+three_room_expanded_assisted,,,saved run; caching/concurrent execution may apply
+three_room_expanded_photos,1630.5848753280006,9537.75390625,saved run; caching/concurrent execution may apply
+three_room_expanded_video,364.8639217480086,2868.89453125,saved run; caching/concurrent execution may apply

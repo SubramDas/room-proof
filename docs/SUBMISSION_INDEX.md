@@ -4,10 +4,13 @@ The development source, model-download scripts, reference measurements, consumer
 
 - [Part 1 protocol](submission/part_1/Capture_Protocol.pdf)
 - [Part 2 requirement status](submission/part_2/00_REQUIREMENTS_AND_STATUS.md)
+- [Expanded four-space results](THREE_ROOM_EXPANDED_RESULTS.md)
 - [Kitchen independent repeat comparison](submission/part_2/03_evaluation/kitchen_repeat/README.md)
 - [Part 3 kitchen and hall comparison](submission/part_3/04_comparison/REPORT.md)
 - [Part 4 fix-loop post-mortem](submission/part_4/03_comparison/POSTMORTEM.md)
+- [Part 4 source replay audit](submission/part_4/05_reproduction/current_photo_replay_audit.json)
 - [Part 5 process evidence](PART_5_PROCESS_EVIDENCE.md)
+- [Final review guide](FINAL_REVIEW.md)
 
 The files under docs/submission are selected evidence excerpts, not standalone reproductions of the full submission directories. Some relative links inside them refer to larger accompanying archive contents. The packaging scripts use the original workspace data/run folders; cloning Git alone does not supply those raw inputs.
 
@@ -18,3 +21,5 @@ Part 2 now contains all 12 completed declared runs, the independent kitchen repe
 Part 3 contains both magicplan exports (2026.38.0, automatic dimensions) and scores 2/6 shared linear dimensions in the pipeline's favour. Part 4 includes the completed earlier three-room Depth Pro output and corrects the baseline worst extent error to 448.15%, improving to 176.54%. Independent kitchen repeat evidence fails the longer-extent proxy and 1 cm height-spread gate. No overall gate pass is claimed.
 
 Original declarations are unchanged. Four historical photo-after source files cannot be recovered exactly; the Part 4 source audit records that reproduction limitation. The original baseline LiDAR/photo dimensions were reproduced from archived code.
+
+The later source-frozen photo after run was rerun from a separate directory. Its full result matches after normalizing the source input path spelling recorded in evidence fields. This verification does not imply the earlier historical source bytes were recovered.
