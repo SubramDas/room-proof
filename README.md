@@ -102,6 +102,30 @@ provides unscored image boxes. Its zero `raw_model_score` is a missing-score
 sentinel, not confidence. The same capture command supports photo, video,
 and LiDAR tiers; use `--lidar-rgb-rotation 90` for this kitchen scan.
 
+For paired scan RGB and depth, the optional ESANet NYUv2 backend is available
+with `--visual-model on --visual-backend esanet --visual-model-path
+.room-proof/models/ESANet --lidar-rgb-rotation 90`. Provision the pinned source
+and checkpoint with `.venv/bin/python scripts/fetch_esanet_model.py` after
+installing the optional dependencies listed in
+[docs/dependencies.md](docs/dependencies.md). ESANet runs only on sampled
+RGB/depth pairs that pass the registration check; it provides wall, floor,
+ceiling, door, and window proposals, not measured openings. The kitchen pilot
+and its limits are in [the comparison report](reports/esanet_kitchen_comparison.md).
+
+Grounding DINO Tiny is another optional local opening candidate backend for
+photos, standalone video, and scan RGB. Provision its pinned checkpoint with
+`.venv/bin/python scripts/fetch_grounding_dino_model.py`, then use
+`--visual-model on --visual-backend grounding-dino --visual-model-path
+.room-proof/models/grounding-dino-tiny`. For this kitchen scan, also use
+`--lidar-rgb-rotation 90`. Its [kitchen comparison](reports/grounding_dino_kitchen_comparison.md)
+records faster CPU time than OWLv2 but no improvement to the final plan.
+Every successful visual-model run now writes `candidate_overlays.json` and
+`candidate_overlays/<frame_id>.png` for all model-selected images. The JSON
+maps each PNG to its photo or video-frame source. Set `--max-model-frames` to
+at least the number of photos when you want overlays for every photo; video
+and LiDAR PNGs cover the selected model frames. The colored boxes are
+unverified proposals.
+
 To compare independently processed photo, standalone-video, and LiDAR RGB
 captures, use `link-captures` with their completed run directories and the
 original photo folder and extracted Stray folder. It writes
@@ -138,6 +162,20 @@ Use `--calibration /path/to/calibration.json` only with the learned matcher.
 It must describe the original cameras and scan pixel mapping independently
 of evaluator tape measurements. A calibrated pose still needs agreement from
 separated scan views before it can support a metric opening.
+
+For a saved Grounding DINO linked run, `review-dino-openings` reuses its model
+boxes and feature correspondences without rerunning the model. It writes
+`photo_guided_openings.json` and side-by-side review PNGs. The kitchen example
+is documented in [the photo-guided review](reports/dino_photo_guided_kitchen.md):
+
+```bash
+.venv/bin/python -m roomproof review-dino-openings \
+  --linked-run runs/run-2807cabe99ae48c0b0dfdcb6709549d1 \
+  --photo-name IMG_0004.jpeg --runs-dir runs
+```
+
+The visual match does not supply a width. A future Grounding DINO
+`link-captures` run also creates the photo-guided report automatically.
 
 When two or more rooms have separate completed `link-captures` runs, combine
 them with the **same property ID** and shared photo/video source IDs:

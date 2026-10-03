@@ -43,7 +43,7 @@ Florence returned an `open_passage` box spanning almost the entire image,
 `[1.51, 2.02, 3019.46, 4025.95]`, and its `doorway` box covered a narrow
 left strip, `[1.51, 889.06, 521.64, 4025.95]`. Visual inspection does not
 support treating either Florence box as both jambs of that passage. The
-known 2.26 m passage remains missed by the metric pipeline. A single
+known 2.26 m passage height remains missed by the metric pipeline. A single
 view does not establish full candidate precision or recall.
 
 **Decision for now:** keep Florence optional. It is a clear CPU speed

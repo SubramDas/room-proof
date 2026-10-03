@@ -161,7 +161,7 @@ The initial patch matcher found video-to-scan RGB overlap but no passing photo
 links. A later learned-matcher run improved 2D correspondence coverage.
 Kitchen LiDAR yielded a provisional room fit and
 one unverified gap. The owner later supplied independent spans 2.36 and
-2.30 m, height 2.80 m, and hall-facing passage width 2.26 m. The provisional
+2.30 m, height 2.80 m, and hall-facing passage height 2.26 m. The provisional
 span errors are +0.1309 and +0.0777 m and the height error is −0.0219 m;
 the opening remains unidentified and unmeasured. The photo OWLv2
 pilot generated many unreviewed boxes and took about 6.6 minutes for eight
@@ -209,7 +209,7 @@ opening-region links in 19 unverified groups and three cross-view-consistent
 pose hypotheses under assumed focal lengths. It accepted no metric
 registration, no room adjacency, and no confirmed opening width. The
 LiDAR-derived 2.4909 × 2.3777 × 2.7781 m kitchen fit is provisional, while
-the hall-facing 2.26 m reference opening remains a miss. The full serial
+the hall-facing 2.26 m reference opening height remains a miss. The full serial
 model-on pass took about 18 minutes on this CPU, above the 15-minute target.
 See `reports/kitchen_pipeline_pilot.md` for exact run IDs and evidence.
 
@@ -256,7 +256,7 @@ of 375 2D view pairs, retained 26 unverified opening tracks, seven
 candidate-region continuity segments, and seven arbitrary-scale visual
 motion edges. The LiDAR fit remained 2.4909 × 2.3777 × 2.7781 m; a convex
 irregular alternative failed its wall-support gate. No calibrated camera
-pose, verified crossing, adjacency, or 2.26 m hall-passage width passed.
+pose, verified crossing, adjacency, or 2.26 m hall-passage height passed.
 The implementation now runs end to end with explicit unknown outputs;
 real multiroom accuracy and a finite width still require matching capture
 evidence, calibration, and an untouched benchmark.
@@ -268,3 +268,38 @@ the same selected frames as OWLv2 and cut the serial run from 17.9 to
 localized poorly. Keep the faster backend experimental until reviewed labels
 establish its opening recall and false-positive rate. See
 `reports/florence2_kitchen_comparison.md`.
+
+ESANet's NYUv2 RGB-D checkpoint is now an optional LiDAR-tier surface
+candidate backend. The kitchen run used nine registered RGB/depth pairs,
+produced wall/floor/ceiling masks plus door/window candidates in 49.03 s
+of model-stage time, and left the provisional dimensions and unresolved
+hall-facing passage unchanged. Its class map has no open-passage label;
+some apparent door/window and surface masks were visually incorrect.
+Keep it as evidence only until a reviewed label set and independently
+measured capture show that feeding masks into geometry improves the plan.
+See `reports/esanet_kitchen_comparison.md`.
+The linked photo/video/ESANet scan kitchen plan also remained unchanged:
+172 of 375 2D view pairs matched, with zero accepted metric registrations,
+crossings, opening widths, or adjacencies.
+
+Grounding DINO Tiny is now an optional photo/video/scan-RGB opening detector
+under the same candidate contract. On identical selected kitchen frames,
+its serial source-plus-linker run took 11.5 minutes, between Florence's
+8.6 and OWLv2's 17.9 minutes. The known passage view had localized but
+duplicated proposals, along with false labels. Twenty scan box/depth-gap
+coincidences yielded zero supported openings. The linked plan and its
+measurements remained unchanged, so keep the model experimental. Details:
+`reports/grounding_dino_kitchen_comparison.md`.
+
+The photo-guided DINO follow-up now reuses saved photo and scan candidates
+plus ALIKED/LightGlue matches. It groups overlapping photo boxes, links
+opening-region points across independent views, probes matching scan depth,
+and produces a review PNG and explicit metric-support status. On the kitchen
+it associates `IMG_0004.jpeg` with scan frames 1830 and 2279, but the two
+scan RGB/depth pairs remain timing-only and the targeted 3D flank check is
+supported in only one view. The 0.793 m raw span is not promoted; the known
+2.26 m hall opening height is still unmeasured. See
+`reports/dino_photo_guided_kitchen.md`. A provisional DINO-top-to-LiDAR-floor
+height is 1.769 m versus the owner's 2.26 m reference and is not promoted.
+Next: verified pixel calibration, structural lintel localization, and
+separated repeat views for the target passage, then metric edge fitting.

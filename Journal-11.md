@@ -155,11 +155,11 @@ depth gap, but none passed the structural-opening confirmation gate. A fresh
 link run with all three model runs again found five video-to-scan RGB image
 overlaps, zero photo links, and no metric cross-capture transform or inferred
 adjacency. Separately, the owner supplied independent kitchen spans 2.36 and 2.30 m,
-height 2.80 m, and hall-facing passage width 2.26 m. Sorted-span LiDAR errors
+height 2.80 m, and hall-facing passage height 2.26 m. Sorted-span LiDAR errors
 are +0.1309 and +0.0777 m; height error is −0.0219 m. The detected 0.697 m
-gap lacks a verified identity and the detector's 1.6 m maximum excludes the
-2.26 m passage in that initial run. A later general candidate ceiling of
-3.2 m still did not detect the passage. The reference values were used only for comparison, never
+gap lacks a verified identity. Its width cannot be compared with the 2.26 m
+height reference. A later general candidate ceiling of 3.2 m still did not
+verify the passage. The reference values were used only for comparison, never
 as pipeline input. Kitchen is now development evidence, so changed rules
 need a separate untouched evaluation capture.
 
@@ -182,7 +182,7 @@ patch matcher on the same model-on source runs. It produced 52 constrained
 opening-region links in 19 unverified groups and three consistent pose
 hypotheses under assumed camera focal lengths. None established calibrated
 metric registration or adjacency. The owner later identified kitchen
-`IMG_0004.jpeg` as showing both edges of the hall-facing 2.26 m passage.
+`IMG_0004.jpeg` as showing both sides of the hall-facing passage, whose height is 2.26 m.
 One model box roughly covers that visible passage, but its jambs were not
 registered to the LiDAR wall. That plan retained the 2.4909 × 2.3777 m
 provisional kitchen fit, 2.7781 m height, and an unresolved opening with
@@ -228,7 +228,7 @@ the linker run is `run-dbe819d692074d83af4d698741ff5786`. It matched
 flow, seven opening segments had image-region continuity, and seven sparse
 motion edges had arbitrary scale. The irregular fit was rejected for an
 unsupported edge. No calibrated metric registration, wall crossing,
-adjacency, or 2.26 m hall-facing width was accepted. The fused kitchen
+adjacency, or 2.26 m hall-facing height was accepted. The fused kitchen
 plan remains schema-valid with provisional 2.4909 × 2.3777 × 2.7781 m
 geometry and an unresolved opening. Updated serial model-on time is
 1,076.13 s (17.9 min). Exact stage counts and limits are in
@@ -247,3 +247,68 @@ identified `IMG_0004.jpeg` passage view, its passage box covered nearly the
 whole image and did not locate both jambs. Florence remains optional rather
 than replacing OWLv2. See `reports/florence2_kitchen_comparison.md` for
 commands, run IDs, selected frame parity, and comparison limits.
+
+## ESANet RGB-D surface pilot — 3 October 2026
+
+Integrated the official NYUv2 ESANet checkpoint as a pinned optional
+LiDAR-tier RGB/depth candidate backend. It gates inference on sampled
+registration, keeps provenance and masks, and leaves geometry measurement
+to the LiDAR path. On the kitchen, nine registered pairs produced 39 surface
+and door/window components in 49.03 s of model-stage time. Five visual
+proposals coincided with depth gaps; zero openings were supported. The plan
+remained 2.4909 × 2.3777 × 2.7781 m with an unresolved hall passage.
+Some masks were visibly wrong. Details: `reports/esanet_kitchen_comparison.md`.
+The linked kitchen run `run-e101f34aeec04abda5bc22b8988bc0d6` reused
+existing Florence photo/video candidates and accepted no metric registration,
+opening width, crossing, or adjacency.
+
+## Grounding DINO Tiny opening comparison — 3 October 2026
+
+Integrated pinned `IDEA-Research/grounding-dino-tiny` as another optional
+visual candidate backend for photos, ordinary video, and scan RGB. It ran
+on the same kitchen frames as Florence and OWLv2, with 94 photo, 140 video,
+and 106 scan-RGB boxes. Serial capture-plus-link time was 690.34 s.
+The model proposed visible hall-passage regions on `IMG_0004.jpeg` but also
+duplicate and false labels. Twenty scan box/depth-gap coincidences did not
+pass the measured-depth and repeated-view gates. The final plan retained
+provisional 2.4909 × 2.3777 × 2.7781 m dimensions and an unknown passage
+width. See `reports/grounding_dino_kitchen_comparison.md`.
+
+## Saved-DINO photo-guided passage review — 3 October 2026
+
+Added a reusable `review-dino-openings` stage and automatic report creation
+for future linked DINO runs. It consumes existing model proposals and
+ALIKED/LightGlue correspondences, groups overlapping photo boxes, checks
+timed depth near the matched scan boxes, and renders a side-by-side PNG.
+No detector was rerun. On kitchen `IMG_0004.jpeg`, a representative passage
+box shares 103 and 83 local feature matches with scan frames 2279 and 1830.
+Both scan frames remain timing-only for RGB/depth pairing. Frame 2279 has a
+0.793 m raw depth flank span across three rows; frame 1830 lacks both flanks.
+The owner's 2.26 m reference is opening height, so it cannot be compared
+with the raw width span or prior 0.697 m depth gap. The passage is visually
+proposed and linked, but its physical identity and width remain unresolved.
+Details and run IDs: `reports/dino_photo_guided_kitchen.md`.
+
+The owner clarified that 2.26 m is the hall-facing opening **height**, not
+its width. The saved DINO review was extended to project the upright scan
+box's top edge to the fitted LiDAR wall and subtract the fitted floor height.
+The representative kitchen boxes give 1.788 m and 1.751 m, median 1.769 m,
+or −0.491 m versus the independent height reference. This remains a
+detector-edge hypothesis: both RGB/depth pairs are timing-only, and the
+visible box top may follow the curtain rather than the lintel. The plan's
+opening height remains unknown. Saved run:
+`runs/run-06762596e3d146c9aae5598907c11a28`. The DINO side-edge
+assumption also gives provisional widths of 0.782 and 0.676 m across the
+two views; there is no independent width reference to score them.
+
+## Fresh Grounding DINO kitchen run — 3 October 2026
+
+Reran DINO on kitchen photos, standalone video, and extracted LiDAR from
+scratch, then linked the new captures with ALIKED/LightGlue. The linked run
+`run-ee1d54ac41ad4fdbacf7083fc53ee981` retains a provisional room fit
+of 2.4909 × 2.3777 × 2.7781 m and 5.9226 m². The passage in
+`IMG_0004.jpeg` matches scan frames 2279 and 1830; detector-edge hypotheses
+give 1.788 and 1.751 m heights and 0.782 and 0.676 m widths. The accepted
+plan still has null opening width and height because the RGB/depth pairs and
+structural edges are unverified. Full run IDs and evaluation are in
+`reports/grounding_dino_kitchen_fresh_run.md`.

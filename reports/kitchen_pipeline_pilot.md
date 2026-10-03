@@ -47,14 +47,14 @@ paired RGB geometry and independent views support the same physical opening.
 
 After the first prediction runs, the owner supplied two wall
 spans of 2.36 and 2.30 m, ceiling height 2.80 m, and a hall-facing open
-passage width of 2.26 m. None of these values entered the predictions above.
+passage height of 2.26 m. None of these values entered the predictions above.
 The two reference spans were not assigned to physical wall IDs. Pairing them
 by size gives current LiDAR errors of **+0.1309 m** (**5.5%**) and
 **+0.0777 m** (**3.4%**); the ceiling error is **−0.0219 m** (**0.8%**).
 These are provisional point-estimate errors, not calibrated accuracy claims.
 The 0.697 m depth gap is not verified as the same feature as the owner's
-2.26 m passage, so a numeric gap-width error would be misleading. The initial gap detector had
-a 1.6 m width ceiling; a later general wide-passage candidate range up to
+passage, and its width cannot be compared with the 2.26 m height reference.
+The initial gap detector had a 1.6 m width ceiling; a later general wide-passage candidate range up to
 3.2 m still did not identify this passage in the kitchen scan. Record this
 as a missed opening, not a successful doorway measurement. The owner later identified
 `IMG_0004.jpeg` as showing both edges of that passage; this reference was
@@ -97,8 +97,9 @@ visible kitchen-to-hall passage. The learned linker connects nine region
 pairs involving that photo, including some scan-RGB views. Boxes overlap
 substantially and could represent the same passage or its surrounding
 scene. There is no verified projection of its left and right jambs onto the
-same measured LiDAR wall, so the **2.26 m width was not recovered**. The
-photo filename and reference width were not passed to the model.
+same measured LiDAR wall, so the **passage width was not recovered**. Its
+2.26 m height was not recovered either. The photo filename and reference
+height were not passed to the model.
 
 The fused [property plan](../runs/run-dc79cc91e51243fab3100e1018dfb6a3/property_plan.json)
 contains one inferred kitchen room, provisional floor area **5.9226 m²**,
@@ -151,7 +152,7 @@ original rectangle stayed **2.4909 × 2.3777 m**, height **2.7781 m**. The
 depth stage still found only a separate **0.697 m** unverified gap; the new
 3D edge record shows both flanking wall sides in 17 sampled frames and
 behind-wall returns in five, but these do not identify it as the owner's
-2.26 m hall passage. The final plan keeps its width null.
+hall passage. The final plan keeps its width and height null.
 
 The final learned linker `run-dbe819d692074d83af4d698741ff5786` used
 the same eight photo and 12 model-video frames as the earlier pilot, added

@@ -265,7 +265,7 @@ structure assembly, metric calibration, and end-to-end runtime.
 The later scan RGB OWLv2 pass proposed 171 boxes but confirmed no structural
 opening. The initial combined graph linked five video/scan RGB image pairs and no
 photos, with no metric registration or adjacency. Owner-supplied kitchen
-reference is 2.36 × 2.30 m, 2.80 m high, and a 2.26 m hall-facing passage.
+reference is 2.36 × 2.30 m, 2.80 m high, and a 2.26 m hall-facing passage height.
 The provisional LiDAR fit differs by +0.1309 and +0.0777 m on sorted spans
 and −0.0219 m in height. The 0.697 m gap is not identified as that passage;
 the prior 1.6 m width ceiling prevented its proposal; the wider generic
@@ -295,7 +295,7 @@ identified by the owner as showing the hall-facing passage, has a roughly
 covering model box, but no verified same-wall jamb measurements. The fused
 plan retains a provisional 2.4909 × 2.3777 × 2.7781 m kitchen and a null,
 unbounded opening width. The full serial model-on run took 1,081.65 s
-(18.0 min), above the 15-minute target. The 2.26 m passage is a miss.
+(18.0 min), above the 15-minute target. The 2.26 m passage height is a miss.
 Open gates remain: reviewed physical-opening labels, calibrated independent
 camera-to-scan registration, multiroom placement, candidate precision and
 recall, runtime reduction, and evaluation on a separate untouched capture.
@@ -334,6 +334,49 @@ Its box on the owner-identified passage photo was too broad to locate both
 jambs. Keep it optional until reviewed candidate labels establish whether
 its faster path preserves acceptable recall and false-positive rates. See
 `reports/florence2_kitchen_comparison.md`.
+
+**ESANet RGB-D pilot:** A pinned NYUv2 checkpoint and upstream source now
+feed wall, floor, ceiling, door, and window masks into the LiDAR-tier candidate
+contract for registered RGB/depth samples only. On the kitchen, 9 of 12
+selected pairs passed the gate; the model stage took 49.03 s and emitted
+39 components. Five door/window proposals coincided with fitted depth gaps,
+but none became a supported opening. Room dimensions, the unmeasured hall
+passage height (2.26 m reference), and plan status were unchanged. The masks are currently
+diagnostic evidence; review semantic errors and independent measurement
+results before using them to alter metric geometry. See
+`reports/esanet_kitchen_comparison.md`.
+The photo/video/ESANet scan linker also retained the same unresolved
+single-room plan despite 172 supported 2D view pairs.
+
+**Grounding DINO Tiny alternative:** A pinned local text-conditioned detector
+now provides photo, video, and scan-RGB boxes through the existing contract.
+The kitchen run used identical selected frames to Florence/OWLv2, took
+690.34 s serially, and linked 106 image regions. On the owner-identified
+passage photo, it proposed localized but duplicated passage boxes and some
+false window/door labels. The scan had 20 box/depth-gap coincidences but
+zero supported structural openings. The final dimensions and unresolved
+hall passage did not improve. Keep it optional pending reviewed labels and
+independent plan-level measurement comparison. See
+`reports/grounding_dino_kitchen_comparison.md`.
+
+**Grounding DINO photo-guided opening follow-up:** Added `review-dino-openings`
+to reuse a completed DINO linked run without new model inference. The stage
+matches DINO passage boxes using saved ALIKED/LightGlue feature pairs,
+groups overlapping photo boxes, inspects timed scan depth near the matched
+region, and emits a source-linked report and review PNG. On the owner's
+`IMG_0004.jpeg`, two scan views show the same opening-looking region, but
+neither has accepted RGB/depth pixel registration; only one shows both 3D
+flanks in the targeted probe. Its 0.793 m raw span is unverified and does
+not measure the 2.26 m hall-passage height reference. The width, height, camera pose, and
+adjacency remain unresolved. See `reports/dino_photo_guided_kitchen.md`.
+
+Owner clarification: the 2.26 m hall-passage reference is **height**, not
+width. The saved DINO review now reports an explicitly provisional
+box-top-to-fitted-floor height. Two matched scan views yield 1.788 m and
+1.751 m (median 1.769 m, error −0.491 m). This does not satisfy the
+opening-height task: the scan RGB/depth pairs are timing-only, and the box
+edge may be the curtain rather than the structural lintel. Keep the plan
+height unknown until the lintel and floor are supported in calibrated 3D.
 
 ## Stop conditions and honest reporting
 

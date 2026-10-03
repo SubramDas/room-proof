@@ -252,6 +252,13 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
         geometry['room_fit'], calibration)
     registered_path = Path(run_dir)/'registered_openings.json'
     write_json(registered_path, registered_openings)
+    photo_guided_artifacts = []
+    if (photo_dir/'visual_candidates.json').is_file() and (lidar_dir/'visual_candidates.json').is_file():
+        photo_model = json.loads((photo_dir/'visual_candidates.json').read_text()).get('model') or {}
+        scan_model = json.loads((lidar_dir/'visual_candidates.json').read_text()).get('model') or {}
+        if photo_model.get('id') == scan_model.get('id') == 'IDEA-Research/grounding-dino-tiny':
+            from .photo_guided_openings import analyze_linked_dino_openings
+            _, photo_guided_artifacts = analyze_linked_dino_openings(run_dir, run_dir)
     from .room_transitions import find_verified_crossings
     transitions = find_verified_crossings(
         registration, registered_openings, geometry['room_fit'])
@@ -314,4 +321,4 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
         {'path': str(odometry_path), 'sha256': sha256(odometry_path)},
         {'path': str(registered_path), 'sha256': sha256(registered_path)},
         {'path': str(transitions_path), 'sha256': sha256(transitions_path)},
-        {'path': str(graph_path), 'sha256': sha256(graph_path)}] + fused_artifacts
+        {'path': str(graph_path), 'sha256': sha256(graph_path)}] + photo_guided_artifacts + fused_artifacts

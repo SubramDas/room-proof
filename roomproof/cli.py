@@ -394,10 +394,10 @@ def main():
     processor.add_argument("--max-lidar-frames", type=positive_int, default=32, help="maximum evenly spaced depth frames for diagnostic geometry")
     processor.add_argument("--lidar-drift", choices=("on", "off"), default="on", help="apply only geometrically verified LiDAR revisit correction")
     processor.add_argument("--visual-model", choices=("on", "off"), default="off", help="run the local experimental semantic candidate stage")
-    processor.add_argument("--visual-backend", choices=("segformer", "owlv2", "florence2"), default="segformer", help="local RGB candidate backend")
-    processor.add_argument("--visual-model-path", help="local SegFormer ONNX checkpoint or OWLv2/Florence-2 checkpoint directory")
+    processor.add_argument("--visual-backend", choices=("segformer", "owlv2", "florence2", "esanet", "grounding-dino"), default="segformer", help="local visual candidate backend; ESANet requires LiDAR RGB/depth")
+    processor.add_argument("--visual-model-path", help="local SegFormer ONNX checkpoint or OWLv2/Florence-2/ESANet/Grounding DINO directory")
     processor.add_argument("--lidar-rgb-rotation", type=int, choices=(0, 90, 180, 270), default=0,
-                           help="clockwise display rotation for OWLv2 or Florence-2 on LiDAR RGB only; boxes map back to raw pixels")
+                           help="clockwise display rotation for OWLv2, Florence-2, ESANet, or Grounding DINO on LiDAR RGB; boxes map back to raw pixels")
     processor.add_argument("--max-model-frames", type=positive_int, default=24, help="maximum selected RGB frames passed to the visual model")
     processor.add_argument("--runs-dir", default="runs")
     from .capture import process_capture
@@ -416,6 +416,13 @@ def main():
     linker.add_argument('--calibration', help='optional calibrated photo/video intrinsics and scan RGB-to-depth pixel map JSON')
     linker.add_argument('--runs-dir', default='runs')
     linker.set_defaults(func=link_capture_runs)
+    opening_review = subcommands.add_parser('review-dino-openings',
+        help='reuse a linked Grounding DINO run to find photo-to-scan passage correspondences')
+    opening_review.add_argument('--linked-run', required=True)
+    opening_review.add_argument('--photo-name', help='optional source photo filename to inspect')
+    opening_review.add_argument('--runs-dir', default='runs')
+    from .photo_guided_openings import review_existing_dino_openings
+    opening_review.set_defaults(func=review_existing_dino_openings)
     assembler = subcommands.add_parser('assemble-property',
         help='combine separately linked metric room runs using shared calibrated openings')
     assembler.add_argument('--linked-run', action='append', dest='linked_runs', required=True)

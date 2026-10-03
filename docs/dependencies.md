@@ -83,6 +83,45 @@ scores, so the adapter stores a documented zero sentinel and leaves all
 boxes as proposals. See `reports/florence2_kitchen_comparison.md` for the
 CPU comparison against OWLv2.
 
+## Optional Grounding DINO Tiny opening candidate comparison
+
+`--visual-backend grounding-dino` uses the
+[official IDEA Research model card](https://huggingface.co/IDEA-Research/grounding-dino-tiny)
+at revision `a2bb814dd30d776dcf7e30523b00659f4f141c71`. The card lists
+Apache 2.0 and local PyTorch inference. The pinned 689,359,096-byte
+`model.safetensors` has SHA-256
+`1a2412ef99bd74bcd3c2a246fa1e48581f8889a1300c9051974741314fc042f3`.
+`scripts/fetch_grounding_dino_model.py` retrieves only JSON, tokenizer text,
+and safetensors files into ignored `.room-proof/models/grounding-dino-tiny/`.
+The adapter checks the weight hash and uses the local PyTorch 2.8.0+cpu and
+Transformers 4.57.1 stack. No capture media is sent to a service.
+The detector proposes boxes; its scores are not calibrated opening
+probabilities. See [the kitchen comparison](../reports/grounding_dino_kitchen_comparison.md).
+
+## Optional ESANet RGB-D surface comparison
+
+`--visual-backend esanet` uses the [official ESANet source](https://github.com/TUI-NICR/ESANet)
+at commit `820c5bb633e49e69dcd075d4330165bb540a0cc9` and the authors'
+NYUv2 RGB-D checkpoint. The source repository states Apache 2.0 for code;
+review the exact checkpoint terms separately before production distribution.
+`scripts/fetch_esanet_model.py` downloads the source and checkpoint into
+ignored `.room-proof/models/ESANet/`, checks the source revision, the archive
+SHA-256 (`46f6a664d3410f3d8d2d4f42d5afdbbda4bac63467e42779c25a2e59b571000a`),
+and the checkpoint SHA-256
+(`eb1e5ee8b7c8f46f0d3014ac8684069b8ae6f52ddc24d655ef163be5ef962150`).
+The adapter loads the checkpoint with PyTorch `weights_only=True` and verifies
+the same checkpoint digest at inference time. The local CPU path used
+PyTorch 2.8.0+cpu, torchvision 0.23.0+cpu, OpenCV 4.12.0,
+pandas 2.3.3, and gdown 5.2.0; NumPy and matplotlib are also required.
+
+ESANet is available only for `--tier lidar`: paired RGB and raw confidence
+filtered depth are both required. It uses only samples marked
+`registered_candidate` by the existing scan RGB/depth alignment check.
+The NYUv2 40-class checkpoint provides wall, floor, ceiling, door, and window
+masks, but no open-passage class. Its labels and scores remain proposals.
+See [the kitchen pilot](../reports/esanet_kitchen_comparison.md) for observed
+runtime and unchanged measurements.
+
 ## Optional ALIKED + LightGlue cross-capture matcher
 
 The kitchen pilot uses the public [LightGlue repository](https://github.com/cvg/LightGlue)

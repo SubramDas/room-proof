@@ -7,6 +7,15 @@ writes `status: unavailable`, empty `candidates`, and a reason; it leaves the
 plan schema valid and unresolved where geometry is unsupported. LiDAR also
 writes `rgb_pairing.json`, `rgb_frames.json`, and
 `lidar_candidate_links.json` with timing and wall-link hypotheses.
+Successful model runs also save `candidate_overlays/<frame_id>.png` for every
+model-selected photo, video frame, or scan-RGB frame, including selected frames
+with zero boxes. `candidate_overlays.json` maps each PNG to its original
+`source_ref`, candidate count, and display size. Colors identify candidate
+classes; a displayed score is the raw model score, and Florence omits the
+unavailable score. Scan-RGB overlays use the requested display rotation.
+These images are review aids, not verified structure. The model frame cap still
+applies: use `--max-model-frames N` with N at least the photo count to obtain
+one overlay per photo. Video and scan overlays cover selected frames only.
 
 Each proposal has `candidate_id`, `class`, `status`, `status_reason`, `frame_id`,
 `source_ref`, `source_sha256`, optional `room_id` and `timestamp_seconds`, a
@@ -25,13 +34,15 @@ also carries that sampled size and the original video frame size. Multiply x
 and y by `source_image_width / image_width` and
 `source_image_height / image_height` to map to the original frame. The
 `source_ref` identifies the original video frame; `sampled_sha256` identifies
-the RGB sample. A semantic mask PNG has model output resolution and contains
-ADE label IDs, so the candidate box, label ID, and mask must be used together.
+the RGB sample. A semantic mask PNG contains backend-specific label IDs:
+ADE for SegFormer, NYUv2 40-class IDs without void for ESANet. The candidate
+box, label ID, and mask must be used together.
 The mask does not isolate one connected component when several share a label.
 
-For SegFormer, `raw_model_score` is the mean winning-class softmax over
-component pixels. For OWLv2, it is the detector's box score for the recorded
-text prompt.
+For SegFormer and ESANet, `raw_model_score` is the mean winning-class softmax
+over component pixels. For OWLv2, it is the detector's box score for the
+recorded text prompt. Florence-2 has no comparable per-box score here; its
+zero is explicitly marked as a missing-score sentinel.
 It is neither a calibrated probability that an opening is real nor a
 measurement interval. No door/window candidate is added to
 `property_plan.json` until its wall, repeated view, and geometry are checked.
@@ -85,6 +96,22 @@ whether they can support an existing LiDAR opening. The checkpoint revision,
 weights digest, package versions, and installation are recorded in
 [dependencies](dependencies.md). This CPU backend is optional and off unless
 `--visual-model on` is also supplied.
+
+`--visual-backend esanet --visual-model-path PATH` selects the pinned NYUv2
+RGB-D checkpoint and runs only on sampled Stray scan frames with a registered
+RGB/depth pair. It emits wall, floor, ceiling, door, and window masks in raw
+sampled RGB coordinates; it has no open-passage class. RGB and depth are
+rotated together for upright model input, then resized to the checkpoint's
+landscape size. Mask labels are visual proposals and currently do not alter
+the LiDAR wall fit. See [the kitchen pilot](../reports/esanet_kitchen_comparison.md).
+
+`--visual-backend grounding-dino --visual-model-path PATH` selects a pinned
+Grounding DINO Tiny checkpoint for local photo, video, or scan-RGB boxes.
+The fixed prompt asks for doorway, door, open passage, window, and cabinet
+door. Scan RGB may use `--lidar-rgb-rotation 90`; boxes map back to stored
+sampled RGB pixels before depth checks. The score is an uncalibrated detector
+score, and every box remains a proposal. See
+[the kitchen comparison](../reports/grounding_dino_kitchen_comparison.md).
 
 For a scan whose stored RGB is sideways, `--lidar-rgb-rotation 90` presents
 frames clockwise to OWLv2 and maps every result back to raw sampled RGB
