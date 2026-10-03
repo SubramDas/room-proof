@@ -9,6 +9,7 @@ from .rgb import reconstruct_rgb
 from .semantics import run_semantics,scope_and_flags
 from .schema import validate
 from .export import render
+from .openings import geometric_openings,merge_openings
 
 
 def code_revision():
@@ -50,9 +51,10 @@ def run(args):
     write_json(out/'run_status.json',{'status':'running','tier':args.tier})
     warnings=['Official evaluator schema unavailable; validated against astra.provisional.v1.',
         'Intervals are engineering ranges, not empirically calibrated confidence intervals.']
-    views=[];files=[];extra={}
+    views=[];files=[];extra={};geometry_openings=[]
     if args.tier=='lidar':
         g=reconstruct(args.input,out/'geometry',args.max_frames,args.drift=='on');layout=build_layout(g,single_room=args.single_room,method=args.layout_method)
+        geometry_openings=geometric_openings(g,layout['surfaces'])
         raster=layout.pop('raster');np.savez_compressed(out/'layout_raster.npz',**raster)
         extra={'drift':g['drift'],'quality':g['qa']};indices=g['indices'];scan=g['scan']
         visual_ids=np.unique(np.linspace(0,len(indices)-1,min(args.semantic_views,len(indices)),dtype=int))
@@ -103,7 +105,7 @@ def run(args):
         else:files=[Path(args.input)];base=Path(args.input).parent
     if not layout['rooms']:warnings.append('No room could be reconstructed from the observed geometry.')
     opens,damage,semantic_warnings=run_semantics(views,layout,out/'semantics',args.device,args.semantic_views,args.staged_damage,args.semantics=='on')
-    layout['openings']=opens;layout['adjacency']=adjacency_from_openings(layout)
+    opens=merge_openings(geometry_openings,opens);layout['openings']=opens;layout['adjacency']=adjacency_from_openings(layout)
     scope,flags=scope_and_flags(damage,layout['surfaces']);warnings+=semantic_warnings
     if args.staged_damage:warnings.append('Explicit staging-marker mode: not a benchmark of natural crack/flood recognition.')
     result={'schema_version':'astra.provisional.v1','capture_id':args.capture_id or Path(args.input).stem,'tier':args.tier,

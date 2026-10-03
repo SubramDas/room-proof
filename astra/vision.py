@@ -1,6 +1,6 @@
 """Public local models. No API calls, truth inputs, or color-to-damage rules."""
 from pathlib import Path
-import sys, time
+import sys, time, json
 import cv2
 import numpy as np
 from .io import sha256,write_json
@@ -68,12 +68,16 @@ class Detector:
         self.description={'name':'GroundingDINO-tiny','weights_sha256':sha256(path/'model.safetensors'),'device':device}
     def predict(self,bgr,text='door . doorway . window . wall crack . water damage . water stain .',threshold=.24):
         from PIL import Image
+        key=__import__('hashlib').sha256(bgr.tobytes()+json.dumps([self.description,text,threshold],sort_keys=True).encode()).hexdigest()
+        cache=ROOT/'.cache/detections'/f'{key}.json'
+        if cache.exists():return json.loads(cache.read_text())
         image=Image.fromarray(cv2.cvtColor(bgr,cv2.COLOR_BGR2RGB))
         inputs=self.processor(images=image,text=text,return_tensors='pt').to(self.device)
         with self.torch.inference_mode():outputs=self.model(**inputs)
         result=self.processor.post_process_grounded_object_detection(outputs,inputs.input_ids,threshold=threshold,text_threshold=.22,target_sizes=[image.size[::-1]])[0]
         names=result.get('text_labels',result.get('labels',[]))
-        return [{'label':str(label),'score':float(score),'box':box.cpu().tolist(),'status':'unverified_candidate'} for label,score,box in zip(names,result['scores'],result['boxes'])]
+        candidates=[{'label':str(label),'score':float(score),'box':box.cpu().tolist(),'status':'unverified_candidate'} for label,score,box in zip(names,result['scores'],result['boxes'])]
+        write_json(cache,candidates);return candidates
 
 
 def focal_guess(image):

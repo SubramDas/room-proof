@@ -117,3 +117,21 @@ def plane_modes(values,lo=None,hi=None,bin_size=.025):
         center=(edges[p]+edges[p+1])/2;v=values[abs(values-center)<.035]
         if len(v)>15:result.append(float(np.median(v)))
     return sorted(result)
+
+
+def gravity_alignment(normals):
+    """Robust dominant horizontal normals, assuming roughly upright input photos.
+
+    This is an image-derived orientation prior, not an IMU observation. Failure
+    on sloped/curved scenes remains possible and must be exposed in RGB QA.
+    """
+    ns=np.asarray(normals);ns=ns[np.isfinite(ns).all(1)&(abs(ns[:,1])>.70)]
+    if len(ns)<100:return np.eye(3)
+    ns=ns*np.where(ns[:,1:2]<0,-1.,1.);axis=np.median(ns,axis=0);axis/=np.linalg.norm(axis)
+    for _ in range(4):
+        use=ns@axis>.96
+        if use.sum()<50:break
+        axis=np.median(ns[use],axis=0);axis/=np.linalg.norm(axis)
+    target=np.array([0.,1.,0.]);cross=np.cross(axis,target);s=np.linalg.norm(cross);c=axis@target
+    if s<1e-8:return np.eye(3)
+    return Rotation.from_rotvec(cross/s*np.arctan2(s,c)).as_matrix()

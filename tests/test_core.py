@@ -56,3 +56,25 @@ def test_staged_regions_do_not_trigger_concealed_damage():
     s={'id':'w','damage_ids':[]}
     d={'id':'d','surface_id':'w','status':'staged_marker_assessment','area':measure(.2,'m2')}
     scope,flags=scope_and_flags([d],[s]);assert not flags;assert scope[0]['action']=='inspect_staged_region_demo'
+
+
+def test_gravity_recovers_tilt_without_scale_change():
+    from scipy.spatial.transform import Rotation
+    from astra.geometry import gravity_alignment
+    rotation=Rotation.from_euler('x',20,degrees=True).as_matrix()
+    normals=np.tile(np.array([0.,1.,0.])@rotation.T,(200,1))
+    aligned=gravity_alignment(normals)
+    np.testing.assert_allclose(normals[0]@aligned.T,[0,1,0],atol=1e-7)
+    assert np.linalg.det(aligned)==pytest.approx(1.)
+
+
+def test_paired_openings_recover_adjacency():
+    from astra.pipeline import adjacency_from_openings
+    surfaces=[{'id':'a','room_id':'one','start':[0,0],'end':[3,0]},
+              {'id':'b','room_id':'two','start':[3,.15],'end':[0,.15]}]
+    openings=[{'id':str(i),'surface_id':sid,'room_id':rid,'kind':'doorway',
+               'surface_uv_bounds':[[1,0],[2,2.2]],'width':measure(1.)} for i,sid,rid in [(0,'a','one'),(1,'b','two')]]
+    result=adjacency_from_openings({'surfaces':surfaces,'openings':openings})
+    assert len(result)==1 and result[0]['rooms']==['one','two']
+    openings[1]['kind']='window'
+    assert adjacency_from_openings({'surfaces':surfaces,'openings':openings})==[]

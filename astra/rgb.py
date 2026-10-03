@@ -3,7 +3,7 @@ from pathlib import Path
 import cv2,numpy as np
 from .io import photo_groups,selected_video,mp4_info,write_json
 from .vision import MetricDepth,DepthPro,focal_guess
-from .geometry import backproject,normal_map,transform,angle_from_normals,planar_rotation
+from .geometry import backproject,normal_map,transform,angle_from_normals,planar_rotation,gravity_alignment
 
 
 def prepare_views(path,tier,out,max_frames=40,rotation=0):
@@ -31,6 +31,25 @@ def match_pair(a,b):
     good=[m for pair in matches if len(pair)==2 for m,n in [pair] if m.distance<.72*n.distance]
     if len(good)<15:return None
     pa=np.float32([a['keypoints'][m.queryIdx].pt for m in good]);pb=np.float32([b['keypoints'][m.trainIdx].pt for m in good])
+    # Depth-assisted PnP also handles rotation-dominated views for which
+    # essential-matrix triangulation cannot establish stable translation.
+    px=np.rint(pa).astype(int)
+    za=a['depth'][np.clip(px[:,1],0,a['depth'].shape[0]-1),np.clip(px[:,0],0,a['depth'].shape[1]-1)]
+    xyz=(np.c_[pa,np.ones(len(pa))]@np.linalg.inv(a['K']).T)*za[:,None]
+    valid=np.isfinite(xyz).all(1)&(za>.25)&(za<15)
+    if valid.sum()>=20:
+        ok,rv,tv,inliers=cv2.solvePnPRansac(xyz[valid].astype(np.float32),pb[valid],b['K'],None,
+            iterationsCount=300,reprojectionError=2.5,confidence=.999,flags=cv2.SOLVEPNP_EPNP)
+        if ok and inliers is not None and len(inliers)>=20 and len(inliers)/valid.sum()>.4:
+            use=np.where(valid)[0][inliers.ravel()]
+            rv,tv=cv2.solvePnPRefineLM(xyz[use],pb[use],b['K'],None,rv,tv)
+            R=cv2.Rodrigues(rv)[0];T=np.eye(4);T[:3,:3]=R;T[:3,3]=tv.ravel()
+            if np.linalg.norm(tv)<8:
+                proj,_=cv2.projectPoints(xyz[use],rv,tv,b['K'],None)
+                error=float(np.median(np.linalg.norm(proj[:,0]-pb[use],axis=1)))
+                return {'from':a['id'],'to':b['id'],'T_to_from':T,'inliers':len(use),'matches':len(good),
+                    'scale':1.,'scale_iqr':error/2.5,'pose_source':'depth_assisted_PnP','reprojection_median_px':error,
+                    'points_a':pa[use],'points_b':pb[use]}
     na=cv2.undistortPoints(pa[:,None,:],a['K'],None)[:,0];nb=cv2.undistortPoints(pb[:,None,:],b['K'],None)[:,0]
     E,mask=cv2.findEssentialMat(na,nb,np.eye(3),method=cv2.RANSAC,prob=.999,threshold=.0025)
     if E is None or E.shape!=(3,3):return None
@@ -105,12 +124,12 @@ def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotatio
         for k,i in enumerate(ids):
             v=views[i];pc=backproject(v['depth'],v['K']);nm=normal_map(pc);valid=(v['depth']>.25)&(v['depth']<12)
             sel=valid[::5,::5];p=pc[::5,::5][sel];n=nm[::5,::5][sel];points.append(transform(p,poses[i]));normals.append(n@poses[i][:3,:3].T);fids.append(np.full(len(p),k))
-        p=np.concatenate(points);n=np.concatenate(normals);A=planar_rotation(angle_from_normals(n));T=np.eye(4);T[:3,:3]=A
+        p=np.concatenate(points);n=np.concatenate(normals);G=gravity_alignment(n);A=planar_rotation(angle_from_normals(n@G.T))@G;T=np.eye(4);T[:3,:3]=A
         ps=np.array([T@poses[i] for i in ids]);p=p@A.T;n=n@A.T
         components.append({'points':p,'normals':n,'frame_ids':np.concatenate(fids).astype(int),'poses':ps,'view_ids':ids})
         for i,pose in zip(ids,ps):views[i]['pose']=pose;views[i]['component']=c
     summary={'model':model.description,'view_count':len(views),'connected_components':cid,'registered_edges':len(edges),
-        'pose_method':'essential_matrix_metric_depth_scaled_pose_graph','pose_graph_refinements':refined,'scale_status':'learned_prior_not_survey_calibrated',
+        'pose_method':'depth_PnP_or_essential_with_metric_prior_and_pose_graph','pose_graph_refinements':refined,'scale_status':'learned_prior_not_survey_calibrated',
         'views':[{'id':v['id'],'source':v['source'],'room_hint':v['room_hint'],'component':v['component'],'K':v['K'],'pose':v['pose'],'intrinsics_method':v['intrinsics_method']} for v in views],
         'edges':[{k:v for k,v in e.items() if k not in ['points_a','points_b']} for e in edges],
         'warnings':['Metric depth and focal priors may have large systematic scale bias.','Disconnected components have no observed relative placement.']}

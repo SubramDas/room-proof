@@ -22,6 +22,8 @@ def main():
     e=sub.add_parser('evaluate');e.add_argument('--result',required=True);e.add_argument('--truth',required=True);e.add_argument('--mapping',required=True,help='JSON reference-room to prediction-room map');e.add_argument('--output',required=True)
     t=sub.add_parser('repeat');t.add_argument('--first',required=True);t.add_argument('--second',required=True);t.add_argument('--output',required=True)
     args=p.parse_args()
+    import cv2,numpy as np
+    cv2.setRNGSeed(0);np.random.seed(0)
     try:
         if args.action=='run':
             if args.max_frames<2 or args.semantic_views<0:p.error('max-frames must be >=2, semantic-views >=0')
