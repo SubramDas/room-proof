@@ -50,7 +50,9 @@ def inspect_photo(root, device_has_lidar, room_id=None):
     errors, warnings, metrics = [], [], {"room_count": 0, "photo_count": 0}
     if not root.is_dir():
         return ["photo input must be a directory with one subfolder per room"], warnings, metrics
-    room_dirs = sorted(path for path in root.iterdir() if path.is_dir())
+    room_dirs = sorted(path for path in root.iterdir() if path.is_dir() and
+                       any(item.is_file() and item.suffix.lower() in IMAGE_SUFFIXES
+                           for item in path.iterdir()))
     root_photos = sorted(path for path in root.iterdir()
                          if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES)
     if room_id is not None and root_photos and room_dirs:
@@ -84,8 +86,8 @@ def inspect_photo(root, device_has_lidar, room_id=None):
                 errors.append(f"duplicate photo content: {photo.relative_to(root).as_posix()} matches {hashes[digest]}")
             else:
                 hashes[digest] = photo.relative_to(root).as_posix()
-    other_media = [path for path in input_files(root)
-                   if (path.suffix.lower() in VIDEO_SUFFIXES and path.parent != root)]
+    other_media = [path for room_dir in room_dirs for path in room_dir.iterdir()
+                   if path.is_file() and path.suffix.lower() in VIDEO_SUFFIXES]
     if other_media:
         errors.append("photo tier found video inside a room folder")
     if device_has_lidar == "false":
@@ -228,7 +230,12 @@ def process_capture(args, run_dir, run):
     status = "invalid" if errors else "valid_low_confidence" if warnings else "valid"
     paths = input_files(source) if source.is_dir() else ([source] if source.is_file() else [])
     if args.tier == "photo":
-        paths = [path for path in paths if path.suffix.lower() in IMAGE_SUFFIXES]
+        if args.room_id is not None and any(path.parent == source and
+                                            path.suffix.lower() in IMAGE_SUFFIXES for path in paths):
+            paths = [path for path in paths if path.parent == source and
+                     path.suffix.lower() in IMAGE_SUFFIXES]
+        else:
+            paths = [path for path in paths if path.suffix.lower() in IMAGE_SUFFIXES]
     runs_root = Path(args.runs_dir).resolve()
     paths = [path for path in paths if not (runs_root == source or runs_root in path.parents)]
     source_files = [{

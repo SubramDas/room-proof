@@ -91,31 +91,34 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
     if calibration_path and match_backend != 'aliked-lightglue':
         raise ValueError('calibrated registration requires --match-backend aliked-lightglue')
     photo_dir, photo_quality, photo_index = _load_run(photo_run, 'photo')
-    video_dir, video_quality, video_index = _load_run(video_run, 'video')
+    video_dir, video_quality, video_index = (_load_run(video_run, 'video')
+                                             if video_run is not None else (None, None, None))
     lidar_dir, lidar_quality, lidar_index = _load_run(lidar_run, 'lidar')
     property_ids = {item['property_id'] for item in
-                    (photo_quality, video_quality, lidar_quality)}
+                    (photo_quality, lidar_quality) + ((video_quality,) if video_quality else ())}
     if len(property_ids) != 1:
         raise ValueError('capture runs have different property IDs')
     if photo_quality['input_path'] != str(Path(photo_source).resolve(strict=True)):
         raise ValueError('photo source differs from the photo run input')
     if lidar_quality['input_path'] != str(Path(lidar_source).resolve(strict=True)):
         raise ValueError('LiDAR source differs from the LiDAR run input')
-    video_path = Path(video_quality['input_path']).resolve(strict=True)
-    if sha256(video_path) != video_index['source_sha256']:
-        raise ValueError('standalone video changed since its source run')
+    if video_quality is not None:
+        video_path = Path(video_quality['input_path']).resolve(strict=True)
+        if sha256(video_path) != video_index['source_sha256']:
+            raise ValueError('standalone video changed since its source run')
     rgb_source_record = next((item for item in lidar_quality['source_files']
                               if item['path'] == 'rgb.mp4'), None)
     if rgb_source_record is None or sha256(Path(lidar_source)/'rgb.mp4') != rgb_source_record['sha256']:
         raise ValueError('LiDAR RGB changed since its source run')
 
     photo_proposals = _opening_proposals(photo_dir, photo_index)
-    video_proposals = _opening_proposals(video_dir, video_index)
+    video_proposals = _opening_proposals(video_dir, video_index) if video_dir else {}
 
     photos = [_analyze_photo(photo_source, frame)
               for frame in _spread(photo_index['frames'], max_views)]
-    videos = [_analyze_sample(video_dir, frame)
-              for frame in _spread(video_index['frames'], max_views)]
+    videos = ([_analyze_sample(video_dir, frame)
+               for frame in _spread(video_index['frames'], max_views)]
+              if video_index else [])
     from .lidar_rgb import read_lidar_rgb_samples
     geometry = json.loads((lidar_dir/'lidar_geometry.json').read_text())
     rgb_index, pairing, rgb_artifacts = read_lidar_rgb_samples(
@@ -150,7 +153,7 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
     pair_specs.extend(('photo', 'photo', left, right)
                       for i, left in enumerate(photos) for right in photos[i+1:])
     source_frames = {'photo': {frame['frame_id']: frame for frame in photo_index['frames']},
-                     'video': {frame['frame_id']: frame for frame in video_index['frames']},
+                     'video': {frame['frame_id']: frame for frame in video_index['frames']} if video_index else {},
                      'scan_rgb': {frame['frame_id']: frame for frame in rgb_index['frames']}}
     for left_name, right_name, left, right in pair_specs:
         left_frame = source_frames[left_name][left['frame_id']]
@@ -184,7 +187,7 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
     report = {
         'report_version': '0.1.0', 'status': 'visual_correspondence_hypotheses_only',
         'property_id': property_ids.pop(),
-        'source_runs': {'photo': str(photo_dir), 'video': str(video_dir),
+        'source_runs': {'photo': str(photo_dir), 'video': str(video_dir) if video_dir else None,
                         'lidar': str(lidar_dir)},
         'method': (learned.provenance['method'] if learned else
                    'same bounded thumbnail features and mutual descriptor matching as visual_geometry; no 3D transform'),
@@ -205,7 +208,7 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
             '2D image overlap is a candidate correspondence, not verified cross-capture registration.',
             'No matched 3D landmarks, camera transform, shared doorway identity, or metric room connection is inferred.',
             'Opening boxes are linked only as image-region tracks, not verified as one physical opening.',
-            'Photo/video frames remain independent of scan RGB timestamps and frame indices.'
+            'Independent photo/video frames cannot be paired with scan RGB by timestamps or frame indices.'
         ],
     }
     path = Path(run_dir)/'cross_capture_links.json'
@@ -228,17 +231,20 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
     opening_links = match_opening_regions(report['records'], lidar_rgb_rotation)
     opening_path = Path(run_dir)/'opening_correspondences.json'
     write_json(opening_path, opening_links)
-    if learned is not None:
+    if learned is not None and video_index is not None:
         from .video_temporal import trace_video
         from .visual_odometry import estimate_video_trajectory
         temporal = trace_video(video_quality['input_path'], video_index,
                                opening_links, records)
         visual_odometry = estimate_video_trajectory(records)
     else:
-        temporal = {'status': 'not_run_without_optical_flow_backend',
-                    'decoded_frame_count': None, 'opening_track_segments': [],
+        temporal = {'status': ('no_standalone_video' if video_index is None else
+                               'not_run_without_optical_flow_backend'),
+                    'decoded_frame_count': 0 if video_index is None else None,
+                    'opening_track_segments': [],
                     'continuous_region_segment_count': 0}
-        visual_odometry = {'status': 'not_run_without_keypoint_correspondences',
+        visual_odometry = {'status': ('no_standalone_video' if video_index is None else
+                                      'not_run_without_keypoint_correspondences'),
                            'edges': [], 'supported_edge_count': 0}
     temporal_path = Path(run_dir)/'video_motion_profile.json'
     write_json(temporal_path, temporal)
@@ -260,16 +266,22 @@ def link_captures(photo_run, video_run, lidar_run, photo_source, lidar_source,
             from .photo_guided_openings import analyze_linked_dino_openings
             _, photo_guided_artifacts = analyze_linked_dino_openings(run_dir, run_dir)
     from .room_transitions import find_verified_crossings
-    transitions = find_verified_crossings(
+    transitions = (find_verified_crossings(
         registration, registered_openings, geometry['room_fit'])
+        if video_dir is not None else {
+            'status': 'no_standalone_video', 'verified_crossings': [],
+            'reason': 'No independent walkthrough video was supplied.'})
     transitions_path = Path(run_dir)/'room_transitions.json'
     write_json(transitions_path, transitions)
     room_labels = {}
     for tier, source_dir in (('photo', photo_dir), ('video', video_dir), ('lidar', lidar_dir)):
+        if source_dir is None:
+            room_labels[tier] = []
+            continue
         plan = json.loads((source_dir/'property_plan.json').read_text())
         room_labels[tier] = [room['id'] for room in plan['rooms']]
-    profile_path = video_dir/'coarse_scene_profile.json'
-    profile = json.loads(profile_path.read_text()) if profile_path.is_file() else {}
+    profile_path = video_dir/'coarse_scene_profile.json' if video_dir else None
+    profile = json.loads(profile_path.read_text()) if profile_path and profile_path.is_file() else {}
     from .visual_room_map import build_visual_room_map
     room_map = build_visual_room_map(records, opening_links, profile, room_labels,
                                      temporal)

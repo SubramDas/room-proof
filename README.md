@@ -143,6 +143,12 @@ available. Every estimate carries its status and source path; provisional
 opening hypotheses remain separate from accepted plan openings. To create
 this report from an older completed run without rerunning models, use
 `.venv/bin/python -m roomproof summarize-dimensions --source-run runs/RUN_ID`.
+The standalone video is optional for `link-captures`. When it is absent,
+omit `--video-run`; the scan's `rgb.mp4` remains LiDAR RGB evidence, not an
+ordinary video capture. Video motion and crossing evidence are reported as
+unavailable. For a single room whose photos are at the root beside `lidar/`,
+pass `--room-id room-kitchen` to the photo command; the reader indexes only
+the eight root photos and keeps LiDAR files out of that photo capture.
 At least nine scan RGB views are required for its registration gate. The
 default patch matcher records 2D visual overlaps and opening proposals.
 `--match-backend aliked-lightglue` enables the optional local learned matcher
@@ -166,6 +172,12 @@ not infer adjacency merely from image matches.
 
 Add `--match-backend aliked-lightglue` to compare the learned matcher with
 the patch baseline on the same selected view pairs.
+For the current `kitchen/` layout, use `process-capture kitchen --tier photo
+--room-id room-kitchen ...` and `process-capture kitchen/lidar --tier lidar
+--room-id room-kitchen ...`, then link their run directories with `--photo-source
+kitchen --lidar-source kitchen/lidar` and no `--video-run`.
+The exact commands and observed RGB/depth pairing are in the
+[kitchen photo and LiDAR refresh](reports/kitchen_photo_lidar_refresh.md).
 Use `--calibration /path/to/calibration.json` only with the learned matcher.
 It must describe the original cameras and scan pixel mapping independently
 of evaluator tape measurements. A calibrated pose still needs agreement from

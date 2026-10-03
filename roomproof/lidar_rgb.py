@@ -208,25 +208,47 @@ def _assess_registration(scan, index, pairing, samples):
         sampled_checks[record["rgb_frame_index"]] = bool(
             aligned and aligned["rgb_edge_at_depth_boundary"] >= .9 * best_strength and
             aligned["rgb_edge_at_depth_boundary"] >= 2 * max(1, aligned["shifted_control_edge"]))
-    used = set()
-    for link in pairing["links"]:
-        if link["depth_frame_id"] is None:
-            continue
-        target = frame_positions[link["depth_frame_id"]] + chosen
-        if not 0 <= target < len(index["frames"]):
-            link["status"] = "unpaired"
-            link["depth_frame_id"] = None
-            continue
-        corrected = link["relative_time_seconds"] - pose_relative[target] - clock_offset
-        if abs(corrected) > pairing["max_timing_residual_seconds"] or target in used:
-            link["status"] = "unpaired"
-            link["depth_frame_id"] = None
-            continue
-        used.add(target)
-        link["depth_frame_id"] = index["frames"][target]["frame_id"]
-        link["corrected_timing_residual_seconds"] = round(corrected, 6)
-        link["status"] = ("registered_candidate" if sampled_checks.get(link["rgb_frame_index"])
-                          else "timing_offset_candidate")
+    # A Stray export may contain one initial depth/pose frame before RGB starts.
+    # If frame counts, an image-verified offset, and the entire timestamp
+    # sequence agree, index mapping is stronger than nearest-time matching
+    # from an assumed shared first-frame origin.
+    direct_offset = (chosen is not None and chosen >= 0 and
+                     len(index["frames"]) == len(pairing["links"]) + chosen)
+    if direct_offset:
+        direct_residuals = [link["relative_time_seconds"] - pose_relative[i + chosen]
+                            for i, link in enumerate(pairing["links"])]
+        direct_clock_offset = statistics.median(direct_residuals)
+        direct_offset = all(abs(value - direct_clock_offset) <= pairing["max_timing_residual_seconds"]
+                            for value in direct_residuals)
+    if direct_offset:
+        clock_offset = direct_clock_offset
+        for i, link in enumerate(pairing["links"]):
+            link["depth_frame_id"] = index["frames"][i + chosen]["frame_id"]
+            link["corrected_timing_residual_seconds"] = round(direct_residuals[i] - clock_offset, 6)
+            link["status"] = ("registered_candidate" if sampled_checks.get(i)
+                              else "timing_offset_candidate")
+        pairing["alignment_method"] = "image-verified integer offset plus full-sequence index and timestamp agreement"
+    else:
+        used = set()
+        for link in pairing["links"]:
+            if link["depth_frame_id"] is None:
+                continue
+            target = frame_positions[link["depth_frame_id"]] + chosen
+            if not 0 <= target < len(index["frames"]):
+                link["status"] = "unpaired"
+                link["depth_frame_id"] = None
+                continue
+            corrected = link["relative_time_seconds"] - pose_relative[target] - clock_offset
+            if abs(corrected) > pairing["max_timing_residual_seconds"] or target in used:
+                link["status"] = "unpaired"
+                link["depth_frame_id"] = None
+                continue
+            used.add(target)
+            link["depth_frame_id"] = index["frames"][target]["frame_id"]
+            link["corrected_timing_residual_seconds"] = round(corrected, 6)
+            link["status"] = ("registered_candidate" if sampled_checks.get(link["rgb_frame_index"])
+                              else "timing_offset_candidate")
+        pairing["alignment_method"] = "image-verified offset from bounded nearest-time candidates"
     pairing["frame_offset_supported_by_images"] = True
     pairing["spatial_registration_verified"] = True
     pairing["estimated_rgb_minus_pose_clock_offset_seconds"] = round(clock_offset, 6)
@@ -237,7 +259,7 @@ def _assess_registration(scan, index, pairing, samples):
     pairing["unpaired_depth_frame_ids"] = [frame["frame_id"] for frame in index["frames"]
                                            if frame["frame_id"] not in
                                            {item["depth_frame_id"] for item in pairing["links"]}]
-    pairing["warnings"] = ["A stable one-frame offset is supported by sampled RGB/depth edges; unsampled frames retain timing-only status.",
+    pairing["warnings"] = [f"A stable {chosen:+d}-frame offset is supported by sampled RGB/depth edges; unsampled frames retain timing-only status.",
                            "This registration check does not calibrate LiDAR scale or verify every model opening."]
 
 

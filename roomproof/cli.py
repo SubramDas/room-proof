@@ -150,6 +150,8 @@ def link_capture_runs(args, run_dir, run):
         calibration_path=args.calibration)
     source_revisions = []
     for path in (args.photo_run, args.video_run, args.lidar_run):
+        if path is None:
+            continue
         source_run = json.loads((Path(path).resolve(strict=True)/'run.json').read_text())
         source_revisions.append(source_run['data_revision'])
     if args.calibration:
@@ -416,9 +418,9 @@ def main():
     from .capture import process_capture
     processor.set_defaults(func=process_capture)
     linker = subcommands.add_parser('link-captures',
-        help='compare independent photo, video, and LiDAR RGB runs in image space')
+        help='compare photo and LiDAR RGB runs, with an optional independent video run')
     linker.add_argument('--photo-run', required=True)
-    linker.add_argument('--video-run', required=True)
+    linker.add_argument('--video-run', help='optional ordinary standalone video capture run')
     linker.add_argument('--lidar-run', required=True)
     linker.add_argument('--photo-source', required=True)
     linker.add_argument('--lidar-source', required=True)

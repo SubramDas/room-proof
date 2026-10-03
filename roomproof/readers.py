@@ -14,7 +14,9 @@ def read_photo_folders(root, capture_id, run_dir, room_id=None):
     """Index stills by room folder or one explicitly labelled root room."""
     root = Path(root)
     frames = []
-    room_dirs = sorted(path for path in root.iterdir() if path.is_dir())
+    room_dirs = sorted(path for path in root.iterdir() if path.is_dir() and
+                       any(item.is_file() and item.suffix.lower() in IMAGE_SUFFIXES
+                           for item in path.iterdir()))
     sources = ([(root, valid_id(room_id, "room"))]
                if not room_dirs and room_id is not None else
                [(path, valid_id(path.name, "room")) for path in room_dirs])

@@ -12,8 +12,12 @@ def assemble_fused_plan(photo_run, video_run, lidar_run, link_report,
                         registration, opening_links, run_dir,
                         verified_connections=(), registered_openings=None):
     plans = [json.loads((Path(path)/'property_plan.json').read_text())
-             for path in (photo_run, video_run, lidar_run)]
-    photo, video, lidar = plans
+             for path in (photo_run, lidar_run)]
+    photo, lidar = plans
+    video = (json.loads((Path(video_run)/'property_plan.json').read_text())
+             if video_run is not None else None)
+    if video is not None:
+        plans.append(video)
     if len({plan['property_id'] for plan in plans}) != 1:
         raise ValueError('cannot fuse plans with different property IDs')
     result = copy.deepcopy(lidar)
@@ -26,6 +30,8 @@ def assemble_fused_plan(photo_run, video_run, lidar_run, link_report,
     }
     known = {room['id'] for room in result['rooms']}
     for source in (photo, video):
+        if source is None:
+            continue
         for room in source['rooms']:
             if room['id'] not in known:
                 result['rooms'].append(copy.deepcopy(room))
