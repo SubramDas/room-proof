@@ -25,6 +25,9 @@ These results compare predictions with supplied laser dimensions. Extent compari
 | three_room_video_final / video | room_3 | short_extent | 0.810 | missing | missing | FAIL |
 | three_room_video_final / video | room_3 | long_extent | 1.670 | missing | missing | FAIL |
 | three_room_video_final / video | room_3 | ceiling_height | 2.260 | missing | missing | FAIL |
+| kitchen_video_final / video | room_1 | short_extent | 2.300 | missing | missing | FAIL |
+| kitchen_video_final / video | room_1 | long_extent | 2.360 | missing | missing | FAIL |
+| kitchen_video_final / video | room_1 | ceiling_height | 2.800 | missing | missing | FAIL |
 
 ## Incomplete benchmark evidence
 
@@ -36,13 +39,13 @@ Repeat scans are deferred by the user. Consumer-app exports, independent damage 
 |---|---|---:|---:|---:|---|
 | three_room_lidar_final | executed | 3 | 18 | 8 | provisional_connected_layout |
 | kitchen_lidar_final | executed | 1 | 8 | 2 | provisional_connected_layout |
-| damage_lidar_final | not_completed | 0 | 0 | 0 | not available |
+| damage_lidar_final | executed | 1 | 15 | 4 | provisional_connected_layout |
 | three_room_photos_final | not_completed | 0 | 0 | 0 | not available |
 | kitchen_photos_final | not_completed | 0 | 0 | 0 | not available |
 | damage_photos_final | not_completed | 0 | 0 | 0 | not available |
 | three_room_video_final | executed | 16 | 4 | 5 | unresolved_physical_stitch |
-| kitchen_video_final | not_completed | 0 | 0 | 0 | not available |
-| damage_video_final | not_completed | 0 | 0 | 0 | not available |
+| kitchen_video_final | executed | 5 | 5 | 2 | unresolved_physical_stitch |
+| damage_video_final | executed | 3 | 0 | 4 | unresolved_physical_stitch |
 | evaluator_single_room | executed | 1 | 0 | 0 | provisional_connected_layout |
 | evaluator_floor_only | executed | 3 | 0 | 0 | unresolved_physical_stitch |
 | evaluator_with_ceiling | executed | 5 | 7 | 0 | unresolved_physical_stitch |
@@ -57,7 +60,10 @@ Measured wall time includes the selected reconstruction and rendering stages. So
 |---|---:|---:|---|
 | three_room_lidar_final | 460.6 | 2395 | cpu |
 | kitchen_lidar_final | 281.7 | 2363 | cpu |
+| damage_lidar_final | 327.5 | 2370 | cpu |
 | three_room_video_final | 647.8 | 2870 | cpu |
+| kitchen_video_final | 387.8 | 2708 | cpu |
+| damage_video_final | 219.7 | 2694 | cpu |
 | evaluator_single_room | 13.8 | 255 | cpu |
 | evaluator_floor_only | 11.2 | 265 | cpu |
 | evaluator_with_ceiling | 29.0 | 308 | cpu |

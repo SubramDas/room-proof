@@ -1,0 +1,11 @@
+room,measurement,unit,reference,pipeline,magicplan,pipeline_absolute_error,magicplan_absolute_error,beat_or_tie,comparison_type,pipeline_run,pipeline_room_id,app_source
+kitchen,short_extent,m,2.3,2.377047678151831,2.37,0.077047678151831,0.07000000000000028,False,linear_extent_proxy,kitchen_lidar_final,room_1,MagicPlan_Kitchen.pdf page 3
+kitchen,long_extent,m,2.36,2.495437407576013,2.4,0.13543740757601297,0.040000000000000036,False,linear_extent_proxy,kitchen_lidar_final,room_1,MagicPlan_Kitchen.pdf page 3
+kitchen,ceiling_height,m,2.8,2.79208031588655,2.79,0.007919684113449676,0.009999999999999787,True,linear,kitchen_lidar_final,room_1,MagicPlan_Kitchen.pdf page 3
+kitchen,floor_area,m2,5.427999999999999,5.931773695651787,5.69,0.5037736956517875,0.26200000000000134,False,derived_reference,kitchen_lidar_final,room_1,MagicPlan_Kitchen.pdf page 3
+kitchen,perimeter,m,9.32,9.744970171455687,9.54,0.42497017145568705,0.21999999999999886,False,derived_reference,kitchen_lidar_final,room_1,MagicPlan_Kitchen.pdf page 3
+hall,short_extent,m,3.3,3.253397653149225,3.3,0.0466023468507748,0.0,False,linear_extent_proxy,three_room_lidar_final,room_1,MagicPlan_Hall.pdf page 3
+hall,long_extent,m,4.2,4.235089801587384,4.24,0.03508980158738417,0.040000000000000036,True,linear_extent_proxy,three_room_lidar_final,room_1,MagicPlan_Hall.pdf page 3
+hall,ceiling_height,m,2.8,2.7687162494134787,2.83,0.03128375058652111,0.03000000000000025,False,linear,three_room_lidar_final,room_1,MagicPlan_Hall.pdf page 3
+hall,floor_area,m2,13.86,13.778431221360613,13.99,0.08156877863938661,0.13000000000000078,True,derived_reference,three_room_lidar_final,room_1,MagicPlan_Hall.pdf page 3
+hall,perimeter,m,15.0,14.976974909473219,15.08,0.023025090526781256,0.08000000000000007,True,derived_reference,three_room_lidar_final,room_1,MagicPlan_Hall.pdf page 3

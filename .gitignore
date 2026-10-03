@@ -18,3 +18,8 @@ single_scan_floor_only/
 single_scan_with_ceiling/
 
 submission/
+
+# Keep small selected submission evidence; full archives remain ignored.
+!docs/submission/
+!docs/submission/**
+reports/build.log

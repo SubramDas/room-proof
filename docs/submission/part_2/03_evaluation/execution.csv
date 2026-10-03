@@ -1,0 +1,14 @@
+run,dataset,tier,status,rooms,opening_candidates,damage_candidates,output_folder
+three_room_lidar_final,three_room,lidar,completed_with_limitations,3,18,8,02_outputs/three_room/lidar
+kitchen_lidar_final,kitchen,lidar,completed_with_limitations,1,8,2,02_outputs/kitchen/lidar
+damage_lidar_final,Crack_water,lidar,completed_with_limitations,1,15,4,02_outputs/Crack_water/lidar
+three_room_photos_final,three_room,photos,incomplete_no_result,,,,02_outputs/three_room/photos
+kitchen_photos_final,kitchen,photos,completed_with_limitations,1,0,1,02_outputs/kitchen/photos
+damage_photos_final,Crack_water,photos,incomplete_no_result,,,,02_outputs/Crack_water/photos
+three_room_video_final,three_room,video,completed_with_limitations,16,4,5,02_outputs/three_room/video
+kitchen_video_final,kitchen,video,completed_with_limitations,5,5,2,02_outputs/kitchen/video
+damage_video_final,Crack_water,video,completed_with_limitations,3,0,4,02_outputs/Crack_water/video
+evaluator_single_room,evaluator_single_room,lidar,completed_with_limitations,1,0,0,02_outputs/evaluator_single_room/lidar
+evaluator_floor_only,evaluator_floor_only,lidar,completed_with_limitations,3,0,0,02_outputs/evaluator_floor_only/lidar
+evaluator_with_ceiling,evaluator_with_ceiling,lidar,completed_with_limitations,5,7,0,02_outputs/evaluator_with_ceiling/lidar
+kitchen_reproduce,kitchen_reproduce,lidar,completed_with_limitations,1,3,7,02_outputs/kitchen_reproduce/lidar

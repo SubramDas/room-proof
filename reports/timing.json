@@ -16,12 +16,36 @@
     "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
   },
   {
+    "run": "damage_lidar_final",
+    "tier": "lidar",
+    "seconds": 327.5044915199978,
+    "max_rss_mb": 2370.2734375,
+    "device": "cpu",
+    "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
+  },
+  {
     "run": "three_room_video_final",
     "tier": "video",
     "seconds": 647.7991158950026,
     "max_rss_mb": 2869.63671875,
     "device": "cpu",
     "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
+  },
+  {
+    "run": "kitchen_video_final",
+    "tier": "video",
+    "seconds": 387.8049516650208,
+    "max_rss_mb": 2708.10546875,
+    "device": "cpu",
+    "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
+  },
+  {
+    "run": "damage_video_final",
+    "tier": "video",
+    "seconds": 219.68098932801513,
+    "max_rss_mb": 2694.05078125,
+    "device": "cpu",
+    "code_revision": "88179eaa8451d90e1ef2cbf6479bbe873822c42d"
   },
   {
     "run": "evaluator_single_room",

@@ -20,3 +20,6 @@ three_room_video_final,video,room_2,,ceiling_height,2.8,,,,,,0.015,False,height
 three_room_video_final,video,room_3,,short_extent,0.81,,,,,,0.024300000000000002,False,axis_extent_proxy_not_per_wall
 three_room_video_final,video,room_3,,long_extent,1.67,,,,,,0.0501,False,axis_extent_proxy_not_per_wall
 three_room_video_final,video,room_3,,ceiling_height,2.26,,,,,,0.015,False,height
+kitchen_video_final,video,room_1,,short_extent,2.3,,,,,,0.06899999999999999,False,axis_extent_proxy_not_per_wall
+kitchen_video_final,video,room_1,,long_extent,2.36,,,,,,0.07079999999999999,False,axis_extent_proxy_not_per_wall
+kitchen_video_final,video,room_1,,ceiling_height,2.8,,,,,,0.015,False,height

@@ -352,5 +352,67 @@
       "full_footprint",
       "adjacency_without_explicit_room_mapping"
     ]
+  },
+  {
+    "tier": "video",
+    "capture_id": "kitchen_video_final",
+    "records": [
+      {
+        "reference_room": "room_1",
+        "predicted_room": null,
+        "quantity": "short_extent",
+        "truth_m": 2.3,
+        "prediction_m": null,
+        "absolute_error_m": null,
+        "signed_error_m": null,
+        "relative_error": null,
+        "nominal_interval_coverage": null,
+        "gate_limit_m": 0.06899999999999999,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_1",
+        "predicted_room": null,
+        "quantity": "long_extent",
+        "truth_m": 2.36,
+        "prediction_m": null,
+        "absolute_error_m": null,
+        "signed_error_m": null,
+        "relative_error": null,
+        "nominal_interval_coverage": null,
+        "gate_limit_m": 0.07079999999999999,
+        "pass": false,
+        "comparison_type": "axis_extent_proxy_not_per_wall"
+      },
+      {
+        "reference_room": "room_1",
+        "predicted_room": null,
+        "quantity": "ceiling_height",
+        "truth_m": 2.8,
+        "prediction_m": null,
+        "absolute_error_m": null,
+        "signed_error_m": null,
+        "relative_error": null,
+        "nominal_interval_coverage": null,
+        "gate_limit_m": 0.015,
+        "pass": false,
+        "comparison_type": "height"
+      }
+    ],
+    "warnings": [
+      "Extent proxies are not the full per-wall benchmark; missing official Round 1 gates.",
+      "Ground-truth instrument uncertainty is unspecified.",
+      "Opening rows lack independent opening IDs/offsets; no complete opening detection score can be claimed.",
+      "Calibration dataset is too small/correlated for validated 95% coverage."
+    ],
+    "unscored": [
+      "opening_detection_and_width_gate",
+      "damage_extent_accuracy",
+      "concealed_damage_accuracy",
+      "scope_accuracy",
+      "full_footprint",
+      "adjacency_without_explicit_room_mapping"
+    ]
   }
 ]

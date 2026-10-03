@@ -1,0 +1,20 @@
+[
+  {
+    "pair": "lidar_declared",
+    "all_manifest_hashes_equal": true,
+    "before_files": 10706,
+    "after_files": 10706
+  },
+  {
+    "pair": "photos_declared",
+    "all_manifest_hashes_equal": true,
+    "before_files": 22,
+    "after_files": 22
+  },
+  {
+    "pair": "kitchen_supporting",
+    "all_manifest_hashes_equal": true,
+    "before_files": 4600,
+    "after_files": 4600
+  }
+]

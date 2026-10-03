@@ -1,0 +1,61 @@
+[
+  {
+    "pair": "lidar_declared",
+    "phase": "before",
+    "run": "three_room_lidar",
+    "recorded_revision": "e3977de6c34bdcef1b2940e2d9bb15730ff09e4e",
+    "hashes_available": false,
+    "unrecoverable_hash_paths": [],
+    "snapshot_status": "recorded_revision_only"
+  },
+  {
+    "pair": "lidar_declared",
+    "phase": "after",
+    "run": "three_room_lidar_after",
+    "recorded_revision": "b21e4ced844e6f0496b9200177de27e290313347",
+    "hashes_available": false,
+    "unrecoverable_hash_paths": [],
+    "snapshot_status": "recorded_revision_only"
+  },
+  {
+    "pair": "photos_declared",
+    "phase": "before",
+    "run": "three_room_photos",
+    "recorded_revision": "e3977de6c34bdcef1b2940e2d9bb15730ff09e4e",
+    "hashes_available": false,
+    "unrecoverable_hash_paths": [],
+    "snapshot_status": "recorded_revision_only"
+  },
+  {
+    "pair": "photos_declared",
+    "phase": "after",
+    "run": "three_room_photos_final",
+    "recorded_revision": "88179eaa8451d90e1ef2cbf6479bbe873822c42d",
+    "hashes_available": true,
+    "unrecoverable_hash_paths": [
+      "astra/__main__.py",
+      "astra/pipeline.py",
+      "astra/rgb.py",
+      "astra/semantics.py"
+    ],
+    "snapshot_status": "revision_fallback_not_exact"
+  },
+  {
+    "pair": "kitchen_supporting",
+    "phase": "before",
+    "run": "kitchen_baseline",
+    "recorded_revision": "e3977de6c34bdcef1b2940e2d9bb15730ff09e4e",
+    "hashes_available": false,
+    "unrecoverable_hash_paths": [],
+    "snapshot_status": "recorded_revision_only"
+  },
+  {
+    "pair": "kitchen_supporting",
+    "phase": "after",
+    "run": "kitchen_lidar_final",
+    "recorded_revision": "70979923e2cdd39d671f3503a56b31593dc28d42",
+    "hashes_available": true,
+    "unrecoverable_hash_paths": [],
+    "snapshot_status": "matched_recorded_hashes"
+  }
+]

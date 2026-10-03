@@ -1,0 +1,38 @@
+{
+  "status": "same kitchen and laser dimensions confirmed by operator",
+  "first_capture": "kitchen_lidar_final",
+  "second_capture": "kitchen_reproduce",
+  "different_video_hashes": true,
+  "reference_length_for_relative_limit": "first capture",
+  "records": [
+    {
+      "measurement": "short_extent",
+      "first_m": 2.377047678151831,
+      "second_m": 2.373018117455362,
+      "absolute_delta_m": 0.00402956069646887,
+      "limit_m": 0.011885238390759154,
+      "within_proxy_limit": true,
+      "comparison": "sorted_extent_proxy_not_matched_wall"
+    },
+    {
+      "measurement": "long_extent",
+      "first_m": 2.495437407576013,
+      "second_m": 2.3865178211214566,
+      "absolute_delta_m": 0.10891958645455624,
+      "limit_m": 0.012477187037880064,
+      "within_proxy_limit": false,
+      "comparison": "sorted_extent_proxy_not_matched_wall"
+    },
+    {
+      "measurement": "ceiling_height",
+      "first_m": 2.79208031588655,
+      "second_m": 2.76105124985833,
+      "absolute_delta_m": 0.031029066028219976,
+      "limit_m": 0.01,
+      "within_proxy_limit": false,
+      "comparison": "height"
+    }
+  ],
+  "full_per_wall_gate": "not established: matched physical wall IDs absent",
+  "source_caveat": "Saved outputs may reflect different source snapshots; compare provenance before attributing differences solely to capture."
+}

@@ -1,0 +1,3 @@
+# Original declarations
+
+Both original documents are preserved verbatim. They were committed together with initial implementation changes in 2b075a2; repository history alone does not independently establish the precise within-session ordering asserted in their text. The early LiDAR declaration describes a subset, not the worst gate of the complete benchmark. The later photo declaration identifies the largest observed extent error and unresolved stitching. No new successful prediction is retroactively substituted. These original documents exceed one combined page; see the separate one-page retrospective index for navigation, not as a replacement original declaration.

@@ -1,0 +1,4 @@
+measurement,first_m,second_m,absolute_delta_m,limit_m,within_proxy_limit,comparison
+short_extent,2.377047678151831,2.373018117455362,0.00402956069646887,0.011885238390759154,True,sorted_extent_proxy_not_matched_wall
+long_extent,2.495437407576013,2.3865178211214566,0.10891958645455624,0.012477187037880064,False,sorted_extent_proxy_not_matched_wall
+ceiling_height,2.79208031588655,2.76105124985833,0.031029066028219976,0.01,False,height

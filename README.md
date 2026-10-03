@@ -88,3 +88,7 @@ The raw Stray walkthrough is sideways. A denser video run is:
 Progress is written to `progress.log`, with state in `run_status.json`. A disconnected terminal output pipe no longer aborts computation. An explicit interrupt/termination is recorded separately. If an interrupted run has no completed result, rerun the same command to reuse its exact-image/model depth caches. Cached completion timings are not cold-run timings.
 
 `--depth-model hybrid` is an experimental RGB-only mode using three Depth Pro anchors to estimate a shared focal length and rescale the faster depth model. `--rgb-scale-refinement` tests per-view depth-scale consistency from matched image points. `--rgb-geometry-bridges` tests weak depth-based temporal links. These options do not certify connectivity or accuracy; inspect each run's diagnostics. `--gravity-lock` and `--min-confidence 2` are LiDAR diagnostic alternatives; they were not improvements on the current three-room partition and are not default settings.
+
+## Submission and process evidence
+
+See [submission index](docs/SUBMISSION_INDEX.md) for Parts 1–4 and [Part 5 history](docs/PART_5_PROCESS_EVIDENCE.md). Raw-data ZIPs are separate; the repository does not contain model binaries or credentials.

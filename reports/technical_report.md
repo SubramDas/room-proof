@@ -2,7 +2,7 @@
 
 ## 1. Scope, architecture and output
 
-Astra local property reconstruction — 3 October 2026. 6/12 declared runs have completed at report generation. This is a measured development submission; no blanket gate-pass claim is made.
+Astra local property reconstruction — 3 October 2026. 9/12 declared runs have completed at report generation. This is a measured development submission; no blanket gate-pass claim is made.
 
 Route 2 uses Stray Scanner 1.4 on iPhone 15 Pro Max. Laptop: Ubuntu 24, Intel i7-1265U, 64 GB RAM, no GPU. Photos/video are intended for iPhone 15 or newer; other physical devices have not been tested. Kaggle is optional and unvalidated.
 

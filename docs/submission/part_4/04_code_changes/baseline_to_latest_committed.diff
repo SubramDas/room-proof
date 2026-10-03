@@ -1,0 +1,958 @@
+diff --git a/astra/__main__.py b/astra/__main__.py
+index 6f9c8ee..7bd3e22 100644
+--- a/astra/__main__.py
++++ b/astra/__main__.py
+@@ -14,14 +14,27 @@ def main():
+     p=argparse.ArgumentParser(prog='astra',description='Local property reconstruction and evidence-linked assessment')
+     sub=p.add_subparsers(dest='action',required=True)
+     r=sub.add_parser('run');r.add_argument('--tier',choices=['lidar','photos','video'],required=True);r.add_argument('--input',required=True);r.add_argument('--output',required=True)
+-    r.add_argument('--capture-id');r.add_argument('--max-frames',type=int,default=120);r.add_argument('--single-room',action='store_true');r.add_argument('--drift',choices=['on','off'],default='on')
++    r.add_argument('--depth-model',choices=['small','depth-pro','depth-pro-int8','hybrid'],default='small');r.add_argument('--layout-method',choices=['planes','free-space'],default='planes');r.add_argument('--capture-id');r.add_argument('--max-frames',type=int,default=120);r.add_argument('--single-room',action='store_true');r.add_argument('--drift',choices=['on','off'],default='on')
+     r.add_argument('--semantics',choices=['on','off'],default='on');r.add_argument('--semantic-views',type=int,default=10);r.add_argument('--device',choices=['cpu','cuda'],default='cpu')
++    r.add_argument('--rgb-scale-refinement',action='store_true')
++    r.add_argument('--rgb-geometry-bridges',action='store_true')
++    r.add_argument('--min-confidence',type=int,choices=[1,2],default=1);r.add_argument('--gravity-lock',action='store_true')
+     r.add_argument('--rotation',type=int,choices=[0,90,180,270],default=0);r.add_argument('--staged-damage',action='store_true');r.add_argument('--schema',help='Optional official evaluator JSON schema')
+     a=sub.add_parser('audit');a.add_argument('--input',required=True);a.add_argument('--output',required=True)
+     v=sub.add_parser('validate');v.add_argument('result');v.add_argument('--schema')
+     e=sub.add_parser('evaluate');e.add_argument('--result',required=True);e.add_argument('--truth',required=True);e.add_argument('--mapping',required=True,help='JSON reference-room to prediction-room map');e.add_argument('--output',required=True)
+     t=sub.add_parser('repeat');t.add_argument('--first',required=True);t.add_argument('--second',required=True);t.add_argument('--output',required=True)
+     args=p.parse_args()
++    if args.action=='run':
++        from .runtime import install_progress_log
++        install_progress_log(Path(args.output)/'progress.log')
++        import signal
++        def interrupted(signum,frame):
++            write_json(Path(args.output)/'run_status.json',{'status':'interrupted','signal':signum,'resume':'Rerun the same command; exact-image depth caches are retained.'})
++            raise SystemExit(128+signum)
++        signal.signal(signal.SIGTERM,interrupted);signal.signal(signal.SIGINT,interrupted)
++    import cv2,numpy as np
++    cv2.setRNGSeed(0);np.random.seed(0)
+     try:
+         if args.action=='run':
+             if args.max_frames<2 or args.semantic_views<0:p.error('max-frames must be >=2, semantic-views >=0')
+diff --git a/astra/export.py b/astra/export.py
+index bf7eab0..10a8a38 100644
+--- a/astra/export.py
++++ b/astra/export.py
+@@ -20,25 +20,42 @@ def render(result,out):
+             a=np.array(wall['start']);b=np.array(wall['end']);m=(a+b)/2;length=wall['length']['value']
+             if length>.35:ax.text(*m,f'{length:.2f}',fontsize=7,ha='center',bbox=dict(facecolor='white',alpha=.75,edgecolor='none',pad=1))
+     surfaces={s['id']:s for s in result['surfaces']}
++    paired_ids={oid for edge in result['adjacency'] for oid in edge['opening_ids']}
+     for op in result['openings']:
+         s=surfaces[op['surface_id']];a=np.array(s['start']);b=np.array(s['end']);e=(b-a)/np.linalg.norm(b-a);low,high=np.array(op['surface_uv_bounds']);ends=np.array([a+e*low[0],a+e*high[0]])
+-        ax.plot(ends[:,0],ends[:,1],color='#e27413',linewidth=4,linestyle='--');mid=ends.mean(0);ax.text(*mid,f"{op['width']['value']:.2f} m ?",fontsize=7,color='#913300')
++        supported=op['id'] in paired_ids
++        ax.plot(ends[:,0],ends[:,1],color='#b75c12' if supported else '#a8a2a0',linewidth=4 if supported else 1.5,linestyle='--',alpha=1. if supported else .6)
++        if supported:
++            mid=ends.mean(0);ax.text(*mid,f"{op['width']['value']:.2f} m ?",fontsize=7,color='#913300',bbox={'facecolor':'white','edgecolor':'none','alpha':.8})
+     ax.autoscale();ax.set_aspect('equal');ax.set_xlabel('Property x (m)');ax.set_ylabel('Property z (m)');ax.grid(alpha=.2)
+     ax.set_title(f"Astra — {result['tier']} — {result['capture_id']}\n{result['status']}",fontsize=12)
+-    fig.text(.02,.015,'Dimensions in metres. Orange: unverified openings. Intervals and evidence in result.json/report.html.\nProvisional uncertainty; no accuracy-gate claim. Disconnected RGB components are schematic placements.',fontsize=8)
++    fig.text(.02,.015,'Dimensions in metres. Orange: paired opening candidates; grey: other unverified proposals. Intervals and evidence in result.json/report.html.\nProvisional uncertainty; no accuracy-gate claim. Disconnected RGB components are schematic placements.',fontsize=8)
+     fig.tight_layout(rect=[0,.05,1,1]);fig.savefig(out/'plan.svg');fig.savefig(out/'plan.pdf');fig.savefig(out/'plan.png',dpi=150);plt.close(fig)
+     rows=[]
+     for room in result['rooms']:
+         for name in ['ceiling_height','floor_area','extent_x','extent_z']:
+             m=room[name];interval=m['interval'];rows.append(f"<tr><td>{html.escape(room['id'])}</td><td>{name}</td><td>{m['value']}</td><td>{m['unit']}</td><td>{interval['lower']} – {interval['upper']}</td><td>{interval['calibration_status']}</td></tr>")
++    for room in result['rooms']:
++        for wall in room['walls']:
++            m=wall['length'];iv=m['interval'];rows.append(f"<tr><td>{html.escape(wall['surface_id'])}</td><td>wall length</td><td>{m['value']:.3f}</td><td>m</td><td>{iv['lower']:.3f} – {iv['upper']:.3f}</td><td>{iv['calibration_status']}</td></tr>")
++    for op in result['openings']:
++        for key in ['width','height']:
++            m=op[key];iv=m['interval'];rows.append(f"<tr><td>{html.escape(op['id'])}</td><td>opening {key}</td><td>{m['value']:.3f}</td><td>m</td><td>{iv['lower']:.3f} – {iv['upper']:.3f}</td><td>{iv['calibration_status']}</td></tr>")
++    damage_rows=''.join(f"<tr><td>{html.escape(d['id'])}</td><td><a href='surfaces/{html.escape(d['surface_id'])}.svg'>{html.escape(d['surface_id'])}</a></td><td>{html.escape(d['class'])}</td><td>{d['area']['value']:.3f} m²</td><td>{html.escape(d['status'])}</td></tr>" for d in result['damage'])
++    flags=''.join(f"<li>{html.escape(f['rule'])}: {html.escape(f['message'])}</li>" for f in result['concealed_damage_flags'])
++    scope=''.join(f"<li>{html.escape(s['surface_id'])}: {html.escape(s['action'])} ({s['quantity']['value']:.3f} {s['quantity']['unit']}); rule {html.escape(s['rule'])}</li>" for s in result['scope_items'])
+     warnings=''.join(f'<li>{html.escape(w)}</li>' for w in result['warnings'])
+     (out/'report.html').write_text('<!doctype html><html><meta charset="utf-8"><title>Astra capture report</title><style>body{font:16px system-ui;margin:32px;max-width:1200px}img{max-width:100%}table{border-collapse:collapse;font-size:13px}td,th{padding:8px;border:1px solid #ddd}code{background:#eee}</style>'
+         +f"<h1>{html.escape(result['capture_id'])}</h1><p>{html.escape(result['status'])}</p><img src='plan.svg' alt='Property floor plan'><h2>Limitations</h2><ul>{warnings}</ul>"
+         +'<h2>Measurement intervals</h2><p>Engineering uncertainty ranges are provisional until independently calibrated.</p><table><tr><th>Room</th><th>Measurement</th><th>Value</th><th>Unit</th><th>95% nominal range</th><th>Calibration</th></tr>'+''.join(rows)+'</table>'
++        +f"<h2>Damage candidates</h2><table><tr><th>Region</th><th>Surface</th><th>Class</th><th>Observed area</th><th>Status</th></tr>{damage_rows}</table><h2>Inspection flags</h2><ul>{flags}</ul><p>An empty list is not evidence of no concealed damage.</p><h2>Scope items</h2><ul>{scope}</ul>"
+         +f"<h2>Evidence</h2><p>{len(result['openings'])} opening candidates; {len(result['damage'])} damage regions; {len(result['scope_items'])} scope items.</p><p><a href='result.json'>Full JSON</a> · <a href='provenance.json'>Provenance</a> · <a href='semantics/candidates.json'>Visual candidates</a></p></html>")
+     (out/'rooms').mkdir(exist_ok=True);(out/'surfaces').mkdir(exist_ok=True)
+     for room in result['rooms']:
+-        f,a=plt.subplots(figsize=(6,6));p=np.array(room['polygon']);a.add_patch(Polygon(p,fill=False));a.autoscale();a.axis('equal');a.set_title(room['id']);f.savefig(out/'rooms'/f"{room['id']}.svg");plt.close(f)
++        f,a=plt.subplots(figsize=(6,6));p=np.array(room['polygon']);a.add_patch(Polygon(p,fill=False));a.autoscale();a.axis('equal');a.set_title(f"{room['id']} — {room['floor_area']['value']:.2f} m²");a.set_xlabel('x (m)');a.set_ylabel('z (m)')
++        for wall in room['walls']:
++            mid=(np.array(wall['start'])+wall['end'])/2;a.text(*mid,f"{wall['length']['value']:.2f} m",ha='center',fontsize=9,bbox={'facecolor':'white','edgecolor':'none','alpha':.8})
++        f.tight_layout();f.savefig(out/'rooms'/f"{room['id']}.svg");plt.close(f)
+     for s in result['surfaces']:
+         if s['kind']!='wall':continue
+         f,a=plt.subplots(figsize=(7,4));length=np.linalg.norm(np.array(s['end'])-s['start']);height=s['height']['value'] or 3
+diff --git a/astra/geometry.py b/astra/geometry.py
+index afccee8..ce48512 100644
+--- a/astra/geometry.py
++++ b/astra/geometry.py
+@@ -48,7 +48,7 @@ def icp(source,target,threshold=.15,iterations=15):
+               'before_rmse_m':before,'translation_m':shift,'rotation_rad':angle}
+ 
+ 
+-def correct_pose_graph(clouds,poses):
++def correct_pose_graph(clouds,poses,gravity_lock=False):
+     """Verified point-cloud factors plus smooth correction priors; never force closure."""
+     n=len(poses);edges=[]
+     for j in range(1,n):
+@@ -67,6 +67,7 @@ def correct_pose_graph(clouds,poses):
+         x=x.reshape(n,6);rs=[(x[0]*100).ravel(),(x*.7).ravel(),(np.diff(x,axis=0)*2).ravel()]
+         for i,j,T,kind,_ in edges:
+             target=np.r_[Rotation.from_matrix(T[:3,:3]).as_rotvec(),T[:3,3]]
++            if gravity_lock:target[[0,2]]=0.
+             rs.append((x[j]-x[i]-target)*(8 if kind=='loop' else 3))
+         return np.concatenate(rs)
+     if not edges:return poses.copy(),{'method':'verified_ICP_pose_graph','accepted_edges':[],'status':'no_verified_constraints'}
+@@ -80,8 +81,9 @@ def correct_pose_graph(clouds,poses):
+     result=least_squares(residual,np.zeros(n*6),jac_sparsity=sp.tocsr(),loss='soft_l1',f_scale=.03,max_nfev=25)
+     corrected=poses.copy();xs=result.x.reshape(n,6)
+     for i,x in enumerate(xs):
++        if gravity_lock:x[[0,2]]=0.
+         C=np.eye(4);C[:3,:3]=Rotation.from_rotvec(x[:3]).as_matrix();C[:3,3]=x[3:];corrected[i]=C@poses[i]
+-    return corrected,{'method':'verified_ICP_pose_graph','status':'optimized','small_angle_approximation':True,
++    return corrected,{'method':'verified_ICP_pose_graph','status':'optimized','small_angle_approximation':True,'gravity_lock':gravity_lock,
+         'max_translation_correction_m':float(np.linalg.norm(xs[:,3:],axis=1).max()),
+         'accepted_edges':[{'from':i,'to':j,'kind':kind,**info} for i,j,_,kind,info in edges]}
+ 
+@@ -117,3 +119,21 @@ def plane_modes(values,lo=None,hi=None,bin_size=.025):
+         center=(edges[p]+edges[p+1])/2;v=values[abs(values-center)<.035]
+         if len(v)>15:result.append(float(np.median(v)))
+     return sorted(result)
++
++
++def gravity_alignment(normals):
++    """Robust dominant horizontal normals, assuming roughly upright input photos.
++
++    This is an image-derived orientation prior, not an IMU observation. Failure
++    on sloped/curved scenes remains possible and must be exposed in RGB QA.
++    """
++    ns=np.asarray(normals);ns=ns[np.isfinite(ns).all(1)&(abs(ns[:,1])>.70)]
++    if len(ns)<100:return np.eye(3)
++    ns=ns*np.where(ns[:,1:2]<0,-1.,1.);axis=np.median(ns,axis=0);axis/=np.linalg.norm(axis)
++    for _ in range(4):
++        use=ns@axis>.96
++        if use.sum()<50:break
++        axis=np.median(ns[use],axis=0);axis/=np.linalg.norm(axis)
++    target=np.array([0.,1.,0.]);cross=np.cross(axis,target);s=np.linalg.norm(cross);c=axis@target
++    if s<1e-8:return np.eye(3)
++    return Rotation.from_rotvec(cross/s*np.arctan2(s,c)).as_matrix()
+diff --git a/astra/io.py b/astra/io.py
+index c4832f1..872109c 100644
+--- a/astra/io.py
++++ b/astra/io.py
+@@ -84,7 +84,7 @@ def load_scan(path):
+     required=['timestamp','frame','x','y','z','qx','qy','qz','qw']
+     if any(k not in rows[0] for k in required):raise ValueError('Unsupported pose columns')
+     ids=[r['frame'] for r in rows];ts=np.array([float(r['timestamp']) for r in rows])
+-    if len(set(ids))!=len(ids) or (np.diff(ts)<=0).any():raise ValueError('Duplicate frame IDs or nonmonotonic timestamps')
++    if not np.isfinite(ts).all() or len(set(ids))!=len(ids) or (np.diff(ts)<=0).any():raise ValueError('Duplicate frame IDs or nonmonotonic timestamps')
+     for folder in ['depth','confidence']:
+         available={p.stem for p in (root/folder).glob('*.png')}
+         if set(ids)!=available:raise ValueError(f'{folder} IDs do not match poses')
+@@ -92,6 +92,7 @@ def load_scan(path):
+     if not np.isfinite(q).all() or np.max(abs(np.linalg.norm(q,axis=1)-1))>.01:raise ValueError('Invalid pose quaternion')
+     poses=np.tile(np.eye(4),(len(rows),1,1));poses[:,:3,:3]=Rotation.from_quat(q).as_matrix()
+     poses[:,:3,3]=[[float(r[k]) for k in ['x','y','z']] for r in rows]
++    if not np.isfinite(poses).all():raise ValueError('Nonfinite camera position')
+     K=np.tile(np.eye(3),(len(rows),1,1))
+     if all(k in rows[0] for k in ['fx','fy','cx','cy']):
+         for i,r in enumerate(rows):K[i,0,0],K[i,1,1],K[i,0,2],K[i,1,2]=[float(r[k]) for k in ['fx','fy','cx','cy']]
+@@ -116,7 +117,9 @@ def photo_groups(path):
+     p=Path(path)
+     if p.is_file():raise ValueError('Photos require a room folder or per-room folders')
+     root_files=sorted(x for x in p.iterdir() if x.is_file() and x.suffix.lower() in IMAGE_SUFFIXES)
+-    if root_files:return {p.name:root_files}
++    if root_files:
++        if not 2<=len(root_files)<=8:raise ValueError(f'{p.name}: photo contract is 2–8 images, found {len(root_files)}')
++        return {p.name:root_files}
+     groups={}
+     for child in sorted(p.iterdir()):
+         if not child.is_dir() or child.name in ['lidar','depth','confidence']:continue
+diff --git a/astra/layout.py b/astra/layout.py
+index dc2f842..da87fa3 100644
+--- a/astra/layout.py
++++ b/astra/layout.py
+@@ -18,7 +18,7 @@ def polygon_area(poly):
+ def point_in_poly(point,poly):return cv2.pointPolygonTest(np.asarray(poly,np.float32),tuple(map(float,point)),False)>=0
+ 
+ 
+-def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04):
++def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04,method='planes'):
+     p=geo['points'];n=geo['normals'];poses=geo['poses'];fids=geo['frame_ids'];cam=poses[:,:3,3]
+     if len(p)<100:raise ValueError('Insufficient geometry for a room layout')
+     horizontal=abs(n[:,1])>.92;hm=plane_modes(p[horizontal,1]);camera_y=float(np.median(cam[:,1]))
+@@ -82,6 +82,19 @@ def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04):
+         poly=contour*cell+origin
+         if len(poly)<3:continue
+         area=polygon_area(poly)
++        if method=='planes':
++            seed_world=(poly.min(0)+poly.max(0))/2;enclosing=[]
++            # High wall observations reject most tables/counters and are present
++            # above door openings, where the free-space bottleneck is ambiguous.
++            for axis,other,centre,across in [(0,2,seed_world[0],seed_world[1]),(2,0,seed_world[1],seed_world[0])]:
++                wall_band=(abs(n[:,axis])>.95)&(p[:,1]>floor+1.85)&(abs(p[:,other]-across)<1.2)
++                vals=plane_modes(p[wall_band,axis]);left=[v for v in vals if v<centre-.25];right=[v for v in vals if v>centre+.25]
++                enclosing.append((max(left),min(right)) if left and right else None)
++            if all(e is not None for e in enclosing):
++                (x0,x1),(z0,z1)=enclosing;boxarea=(x1-x0)*(z1-z0)
++                # Only replace a basin with plausible observed enclosing walls.
++                if .4<boxarea<40 and .55<boxarea/max(area,1e-6)<2.5:
++                    poly=np.array([[x0,z0],[x1,z0],[x1,z1],[x0,z1]]);area=polygon_area(poly)
+         # Infer a rectangle only where observed polygon strongly supports it.
+         lo=poly.min(0);hi=poly.max(0);rect_area=float(np.prod(hi-lo));rectangularity=area/max(rect_area,1e-6)
+         if rectangularity>.84:
+@@ -104,21 +117,26 @@ def build_layout(geo,tier='lidar',single_room=False,room_names=None,cell=.04):
+         inside=(p[:,0]>=lo[0])&(p[:,0]<=hi[0])&(p[:,2]>=lo[1])&(p[:,2]<=hi[1])
+         local_h=plane_modes(p[inside&horizontal&(p[:,1]>floor+1.8),1]);ceil=ceiling
+         if local_h:ceil=max(local_h,key=lambda y:np.sum(inside&horizontal&(abs(p[:,1]-y)<.045)))
+-        h=ceil-floor if ceil is not None else None
++        local_floor=floor
++        if method=='planes':
++            local_floor_modes=plane_modes(p[inside&horizontal&(p[:,1]<camera_y-.45),1])
++            if local_floor_modes:
++                local_floor=max(local_floor_modes,key=lambda y:np.sum(inside&horizontal&(abs(p[:,1]-y)<.045)))
++        h=ceil-local_floor if ceil is not None else None
+         walls=[]
+         for j,(a,b) in enumerate(zip(poly,np.roll(poly,-1,axis=0))):
+             sid=f'{rid}_wall_{j+1}';length=float(np.linalg.norm(b-a))
+             edge={'surface_id':sid,'start':a.tolist(),'end':b.tolist(),'length':measure(length,half_width=max(sigma,length*(.025 if tier=='lidar' else .18)))}
+-            walls.append(edge);surfaces.append({'id':sid,'room_id':rid,'kind':'wall','start':a.tolist(),'end':b.tolist(),'floor_y':float(floor),
++            walls.append(edge);surfaces.append({'id':sid,'room_id':rid,'kind':'wall','start':a.tolist(),'end':b.tolist(),'floor_y':float(local_floor),
+                 'height':measure(h,half_width=.05 if tier=='lidar' else .45),'gross_area':measure(length*h if h else None,'m2',half_width=max(.1,length*(h or 0)*(.06 if tier=='lidar' else .4))),
+                 'visibility':'partial','damage_ids':[]})
+         for kind in ['floor','ceiling']:
+-            surfaces.append({'id':f'{rid}_{kind}','room_id':rid,'kind':kind,'polygon':poly.tolist(),'y':float(floor) if kind=='floor' else (float(ceil) if ceil is not None else None),
++            surfaces.append({'id':f'{rid}_{kind}','room_id':rid,'kind':kind,'polygon':poly.tolist(),'y':float(local_floor) if kind=='floor' else (float(ceil) if ceil is not None else None),
+                 'gross_area':measure(c['area'],'m2',half_width=c['area']*(.07 if tier=='lidar' else .4)),'visibility':'partial','damage_ids':[]})
+-        rooms.append({'id':rid,'name':rid,'polygon':poly.tolist(),'walls':walls,'floor_y':float(floor),'ceiling_y':float(ceil) if ceil is not None else None,
++        rooms.append({'id':rid,'name':rid,'polygon':poly.tolist(),'walls':walls,'floor_y':float(local_floor),'ceiling_y':float(ceil) if ceil is not None else None,
+             'ceiling_height':measure(h,half_width=.05 if tier=='lidar' else .45),'floor_area':measure(c['area'],'m2',half_width=c['area']*(.07 if tier=='lidar' else .4)),
+             'extent_x':measure(hi[0]-lo[0],half_width=sigma if tier=='lidar' else .4),'extent_z':measure(hi[1]-lo[1],half_width=sigma if tier=='lidar' else .4),
+             'camera_visits':c['visits'],'status':'provisional','geometry_source':'observed_free_space_and_planes'})
+-    qa={'floor_y':float(floor),'ceiling_y':ceiling,'horizontal_plane_modes':hm,'room_candidate_count':len(candidates),
++    qa={'floor_y':float(floor),'method':method,'ceiling_y':ceiling,'horizontal_plane_modes':hm,'room_candidate_count':len(candidates),
+         'warnings':['Room boundaries and interval calibration are provisional.','Watershed spaces require topology validation; no declared room count is forced.']}
+     return {'rooms':rooms,'surfaces':surfaces,'adjacency':[],'openings':[],'layout_qa':qa,'raster':{'free':free,'hits':hits,'segments':segmented,'origin':origin,'cell':cell}}
+diff --git a/astra/lidar.py b/astra/lidar.py
+index de0f6f1..7bf60c3 100644
+--- a/astra/lidar.py
++++ b/astra/lidar.py
+@@ -5,7 +5,7 @@ from .io import load_scan,write_json,selected_video
+ from .geometry import backproject,transform,voxel_downsample,normal_map,correct_pose_graph,angle_from_normals,planar_rotation
+ 
+ 
+-def reconstruct(path,out,max_frames=160,drift=True,pixel_step=3):
++def reconstruct(path,out,max_frames=160,drift=True,pixel_step=3,min_confidence=1,gravity_lock=False):
+     scan=load_scan(path);out=Path(out);out.mkdir(parents=True,exist_ok=True)
+     indices=np.unique(np.linspace(0,len(scan['ids'])-1,min(max_frames,len(scan['ids'])),dtype=int))
+     cameras=[];normals=[];raw=[];valid_fractions=[]
+@@ -15,12 +15,12 @@ def reconstruct(path,out,max_frames=160,drift=True,pixel_step=3):
+         if d is None or c is None or d.shape!=c.shape:raise ValueError(f'Unreadable paired depth frame {i}')
+         depth=d.astype(np.float32)*.001
+         pc=backproject(depth,scan['K'][i],(scan['video']['width'],scan['video']['height']),step=1)
+-        nm=normal_map(pc);valid=(depth>.25)&(depth<6)&(c>=1)
++        nm=normal_map(pc);valid=(depth>.25)&(depth<6)&(c>=min_confidence)
+         # Depth jumps invalidate normals and measurements near occlusion boundaries.
+         gx=np.abs(np.gradient(depth,axis=1));gy=np.abs(np.gradient(depth,axis=0));valid&=(gx<.10)&(gy<.10)
+         sel=valid[::pixel_step,::pixel_step];p=pc[::pixel_step,::pixel_step][sel];n=nm[::pixel_step,::pixel_step][sel]
+         cameras.append(p);normals.append(n);raw.append(voxel_downsample(transform(p,scan['poses'][i]),.045));valid_fractions.append(float(valid.mean()))
+-    before=scan['poses'][indices];after,correction=correct_pose_graph(raw,before) if drift else (before.copy(),{'status':'disabled','accepted_edges':[]})
++    before=scan['poses'][indices];after,correction=correct_pose_graph(raw,before,gravity_lock=gravity_lock) if drift else (before.copy(),{'status':'disabled','accepted_edges':[]})
+     pts=[];ns=[];frame_ids=[]
+     for k,(p,n,T) in enumerate(zip(cameras,normals,after)):
+         pts.append(transform(p,T));ns.append(n@T[:3,:3].T);frame_ids.append(np.full(len(p),k,dtype=np.int32))
+@@ -33,7 +33,7 @@ def reconstruct(path,out,max_frames=160,drift=True,pixel_step=3):
+         frame_ids=frame_ids,poses=after,raw_poses=before,indices=indices,K=scan['K'][indices],raw_points=raw_points.astype(np.float32))
+     correction['alignment_angle_rad']=angle;write_json(out/'drift.json',correction)
+     scan['qa']['selected_frames']=indices.tolist();scan['qa']['valid_depth_fraction_range']=[min(valid_fractions),max(valid_fractions)]
+-    scan['qa']['point_count']=len(points);write_json(out/'qa.json',scan['qa'])
++    scan['qa']['point_count']=len(points);scan['qa']['minimum_confidence']=min_confidence;write_json(out/'qa.json',scan['qa'])
+     print(f'LiDAR: {len(indices)} frames, {len(points):,} points; drift {correction["status"]}',flush=True)
+     return {'points':points,'normals':normals,'frame_ids':frame_ids,'poses':after,'raw_poses':before,'indices':indices,
+             'K':scan['K'][indices],'scan':scan,'raw_points':raw_points,'qa':scan['qa'],'drift':correction}
+diff --git a/astra/openings.py b/astra/openings.py
+new file mode 100644
+index 0000000..63ef656
+--- /dev/null
++++ b/astra/openings.py
+@@ -0,0 +1,58 @@
++"""LiDAR opening candidates require both a wall gap and rays passing through it."""
++import numpy as np
++from scipy.ndimage import gaussian_filter1d,label
++from .layout import measure
++
++
++def geometric_openings(geo,surfaces):
++    p=geo['points'];origins=geo['poses'][geo['frame_ids'],:3,3];rays=p-origins;items=[]
++    for s in surfaces:
++        if s['kind']!='wall':continue
++        a=np.array(s['start']);b=np.array(s['end']);edge=b-a;L=np.linalg.norm(edge)
++        if L<.45:continue
++        e=edge/L;n=np.array([-e[1],e[0]]);q=p[:,[0,2]]-a
++        u=q@e;y=p[:,1]-s['floor_y'];distance=q@n
++        bins=np.linspace(0,L,max(3,int(np.ceil(L/.015)))+1);centers=(bins[:-1]+bins[1:])/2
++        onwall=(abs(distance)<.04)&(y>.4)&(y<1.85)
++        wall=np.histogram(u[onwall],bins)[0].astype(float)
++        den=rays[:,[0,2]]@n;num=(a-origins[:,[0,2]])@n
++        t=np.divide(num,den,out=np.full(len(p),-1.),where=abs(den)>.02)
++        passmask=(t>.02)&(t<.98)&((1-t)*np.linalg.norm(rays,axis=1)>.18)&(abs(num)>.15)
++        ids=np.where(passmask)[0]
++        if len(ids)<30:continue
++        cross=origins[ids]+t[ids,None]*rays[ids];cu=(cross[:,[0,2]]-a)@e;cy=cross[:,1]-s['floor_y']
++        counts=np.array([np.histogram(cu[(cy>lo)&(cy<hi)],bins)[0] for lo,hi in [(.35,.85),(.85,1.35),(1.35,1.85)]])
++        through=gaussian_filter1d(counts.astype(float),1,axis=1)
++        smoothed=gaussian_filter1d(wall,1);positive=smoothed[smoothed>3]
++        if not len(positive):continue
++        void=(np.sum(through>2,axis=0)>=2)&(smoothed<max(5.,np.median(positive)*.13))
++        labs,numlab=label(void)
++        for k in range(1,numlab+1):
++            use=np.where(labs==k)[0];lo=bins[use[0]];hi=bins[use[-1]+1];width=hi-lo
++            if not .4<width<2.:continue
++            evidence=ids[(cu>=lo)&(cu<=hi)&(cy>.35)&(cy<1.85)]
++            frames=np.unique(geo['frame_ids'][evidence])
++            if len(frames)<3:continue
++            above=(abs(distance)<.055)&(u>lo+.03)&(u<hi-.03)&(y>1.85)&(y<3.)
++            if above.sum()<30:continue
++            heights=y[above];ybins=np.arange(1.85,3.02,.015);hist,_=np.histogram(heights,ybins)
++            strong=np.where(gaussian_filter1d(hist.astype(float),1)>max(4.,hist.max()*.12))[0]
++            if not len(strong):continue
++            height=float(ybins[strong[0]])
++            items.append({'id':f'geometric_opening_{len(items)+1}','surface_id':s['id'],'room_id':s['room_id'],'kind':'doorway',
++                'surface_uv_bounds':[[float(lo),0.],[float(hi),height]],'width':measure(width,half_width=.05,method='wall_gap_and_transmitted_depth_rays'),
++                'height':measure(height,half_width=.06,method='observed_lintel_on_wall_plane'),
++                'status':'provisional_geometry_candidate','evidence':[f'depth_frame:{int(geo["indices"][f])}' for f in frames],
++                'support_views':len(frames),'geometry_checks':{'rays_cross_wall_plane':True,'low_wall_occupancy':True,'observed_lintel':True}})
++    return items
++
++
++def merge_openings(geometric,visual):
++    result=list(geometric)
++    for v in visual:
++        uv=np.mean(v['surface_uv_bounds'],axis=0)
++        matching=next((g for g in geometric if g['surface_id']==v['surface_id'] and g['kind']==v['kind'] and abs(np.mean(g['surface_uv_bounds'],axis=0)[0]-uv[0])<.5),None)
++        if matching:matching['evidence']+=v['evidence'];matching['visual_support']=True
++        else:result.append(v)
++    for i,o in enumerate(result):o['id']=f'opening_{i+1}'
++    return result
+diff --git a/astra/pipeline.py b/astra/pipeline.py
+index abfa687..1ccc0ad 100644
+--- a/astra/pipeline.py
++++ b/astra/pipeline.py
+@@ -2,13 +2,15 @@ from pathlib import Path
+ import json,os,platform,subprocess,time,resource
+ import cv2,numpy as np
+ from . import __version__
+-from .io import write_json,input_manifest,selected_video
++from .io import write_json,input_manifest,selected_video,sha256
+ from .lidar import reconstruct
+ from .layout import build_layout,point_in_poly
+ from .rgb import reconstruct_rgb
+ from .semantics import run_semantics,scope_and_flags
+ from .schema import validate
+ from .export import render
++from .quality import topology_quality
++from .openings import geometric_openings,merge_openings
+ 
+ 
+ def code_revision():
+@@ -47,24 +49,31 @@ def adjacency_from_openings(layout):
+ 
+ def run(args):
+     start=time.perf_counter();out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
++    source_root=Path(__file__).resolve().parents[1]
++    start_revision=code_revision()
++    source_hashes={str(p.relative_to(source_root)):sha256(p) for p in sorted((source_root/'astra').glob('*.py'))}
++    write_json(out/'source_manifest_at_start.json',{'revision':start_revision,'files':source_hashes})
+     write_json(out/'run_status.json',{'status':'running','tier':args.tier})
+     warnings=['Official evaluator schema unavailable; validated against astra.provisional.v1.',
+         'Intervals are engineering ranges, not empirically calibrated confidence intervals.']
+-    views=[];files=[];extra={}
++    views=[];files=[];extra={};geometry_openings=[]
+     if args.tier=='lidar':
+-        g=reconstruct(args.input,out/'geometry',args.max_frames,args.drift=='on');layout=build_layout(g,single_room=args.single_room)
++        g=reconstruct(args.input,out/'geometry',args.max_frames,args.drift=='on',min_confidence=args.min_confidence,gravity_lock=args.gravity_lock);layout=build_layout(g,single_room=args.single_room,method=args.layout_method)
++        geometry_openings=geometric_openings(g,layout['surfaces'])
+         raster=layout.pop('raster');np.savez_compressed(out/'layout_raster.npz',**raster)
+         extra={'drift':g['drift'],'quality':g['qa']};indices=g['indices'];scan=g['scan']
+         visual_ids=np.unique(np.linspace(0,len(indices)-1,min(args.semantic_views,len(indices)),dtype=int))
+         frames=selected_video(scan['root']/'rgb.mp4',indices[visual_ids],out/'keyframes')
+         for pos,v in zip(visual_ids,frames):
+             im=cv2.imread(v['image']);K=g['K'][pos].copy();K[0]*=im.shape[1]/scan['video']['width'];K[1]*=im.shape[0]/scan['video']['height']
+-            views.append({'id':int(indices[pos]),'bgr':im,'pose':g['poses'][pos],'K':K,'source':f"rgb.mp4#frame={indices[pos]}"})
++            views.append({'id':int(indices[pos]),'bgr':im,'pose':g['poses'][pos],'K':K,'source':f"rgb.mp4#frame={indices[pos]}",
++                          'sensor_depth':cv2.imread(str(scan['root']/'depth'/f"{scan['ids'][indices[pos]]}.png"),cv2.IMREAD_UNCHANGED).astype(np.float32)*.001,
++                          'sensor_confidence':cv2.imread(str(scan['root']/'confidence'/f"{scan['ids'][indices[pos]]}.png"),cv2.IMREAD_UNCHANGED)})
+         files=[scan['root']/n for n in ['odometry.csv','imu.csv','camera_matrix.csv','rgb.mp4']]
+         files+=list((scan['root']/'depth').glob('*.png'))+list((scan['root']/'confidence').glob('*.png'));base=scan['root']
+         warnings+=g['qa']['warnings']+layout['layout_qa']['warnings']
+     else:
+-        components,views,summary=reconstruct_rgb(args.input,args.tier,out/'geometry',device=args.device,max_frames=args.max_frames,rotation=args.rotation)
++        components,views,summary=reconstruct_rgb(args.input,args.tier,out/'geometry',device=args.device,max_frames=args.max_frames,rotation=args.rotation,depth_model=args.depth_model,geometry_bridges=args.rgb_geometry_bridges,scale_refinement=args.rgb_scale_refinement)
+         layout={'rooms':[],'surfaces':[],'openings':[],'adjacency':[]};cursor=0.;component_offsets={}
+         if args.tier=='photos':
+             # One output room per source folder; choose its best-supported component.
+@@ -77,7 +86,7 @@ def run(args):
+                 remap={old:new for new,old in enumerate(selected)}
+                 local={'points':g['points'][mask],'normals':g['normals'][mask],'frame_ids':np.array([remap[int(i)] for i in g['frame_ids'][mask]]),
+                        'poses':g['poses'][selected]}
+-                try:part=build_layout(local,args.tier,single_room=True,room_names=[room_name])
++                try:part=build_layout(local,args.tier,single_room=True,room_names=[room_name],method=args.layout_method)
+                 except ValueError as e:warnings.append(f'{room_name}: {e}');continue
+                 part.pop('raster')
+                 if ci not in component_offsets:
+@@ -90,7 +99,7 @@ def run(args):
+                 layout['rooms']+=part['rooms'];layout['surfaces']+=part['surfaces'];cursor=max([np.max(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[cursor])+1.
+         else:
+             for ci,g in enumerate(components):
+-                try:part=build_layout(g,args.tier,single_room=args.single_room)
++                try:part=build_layout(g,args.tier,single_room=args.single_room,method=args.layout_method)
+                 except ValueError as e:warnings.append(f'Component {ci}: {e}');continue
+                 part.pop('raster');low=min([np.min(np.array(r['polygon'])[:,0]) for r in part['rooms']]+[0.]);offset=np.array([cursor-low,0.])
+                 offset_layout(part,offset,f'component_{ci+1}_' if len(components)>1 else '')
+@@ -103,16 +112,23 @@ def run(args):
+         else:files=[Path(args.input)];base=Path(args.input).parent
+     if not layout['rooms']:warnings.append('No room could be reconstructed from the observed geometry.')
+     opens,damage,semantic_warnings=run_semantics(views,layout,out/'semantics',args.device,args.semantic_views,args.staged_damage,args.semantics=='on')
+-    layout['openings']=opens;layout['adjacency']=adjacency_from_openings(layout)
++    opens=merge_openings(geometry_openings,opens);layout['openings']=opens;layout['adjacency']=adjacency_from_openings(layout)
+     scope,flags=scope_and_flags(damage,layout['surfaces']);warnings+=semantic_warnings
++    topology=topology_quality(layout['rooms'],layout['adjacency'],args.tier,physical_stitch=args.tier=='lidar' or len(components)==1)
++    if topology['status']=='unresolved_physical_stitch':warnings.append('Physical whole-property stitch unresolved: inspect connectivity, component placement and overlaps.')
+     if args.staged_damage:warnings.append('Explicit staging-marker mode: not a benchmark of natural crack/flood recognition.')
+     result={'schema_version':'astra.provisional.v1','capture_id':args.capture_id or Path(args.input).stem,'tier':args.tier,
+         'status':'provisional_reconstruction' if layout['rooms'] else 'unresolved_geometry',
+-        'rooms':layout['rooms'],'surfaces':layout['surfaces'],'openings':opens,'adjacency':layout['adjacency'],'damage':damage,
++        'layout_quality':topology,'rooms':layout['rooms'],'surfaces':layout['surfaces'],'openings':opens,'adjacency':layout['adjacency'],'damage':damage,
+         'concealed_damage_flags':flags,'scope_items':scope,'warnings':warnings,'diagnostics':extra}
+     validate(result,args.schema);write_json(out/'result.json',result);render(result,out)
+     manifest=input_manifest(files,base);write_json(out/'input_manifest.json',manifest)
+-    provenance={'version':__version__,'code_revision':code_revision(),'config':vars(args),'platform':platform.platform(),
++    import importlib.metadata
++    dependencies={}
++    for package in ['numpy','scipy','opencv-python-headless','torch','torchvision','transformers','timm','matplotlib','imageio-ffmpeg']:
++        try:dependencies[package]=importlib.metadata.version(package)
++        except importlib.metadata.PackageNotFoundError:pass
++    provenance={'source_hashes':source_hashes,'dependencies':dependencies,'semantic_model_manifest':'semantics/candidates.json','version':__version__,'code_revision':start_revision,'config':vars(args),'platform':platform.platform(),
+         'python':platform.python_version(),'input_root':str(Path(base).resolve()),'input_manifest':'input_manifest.json',
+         'wall_time_seconds':time.perf_counter()-start,'max_rss_mb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024,
+         'ground_truth_used_for_inference':False,'intervals_calibrated':False,'models':extra.get('rgb_reconstruction',{}).get('model',None)}
+diff --git a/astra/quality.py b/astra/quality.py
+new file mode 100644
+index 0000000..4ed7da5
+--- /dev/null
++++ b/astra/quality.py
+@@ -0,0 +1,41 @@
++"""Observable layout checks; an empty adjacency graph is never declared correct."""
++import cv2,numpy as np
++from .layout import measure
++
++
++def topology_quality(rooms,adjacency,tier,physical_stitch=True):
++    if not rooms:return {'status':'unresolved','room_overlaps':[],'connected_components':0,'footprint_area':measure(None,'m2')}
++    polygons=[np.array(r['polygon']) for r in rooms];points=np.concatenate(polygons);origin=points.min(0)-.05;span=points.max(0)-origin+.05
++    cell=max(.02,float(span.max()/1800));size=np.ceil(span/cell).astype(int)+2
++    occupancy=np.zeros((size[1],size[0]),np.uint16);masks=[];overlaps=[]
++    for r,poly in zip(rooms,polygons):
++        mask=np.zeros(occupancy.shape,np.uint8);cv2.fillPoly(mask,[np.rint((poly-origin)/cell).astype(np.int32)],1)
++        for other,previous in masks:
++            other_poly=np.asarray(other['polygon'],np.float32);current_poly=np.asarray(poly,np.float32)
++            if cv2.isContourConvex(other_poly) and cv2.isContourConvex(current_poly):
++                area=float(cv2.intersectConvexConvex(other_poly,current_poly)[0])
++            else:
++                interior=cv2.erode(mask,np.ones((3,3),np.uint8));previous_interior=cv2.erode(previous,np.ones((3,3),np.uint8))
++                area=float(np.sum((interior>0)&(previous_interior>0))*cell*cell)
++            # Exact convex intersections, or an interior raster for concave fallback.
++
++            if area>max(.025,.01*min(r['floor_area']['value'],other['floor_area']['value'])):
++                overlaps.append({'rooms':[other['id'],r['id']],'overlap_m2':area})
++        masks.append((r,mask));occupancy+=mask
++    ids={r['id'] for r in rooms};graph={i:set() for i in ids}
++    for edge in adjacency:
++        a,b=edge['rooms']
++        if a in graph and b in graph:graph[a].add(b);graph[b].add(a)
++    unseen=set(ids);components=[]
++    while unseen:
++        todo=[unseen.pop()];component=[]
++        while todo:
++            n=todo.pop();component.append(n)
++            for q in graph[n]&unseen:unseen.remove(q);todo.append(q)
++        components.append(sorted(component))
++    area=float(np.sum(occupancy>0)*cell*cell)
++    valid=physical_stitch and not overlaps and len(components)==1
++    return {'status':'provisional_connected_layout' if valid else 'unresolved_physical_stitch','physical_coordinates_observed':physical_stitch,
++        'room_overlaps':overlaps,'connected_components':len(components),'components':components,
++        'footprint_area':measure(area,'m2',half_width=area*(.1 if tier=='lidar' else .6),method='raster_union_of_inferred_rooms'),
++        'raster_resolution_m':cell,'warning':'Connectivity is inferred evidence, not externally verified correctness; area intervals are uncalibrated.'}
+diff --git a/astra/rgb.py b/astra/rgb.py
+index 8eab421..0cf1ff3 100644
+--- a/astra/rgb.py
++++ b/astra/rgb.py
+@@ -2,8 +2,8 @@
+ from pathlib import Path
+ import cv2,numpy as np
+ from .io import photo_groups,selected_video,mp4_info,write_json
+-from .vision import MetricDepth,focal_guess
+-from .geometry import backproject,normal_map,transform,angle_from_normals,planar_rotation
++from .vision import MetricDepth,DepthPro,focal_guess
++from .geometry import backproject,normal_map,transform,angle_from_normals,planar_rotation,gravity_alignment
+ 
+ 
+ def prepare_views(path,tier,out,max_frames=40,rotation=0):
+@@ -31,6 +31,25 @@ def match_pair(a,b):
+     good=[m for pair in matches if len(pair)==2 for m,n in [pair] if m.distance<.72*n.distance]
+     if len(good)<15:return None
+     pa=np.float32([a['keypoints'][m.queryIdx].pt for m in good]);pb=np.float32([b['keypoints'][m.trainIdx].pt for m in good])
++    # Depth-assisted PnP also handles rotation-dominated views for which
++    # essential-matrix triangulation cannot establish stable translation.
++    px=np.rint(pa).astype(int)
++    za=a['depth'][np.clip(px[:,1],0,a['depth'].shape[0]-1),np.clip(px[:,0],0,a['depth'].shape[1]-1)]
++    xyz=(np.c_[pa,np.ones(len(pa))]@np.linalg.inv(a['K']).T)*za[:,None]
++    valid=np.isfinite(xyz).all(1)&(za>.25)&(za<15)
++    if valid.sum()>=20:
++        ok,rv,tv,inliers=cv2.solvePnPRansac(xyz[valid].astype(np.float32),pb[valid],b['K'],None,
++            iterationsCount=300,reprojectionError=2.5,confidence=.999,flags=cv2.SOLVEPNP_EPNP)
++        if ok and inliers is not None and len(inliers)>=20 and len(inliers)/valid.sum()>.4:
++            use=np.where(valid)[0][inliers.ravel()]
++            rv,tv=cv2.solvePnPRefineLM(xyz[use],pb[use],b['K'],None,rv,tv)
++            R=cv2.Rodrigues(rv)[0];T=np.eye(4);T[:3,:3]=R;T[:3,3]=tv.ravel()
++            if np.linalg.norm(tv)<8:
++                proj,_=cv2.projectPoints(xyz[use],rv,tv,b['K'],None)
++                error=float(np.median(np.linalg.norm(proj[:,0]-pb[use],axis=1)))
++                return {'from':a['id'],'to':b['id'],'T_to_from':T,'inliers':len(use),'matches':len(good),
++                    'scale':1.,'scale_iqr':error/2.5,'pose_source':'depth_assisted_PnP','reprojection_median_px':error,
++                    'points_a':pa[use],'points_b':pb[use]}
+     na=cv2.undistortPoints(pa[:,None,:],a['K'],None)[:,0];nb=cv2.undistortPoints(pb[:,None,:],b['K'],None)[:,0]
+     E,mask=cv2.findEssentialMat(na,nb,np.eye(3),method=cv2.RANSAC,prob=.999,threshold=.0025)
+     if E is None or E.shape!=(3,3):return None
+@@ -47,21 +66,47 @@ def match_pair(a,b):
+     return {'from':a['id'],'to':b['id'],'T_to_from':T,'inliers':int(count),'matches':len(good),'scale':scale,'scale_iqr':spread,'points_a':pa[use],'points_b':pb[use]}
+ 
+ 
+-def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotation=0):
++def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotation=0,depth_model='small',geometry_bridges=False,scale_refinement=False):
+     out=Path(out);out.mkdir(parents=True,exist_ok=True);views=prepare_views(path,tier,out,max_frames,rotation)
+-    model=MetricDepth(models,device);sift=cv2.SIFT_create(nfeatures=1800)
++    model=(DepthPro(models,device,quantized=depth_model=='depth-pro-int8') if depth_model.startswith('depth-pro') else MetricDepth(models,device));sift=cv2.SIFT_create(nfeatures=1800)
++    hybrid_scale=None
++    if depth_model=='hybrid':
++        anchor_model=DepthPro(models,device);anchors=np.unique(np.linspace(0,len(views)-1,min(3,len(views)),dtype=int));ratios=[];focals=[]
++        for idx in anchors:
++            v=views[idx];metric,f=anchor_model.predict_with_focal(v['bgr'],out/'depth_cache');small=model.predict(v['bgr'],out/'depth_cache')
++            valid=np.isfinite(metric)&np.isfinite(small)&(metric>.3)&(metric<10)&(small>.3)&(small<15)
++            ratio=float(np.median(metric[valid]/small[valid]));ratios.append(ratio);focals.append(float(f))
++            print(f'RGB metric anchor {idx+1}/{len(views)}: depth ratio {ratio:.3f}, focal {f:.1f}px',flush=True)
++        hybrid_scale=np.interp(np.arange(len(views)),anchors,ratios)
++        focal=float(np.median(focals))
++        for v in views:v['K'][0,0]=v['K'][1,1]=focal;v['intrinsics_method']='median_RGB_DepthPro_anchor_focal'
++        model.description={'name':'RGB_DepthPro_anchors_with_small_depth','dense_model':model.description,'anchor_model':anchor_model.description,'anchor_view_ids':anchors.tolist(),'anchor_depth_ratios':ratios,'anchor_focal_px':focals,'scale_interpolation':'linear_by_view_order','warning':'Image-model transfer, not survey calibration'}
++        del anchor_model
++        import gc;gc.collect()
++    elif tier=='video' and depth_model=='small':
++        # The capture protocol fixes the lens/zoom. Independent noisy focal guesses
++        # should not invent frame-to-frame camera zoom.
++        focal=float(np.median([v['K'][0,0] for v in views]))
++        for v in views:v['K'][0,0]=v['K'][1,1]=focal;v['intrinsics_method']='shared_video_focal_prior'
++
+     for v in views:
+-        v['depth']=model.predict(v['bgr'],out/'depth_cache');v['keypoints'],v['desc']=sift.detectAndCompute(cv2.cvtColor(v['bgr'],cv2.COLOR_BGR2GRAY),None)
++        if depth_model.startswith('depth-pro'):
++            v['depth'],f=model.predict_with_focal(v['bgr'],out/'depth_cache');v['K'][0,0]=f;v['K'][1,1]=f;v['intrinsics_method']='DepthPro_learned_focal'
++        else:
++            v['depth']=model.predict(v['bgr'],out/'depth_cache')
++            if hybrid_scale is not None:v['depth']=v['depth']*hybrid_scale[v['id']]
++        v['keypoints'],v['desc']=sift.detectAndCompute(cv2.cvtColor(v['bgr'],cv2.COLOR_BGR2GRAY),None)
++        write_json(out/'progress.json',{'phase':'depth_and_features','completed':v['id']+1,'total':len(views),'depth_model':depth_model})
+         print(f'{tier}: depth and features {v["id"]+1}/{len(views)}',flush=True)
+     edges=[]
+     for i,a in enumerate(views):
+-        if a['desc'] is None:continue
+         for j in range(i+1,len(views)):
+             b=views[j]
+-            if b['desc'] is None:continue
+             if tier=='video' and j-i>3 and (j-i<10 or j%8 or i%8):continue
+-            edge=match_pair(a,b)
++            edge=match_pair(a,b) if a['desc'] is not None and b['desc'] is not None else None
++            if edge is None and tier=='video' and geometry_bridges and j==i+1:edge=depth_geometry_pair(a,b)
+             if edge:edges.append(edge)
++    scale_diagnostics=refine_depth_scales(views,edges,anchors if depth_model=='hybrid' else ()) if scale_refinement else {'status':'disabled'}
+     # Maximum-support spanning forest. Disconnected components remain explicit.
+     poses=[None]*len(views);component=[None]*len(views);cid=0;used=[]
+     while any(p is None for p in poses):
+@@ -93,7 +138,11 @@ def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotatio
+                 weight=min(2.,np.sqrt(e['inliers']/30)) / (1+e['scale_iqr']/max(e['scale'],1e-6))
+                 rr.append(np.r_[Rotation.from_matrix(pred[:3,:3]@target[:3,:3].T).as_rotvec(),(pred[:3,3]-target[:3,3])*.3]*weight)
+             return np.concatenate(rr)
+-        fit=least_squares(residual,initial.ravel(),loss='soft_l1',f_scale=.05,max_nfev=15)
++        from scipy.sparse import lil_matrix
++        sp=lil_matrix((6+6*len(ce),6*len(ids)),dtype=int);sp[:6,:6]=1
++        for k,e in enumerate(ce):
++            a,b=local[e['from']],local[e['to']];sp[6+6*k:12+6*k,6*a:6*a+6]=1;sp[6+6*k:12+6*k,6*b:6*b+6]=1
++        fit=least_squares(residual,initial.ravel(),jac_sparsity=sp.tocsr(),loss='soft_l1',f_scale=.05,max_nfev=20)
+         for i,T in zip(ids,unpack(fit.x)):poses[i]=T
+         refined.append({'component':c,'edges':len(ce),'cost':float(fit.cost)})
+     components=[]
+@@ -102,14 +151,86 @@ def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotatio
+         for k,i in enumerate(ids):
+             v=views[i];pc=backproject(v['depth'],v['K']);nm=normal_map(pc);valid=(v['depth']>.25)&(v['depth']<12)
+             sel=valid[::5,::5];p=pc[::5,::5][sel];n=nm[::5,::5][sel];points.append(transform(p,poses[i]));normals.append(n@poses[i][:3,:3].T);fids.append(np.full(len(p),k))
+-        p=np.concatenate(points);n=np.concatenate(normals);A=planar_rotation(angle_from_normals(n));T=np.eye(4);T[:3,:3]=A
++        p=np.concatenate(points);n=np.concatenate(normals);G=gravity_alignment(n);A=planar_rotation(angle_from_normals(n@G.T))@G;T=np.eye(4);T[:3,:3]=A
+         ps=np.array([T@poses[i] for i in ids]);p=p@A.T;n=n@A.T
+         components.append({'points':p,'normals':n,'frame_ids':np.concatenate(fids).astype(int),'poses':ps,'view_ids':ids})
+         for i,pose in zip(ids,ps):views[i]['pose']=pose;views[i]['component']=c
+     summary={'model':model.description,'view_count':len(views),'connected_components':cid,'registered_edges':len(edges),
+-        'pose_method':'essential_matrix_metric_depth_scaled_pose_graph','pose_graph_refinements':refined,'scale_status':'learned_prior_not_survey_calibrated',
++        'scale_refinement':scale_diagnostics,'pose_method':'depth_PnP_or_essential_with_metric_prior_and_pose_graph','pose_graph_refinements':refined,'scale_status':'learned_prior_not_survey_calibrated',
+         'views':[{'id':v['id'],'source':v['source'],'room_hint':v['room_hint'],'component':v['component'],'K':v['K'],'pose':v['pose'],'intrinsics_method':v['intrinsics_method']} for v in views],
+         'edges':[{k:v for k,v in e.items() if k not in ['points_a','points_b']} for e in edges],
+         'warnings':['Metric depth and focal priors may have large systematic scale bias.','Disconnected components have no observed relative placement.']}
+     write_json(out/'rgb_reconstruction.json',summary)
++    (out/'components').mkdir(exist_ok=True)
++    for ci,g in enumerate(components):np.savez_compressed(out/'components'/f'{ci:03d}.npz',**g)
++    write_json(out/'progress.json',{'phase':'geometry_complete','views':len(views),'components':len(components)})
+     return components,views,summary
++
++
++def depth_geometry_pair(a,b):
++    """Weak temporal RGB-depth bridge; require multiple plane directions.
++
++    Used only between consecutive video samples. A single featureless wall is
++    not enough to establish a camera pose, even if nearest-point error is low.
++    """
++    from scipy.spatial import cKDTree
++    from scipy.spatial.transform import Rotation
++    from .geometry import rigid_fit,voxel_downsample
++    clouds=[];bases=[]
++    for v in [a,b]:
++        pc=backproject(v['depth'],v['K']);nm=normal_map(pc);good=(v['depth']>.3)&(v['depth']<8.)
++        ns=nm[::12,::12][good[::12,::12]];p=pc[::12,::12][good[::12,::12]]
++        if len(p)<200:return None
++        if np.linalg.eigvalsh(ns.T@ns/len(ns)).min()<.025:return None
++        R=np.diag([1.,-1.,-1.]);G=gravity_alignment(ns@R.T);A=planar_rotation(angle_from_normals(ns@R.T@G.T))@G@R
++        B=np.eye(4);B[:3,:3]=A;bases.append(B);clouds.append(voxel_downsample(p@A.T,.06))
++    target=clouds[0];tree=cKDTree(target);best=None
++    for quarter in [0,1,3,2]:
++        R=planar_rotation(quarter*np.pi/2);B=bases[1].copy();B[:3,:3]=R@B[:3,:3];source=clouds[1]@R.T;T=np.eye(4)
++        for _ in range(15):
++            moving=transform(source,T);dist,indices=tree.query(moving);use=dist<.45
++            if use.sum()<150:break
++            use&=dist<=np.quantile(dist[use],.75)
++            delta=rigid_fit(moving[use],target[indices[use]]);T=delta@T
++            if np.linalg.norm(delta[:3,3])<.001:break
++        moving=transform(source,T);dist,_=tree.query(moving);overlap=float(np.mean(dist<.18));rmse=float(np.sqrt(np.mean(np.minimum(dist,.45)**2)))
++        if overlap<.6 or rmse>.18 or np.linalg.norm(T[:3,3])>1. or Rotation.from_matrix(T[:3,:3]).magnitude()>.20:continue
++        score=rmse+.04*np.linalg.norm(T[:3,3])
++        if best is None or score<best[0]:best=(score,np.linalg.inv(B)@np.linalg.inv(T)@bases[0],overlap,rmse,quarter)
++    if best is None:return None
++    _,relative,overlap,rmse,quarter=best
++    return {'from':a['id'],'to':b['id'],'T_to_from':relative,'inliers':30,'matches':0,'scale':1.,'scale_iqr':1.,
++        'pose_source':'weak_temporal_learned_depth_geometry','geometry_overlap':overlap,'geometry_rmse_m':rmse,'quarter_turn_alias':quarter,
++        'points_a':np.empty((0,2)),'points_b':np.empty((0,2))}
++
++
++def refine_depth_scales(views,edges,anchors=()):
++    """Align per-view learned scale through matched 3-D points, preserving priors."""
++    from scipy.sparse import lil_matrix
++    from scipy.optimize import lsq_linear
++    factors=[]
++    for e in edges:
++        if len(e['points_a'])<15:continue
++        clouds=[]
++        for key,vid in [('points_a',e['from']),('points_b',e['to'])]:
++            v=views[vid];uv=e[key];xy=np.rint(uv).astype(int);d=v['depth'][np.clip(xy[:,1],0,v['depth'].shape[0]-1),np.clip(xy[:,0],0,v['depth'].shape[1]-1)]
++            clouds.append((np.c_[uv,np.ones(len(uv))]@np.linalg.inv(v['K']).T)*d[:,None])
++        a,b=clouds;valid=np.isfinite(a).all(1)&np.isfinite(b).all(1)&(a[:,2]>.3)&(b[:,2]>.3)&(a[:,2]<12)&(b[:,2]<12)
++        a=a[valid]@e['T_to_from'][:3,:3].T;b=b[valid]
++        if len(a)<15:continue
++        a-=np.median(a,axis=0);b-=np.median(b,axis=0);use=np.ones(len(a),bool);scale=1.
++        for _ in range(3):
++            denom=np.sum(a[use]**2)
++            if denom<.1:break
++            scale=float(np.sum(a[use]*b[use])/denom);error=np.linalg.norm(a*scale-b,axis=1);use=error<=np.quantile(error,.75)
++        error=np.linalg.norm(a*scale-b,axis=1);relative=float(np.median(error)/(np.median(np.linalg.norm(b,axis=1))+.1))
++        if .4<scale<2.5 and relative<.25:factors.append((e['from'],e['to'],np.log(scale),relative))
++    if not factors:return {'status':'no_consistent_scale_factors','scale_factors':[1.]*len(views)}
++    n=len(views);A=lil_matrix((n+len(anchors)+len(factors),n));b=np.zeros(A.shape[0]);A[:n,:n]=np.eye(n)*.5;row=n
++    for i in anchors:A[row,i]=10.;row+=1
++    for i,j,target,error in factors:
++        weight=2./(1+error*4);A[row,i]=weight;A[row,j]=-weight;b[row]=weight*target;row+=1
++    fit=lsq_linear(A.tocsr(),b,bounds=(-np.log(2),np.log(2)),tol=1e-6,max_iter=100);scales=np.exp(fit.x)
++    for v,s in zip(views,scales):v['depth']=v['depth']*s
++    for e in edges:e['T_to_from'][:3,3]*=scales[e['from']]
++    return {'status':'relative_learned_scale_refined','verified_factors':len(factors),'anchor_view_ids':list(map(int,anchors)),'scale_factors':scales.tolist(),'warning':'Self-consistency, not independent absolute metric calibration'}
+diff --git a/astra/runtime.py b/astra/runtime.py
+new file mode 100644
+index 0000000..0d889ac
+--- /dev/null
++++ b/astra/runtime.py
+@@ -0,0 +1,30 @@
++"""Progress output must not abort a computation when a terminal disconnects."""
++from pathlib import Path
++import sys,threading
++
++
++class ResilientLogStream:
++    def __init__(self,stream,log):
++        self.stream=stream;self.log=log;self.disconnected=False;self.lock=threading.Lock()
++    @property
++    def encoding(self):return getattr(self.stream,'encoding','utf-8')
++    def write(self,text):
++        with self.lock:
++            self.log.write(text);self.log.flush()
++            if not self.disconnected:
++                try:self.stream.write(text);self.stream.flush()
++                except (BrokenPipeError,ValueError):self.disconnected=True
++        return len(text)
++    def flush(self):
++        self.log.flush()
++        if not self.disconnected:
++            try:self.stream.flush()
++            except (BrokenPipeError,ValueError):self.disconnected=True
++    def isatty(self):return False
++    def fileno(self):return self.stream.fileno()
++
++
++def install_progress_log(path):
++    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
++    log=path.open('a',buffering=1)
++    sys.stdout=ResilientLogStream(sys.stdout,log);sys.stderr=ResilientLogStream(sys.stderr,log)
+diff --git a/astra/schema.py b/astra/schema.py
+index e549e3e..b0dd851 100644
+--- a/astra/schema.py
++++ b/astra/schema.py
+@@ -22,6 +22,23 @@ def validate(result,official=None):
+     for kind in ['openings','damage','scope_items','concealed_damage_flags']:
+         for item in result[kind]:
+             if item['surface_id'] not in ids:raise ValueError(f'Orphan {kind} surface reference')
++    room_ids=[r['id'] for r in result['rooms']]
++    if len(room_ids)!=len(set(room_ids)):raise ValueError('Duplicate room IDs')
++    surface_map={s['id']:s for s in result['surfaces']}
++    for surface in result['surfaces']:
++        if surface['room_id'] not in room_ids:raise ValueError('Orphan surface room reference')
++    for kind in ['openings','damage','scope_items','concealed_damage_flags']:
++        item_ids=[x['id'] for x in result[kind]]
++        if len(item_ids)!=len(set(item_ids)):raise ValueError(f'Duplicate {kind} IDs')
++        for x in result[kind]:
++            if 'room_id' in x and x['room_id']!=surface_map[x['surface_id']]['room_id']:raise ValueError('Room/surface association mismatch')
++    opening_ids={x['id'] for x in result['openings']};damage_ids={x['id'] for x in result['damage']}
++    for edge in result['adjacency']:
++        if not set(edge['rooms'])<=set(room_ids) or not set(edge['opening_ids'])<=opening_ids:raise ValueError('Orphan adjacency reference')
++    for surface in result['surfaces']:
++        if not set(surface['damage_ids'])<=damage_ids:raise ValueError('Orphan surface damage reference')
++    for kind in ['scope_items','concealed_damage_flags']:
++        if any(x['damage_id'] not in damage_ids for x in result[kind]):raise ValueError('Orphan damage reference')
+     def check(o):
+         if isinstance(o,dict):
+             if 'value' in o and 'interval' in o:
+@@ -31,3 +48,23 @@ def validate(result,official=None):
+         elif isinstance(o,list):
+             for v in o:check(v)
+     check(result)
++
++# The local contract is deliberately explicit; an official schema can be supplied
++# as a second validation layer, without pretending these two contracts are equal.
++SCHEMA['$defs'].update({
++ 'point':{'type':'array','minItems':2,'maxItems':2,'items':{'type':'number'}},
++ 'wall':{'type':'object','required':['surface_id','start','end','length'],
++         'properties':{'surface_id':{'type':'string'},'start':{'$ref':'#/$defs/point'},'end':{'$ref':'#/$defs/point'},'length':{'$ref':'#/$defs/measurement'}}},
++ 'surface':{'type':'object','required':['id','room_id','kind','gross_area','visibility','damage_ids'],
++            'properties':{'id':{'type':'string'},'room_id':{'type':'string'},'kind':{'enum':['wall','floor','ceiling']},'gross_area':{'$ref':'#/$defs/measurement'},'damage_ids':{'type':'array','items':{'type':'string'}}}},
++ 'opening':{'type':'object','required':['id','surface_id','room_id','kind','width','height','status','evidence','surface_uv_bounds'],
++            'properties':{'id':{'type':'string'},'surface_id':{'type':'string'},'room_id':{'type':'string'},'kind':{'enum':['doorway','window']},'width':{'$ref':'#/$defs/measurement'},'height':{'$ref':'#/$defs/measurement'},'evidence':{'type':'array','items':{'type':'string'}}}},
++ 'damage':{'type':'object','required':['id','surface_id','room_id','class','area','extent_width','extent_height','surface_polygon','status','evidence'],
++           'properties':{'area':{'$ref':'#/$defs/measurement'},'extent_width':{'$ref':'#/$defs/measurement'},'extent_height':{'$ref':'#/$defs/measurement'},'class':{'enum':['crack','water_logging/floods']},'surface_polygon':{'type':'array','minItems':3,'items':{'$ref':'#/$defs/point'}}}},
++ 'adjacency':{'type':'object','required':['rooms','opening_ids','status'],'properties':{'rooms':{'type':'array','minItems':2,'maxItems':2,'uniqueItems':True,'items':{'type':'string'}},'opening_ids':{'type':'array','minItems':2,'items':{'type':'string'}}}},
++ 'scope':{'type':'object','required':['id','surface_id','damage_id','action','quantity','rule','provisional'],'properties':{'quantity':{'$ref':'#/$defs/measurement'}}},
++ 'flag':{'type':'object','required':['id','surface_id','damage_id','rule','rule_inputs','message','status','evidence']}
++})
++for name,definition in [('surfaces','surface'),('openings','opening'),('damage','damage'),('adjacency','adjacency'),('scope_items','scope'),('concealed_damage_flags','flag')]:
++    SCHEMA['properties'][name]={'type':'array','items':{'$ref':f'#/$defs/{definition}'}}
++SCHEMA['properties']['rooms']['items']['properties']['walls']={'type':'array','minItems':3,'items':{'$ref':'#/$defs/wall'}}
+diff --git a/astra/semantics.py b/astra/semantics.py
+index a202096..dc83a7e 100644
+--- a/astra/semantics.py
++++ b/astra/semantics.py
+@@ -67,13 +67,13 @@ def staged_regions(image):
+     hsv=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);h,w=hsv.shape[:2];results=[]
+     # The user's colored props are declared staging, so this mode assesses their
+     # projection/extent only and must not be scored as natural-damage recognition.
+-    ranges=[('staged_crack_marker',(0,0,0),(179,255,55)),('staged_flood_marker',(5,65,40),(30,230,190))]
++    ranges=[('staged_crack_marker',(0,0,0),(179,255,100)),('staged_flood_marker',(5,35,40),(35,230,210))]
+     for label,lo,hi in ranges:
+         mask=cv2.inRange(hsv,np.array(lo),np.array(hi));mask=cv2.morphologyEx(mask,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))
+         contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+         for c in contours:
+             area=cv2.contourArea(c);x,y,bw,bh=cv2.boundingRect(c)
+-            if not .001*h*w<area<.055*h*w or min(bw,bh)<12:continue
++            if not .00015*h*w<area<.045*h*w or min(bw,bh)<8 or max(bw,bh)/min(bw,bh)>6:continue
+             approx=cv2.approxPolyDP(c,.025*cv2.arcLength(c,True),True)
+             if not 4<=len(approx)<=6 or area/(bw*bh)<.7:continue
+             results.append({'label':label,'score':None,'box':[x,y,x+bw,y+bh],'status':'staging_marker_candidate','contour':c[:,0].tolist()})
+@@ -95,7 +95,15 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
+             c={**c,'view_id':str(v.get('id',vi)),'source':v.get('source',v.get('image')),'rotation':angle};box=c['box'];x1,y1,x2,y2=box
+             corners=inverse_pixels([[x1,y1],[x2,y1],[x2,y2],[x1,y2]],angle,w,h)
+             centre=corners.mean(0);hit=ray_surface(centre,K,pose,layout['surfaces'],v.get('room_ids')) if pose is not None else None
+-            label=c['label'].lower();is_open=any(t in label for t in ['door','window','opening']);is_damage=any(t in label for t in ['crack','water','stain','flood'])
++            if hit and 'sensor_depth' in v:
++                depth=v['sensor_depth'];dh,dw=depth.shape
++                dx=int(np.clip(round(centre[0]*dw/w),0,dw-1));dy=int(np.clip(round(centre[1]*dh/h),0,dh-1))
++                observed=float(depth[dy,dx]);confidence=int(v['sensor_confidence'][dy,dx])
++                expected=float((hit[2]-pose[:3,3])@pose[:3,2])
++                c['depth_evidence']={'observed_camera_z_m':observed,'wall_camera_z_m':expected,'confidence':confidence}
++                if confidence>=1 and observed>.2 and observed<expected-max(.12,.025*expected):
++                    c['projection_rejected']='foreground_object_in_front_of_wall';hit=None
++            label=c['label'].lower();is_open=any(t in label for t in ['door','window','opening']);is_damage=any(t in label for t in ['crack','water','stain','flood']) and (not staged or label.startswith('staged_'))
+             cv2.rectangle(overlay,(int(x1),int(y1)),(int(x2),int(y2)),(0,180,255),2)
+             cv2.putText(overlay,c['label'],(int(x1),max(15,int(y1)-4)),cv2.FONT_HERSHEY_SIMPLEX,.4,(0,0,255),1)
+             if hit:
+@@ -103,7 +111,9 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
+                 c['surface_id']=s['id'];c['surface_uv_box']=uv.tolist() if good.all() else None
+                 if good.all():
+                     low=uv.min(0);high=uv.max(0);width,height=high-low
+-                    if is_open and .35<width<3.5 and .5<height<3.5:
++                    wall_length=float(np.linalg.norm(np.array(s['end'])-s['start']));wall_height=s['height']['value']
++                    contained=(low[0]>=-.05 and high[0]<=wall_length+.05 and low[1]>=-.15 and (wall_height is None or high[1]<=wall_height+.15))
++                    if is_open and contained and .35<width<3.5 and .5<height<3.5:
+                         kind='window' if 'window' in label else 'doorway';candidate={'id':f'opening_{len(openings)+1}','surface_id':s['id'],'room_id':s['room_id'],'kind':kind,
+                             'surface_uv_bounds':[low.tolist(),high.tolist()],'width':measure(width,half_width=max(.08,width*.12)),
+                             'height':measure(height,half_width=max(.08,height*.12)),'status':'provisional_visual_candidate','evidence':[c['source']],'support_views':1}
+@@ -132,16 +142,26 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
+         print(f'Semantics {vi+1}/{len(views)}: {len(candidates)} candidates',flush=True)
+     # Surface raster union merges repeated views, preserving one region per class/surface.
+     merged=[]
+-    for sid,cls in sorted({(d['surface_id'],d['class']) for d in damage}):
+-        ds=[d for d in damage if d['surface_id']==sid and d['class']==cls];alluv=np.concatenate([d['surface_polygon'] for d in ds]);origin=alluv.min(0);span=alluv.max(0)-origin
++    for sid,cls,status in sorted({(d['surface_id'],d['class'],d['status']) for d in damage}):
++        ds=[d for d in damage if d['surface_id']==sid and d['class']==cls and d['status']==status]
++        surface=next(s for s in layout['surfaces'] if s['id']==sid)
++        origin=np.zeros(2);span=np.array([np.linalg.norm(np.array(surface['end'])-surface['start']),surface['height']['value'] or 3.])
+         cell=max(.005,float(span.max()/1200));size=np.ceil(span/cell).astype(int)+3;mask=np.zeros((size[1],size[0]),np.uint8)
+         for d in ds:cv2.fillPoly(mask,[np.rint((np.array(d['surface_polygon'])-origin)/cell).astype(np.int32)],1)
+         contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+         for contour in contours:
+             poly=contour[:,0]*cell+origin;area=float(cv2.contourArea(contour)*cell*cell)
+-            if area<=0:continue
+-            item={**ds[0],'id':f'damage_{len(merged)+1}','surface_polygon':poly.tolist(),'area':measure(area,'m2',half_width=max(.01,area*.4)),
+-                  'evidence':sorted({e for d in ds for e in d['evidence']})};merged.append(item)
++            if area<=0 or (status=='staged_marker_assessment' and area<.002):continue
++            component_mask=np.zeros_like(mask);cv2.fillPoly(component_mask,[contour],1)
++            contributors=[]
++            for d in ds:
++                support=np.zeros_like(mask);cv2.fillPoly(support,[np.rint((np.array(d['surface_polygon'])-origin)/cell).astype(np.int32)],1)
++                if np.any((support>0)&(component_mask>0)):contributors.append(d)
++            if not contributors:continue
++            item={**contributors[0],'id':f'damage_{len(merged)+1}','surface_polygon':poly.tolist(),'area':measure(area,'m2',half_width=max(.01,area*.4)),
++                  'extent_width':measure(float(np.ptp(poly[:,0])),half_width=max(.05,float(np.ptp(poly[:,0]))*.15)),
++                  'extent_height':measure(float(np.ptp(poly[:,1])),half_width=max(.05,float(np.ptp(poly[:,1]))*.15)),
++                  'evidence':sorted({e for d in contributors for e in d['evidence']})};merged.append(item)
+     write_json(out/'candidates.json',{'candidates':all_candidates,'warnings':warnings,'detector':detector.description if detector else None,'staged_mode':staged})
+     return openings,merged,warnings
+ 
+diff --git a/astra/vision.py b/astra/vision.py
+index eb59b37..09bb14d 100644
+--- a/astra/vision.py
++++ b/astra/vision.py
+@@ -1,6 +1,6 @@
+ """Public local models. No API calls, truth inputs, or color-to-damage rules."""
+ from pathlib import Path
+-import sys, time
++import sys, time, json
+ import cv2
+ import numpy as np
+ from .io import sha256,write_json
+@@ -28,6 +28,48 @@ class MetricDepth:
+         return d
+ 
+ 
++class DepthPro:
++    """Apple metric depth with its own focal estimate; entirely local inference."""
++    def __init__(self,models=None,device='cpu',quantized=False):
++        import torch
++        from dataclasses import replace
++        self.torch=torch;torch.set_num_threads(4);self.device=device
++        root=Path(models or ROOT/'models');source=root/'depth-pro-source'/'src';weights=root/'depth_pro.pt'
++        if not source.exists() or not weights.exists():raise RuntimeError('Depth Pro assets missing. Run: python scripts/fetch_models.py --depth-pro')
++        sys.path.insert(0,str(source))
++        # Load the official numerical module directly. Its package initializer
++        # also imports an optional HEIF reader; inputs here are already arrays.
++        import importlib.util
++        spec=importlib.util.spec_from_file_location('_astra_depth_pro',source/'depth_pro/depth_pro.py',submodule_search_locations=[str(source/'depth_pro')])
++        depth_pro=importlib.util.module_from_spec(spec);sys.modules[spec.name]=depth_pro;spec.loader.exec_module(depth_pro)
++        cfg=replace(depth_pro.DEFAULT_MONODEPTH_CONFIG_DICT,checkpoint_uri=str(weights))
++        self.model,self.preprocess=depth_pro.create_model_and_transforms(config=cfg,device=torch.device(device),precision=torch.float32)
++        self.model.eval();self.fingerprint=sha256(weights)
++        if quantized:
++            if device!='cpu':raise ValueError('Dynamic int8 quantization is CPU-only')
++            self.model=torch.ao.quantization.quantize_dynamic(self.model,{torch.nn.Linear},dtype=torch.qint8,inplace=True)
++        self.cache_fingerprint=self.fingerprint+(':dynamic_int8' if quantized else ':float32')
++        self.description={'quantization':'dynamic_int8' if quantized else 'none','name':'Apple Depth Pro','weights_sha256':self.fingerprint,'device':device,'license':'Apple supplied license','focal_method':'learned_from_image'}
++    def predict_with_focal(self,bgr,cache=None):
++        from PIL import Image
++        key=__import__('hashlib').sha256(bgr.tobytes()+self.cache_fingerprint.encode()).hexdigest()
++        path=Path(cache)/(key+'.npz') if cache else None
++        if path and not path.exists():
++            # Exact content/model/precision cache replay; no reference labels.
++            import shutil
++            prior=next(iter(sorted((ROOT/'runs').glob(f'*/geometry/depth_cache/{key}.npz'))),None)
++            if prior is not None:
++                path.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(prior,path)
++        if path and path.exists():
++            self.description['cache_hits']=self.description.get('cache_hits',0)+1
++            data=np.load(path);return data['depth'],float(data['focal'])
++        image=Image.fromarray(cv2.cvtColor(bgr,cv2.COLOR_BGR2RGB))
++        with self.torch.inference_mode():pred=self.model.infer(self.preprocess(image),f_px=None)
++        d=pred['depth'].detach().cpu().numpy();f=float(pred['focallength_px'].detach().cpu())
++        if path:path.parent.mkdir(parents=True,exist_ok=True);np.savez_compressed(path,depth=d,focal=f)
++        return d,f
++
++
+ class Detector:
+     def __init__(self,path=None,device='cpu'):
+         import torch
+@@ -40,12 +82,16 @@ class Detector:
+         self.description={'name':'GroundingDINO-tiny','weights_sha256':sha256(path/'model.safetensors'),'device':device}
+     def predict(self,bgr,text='door . doorway . window . wall crack . water damage . water stain .',threshold=.24):
+         from PIL import Image
++        key=__import__('hashlib').sha256(bgr.tobytes()+json.dumps([self.description,text,threshold],sort_keys=True).encode()).hexdigest()
++        cache=ROOT/'.cache/detections'/f'{key}.json'
++        if cache.exists():return json.loads(cache.read_text())
+         image=Image.fromarray(cv2.cvtColor(bgr,cv2.COLOR_BGR2RGB))
+         inputs=self.processor(images=image,text=text,return_tensors='pt').to(self.device)
+         with self.torch.inference_mode():outputs=self.model(**inputs)
+         result=self.processor.post_process_grounded_object_detection(outputs,inputs.input_ids,threshold=threshold,text_threshold=.22,target_sizes=[image.size[::-1]])[0]
+         names=result.get('text_labels',result.get('labels',[]))
+-        return [{'label':str(label),'score':float(score),'box':box.cpu().tolist(),'status':'unverified_candidate'} for label,score,box in zip(names,result['scores'],result['boxes'])]
++        candidates=[{'label':str(label),'score':float(score),'box':box.cpu().tolist(),'status':'unverified_candidate'} for label,score,box in zip(names,result['scores'],result['boxes'])]
++        write_json(cache,candidates);return candidates
+ 
+ 
+ def focal_guess(image):
+diff --git a/scripts/fetch_models.py b/scripts/fetch_models.py
+index 64ba273..9d0a510 100644
+--- a/scripts/fetch_models.py
++++ b/scripts/fetch_models.py
+@@ -38,4 +38,24 @@ def main():
+               'weights_url':url,'weights_sha256':hashlib.file_digest((base/name).open('rb'),'sha256').hexdigest()}
+     (base/'depth_manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+     print('Metric depth ready:',base/name)
+-if __name__=='__main__':main()
++def depth_pro():
++    base=ROOT/'models';base.mkdir(exist_ok=True)
++    lock=base/'depth_pro_source.json'
++    if lock.exists():rev=json.loads(lock.read_text())['revision']
++    else:
++        with urllib.request.urlopen('https://api.github.com/repos/apple-aiml-research/ml-depth-pro/commits/main',timeout=30) as r:rev=json.load(r)['sha']
++        lock.write_text(json.dumps({'revision':rev,'source':'https://github.com/apple-aiml-research/ml-depth-pro'},indent=2))
++    archive=base/f'depth-pro-{rev}.tar.gz'
++    download(f'https://codeload.github.com/apple-aiml-research/ml-depth-pro/tar.gz/{rev}',archive)
++    target=base/'depth-pro-source'
++    if not target.exists():
++        stage=base/'pro-source-stage';stage.mkdir(exist_ok=True)
++        with tarfile.open(archive) as tar:tar.extractall(stage,filter='data')
++        next(p for p in stage.iterdir() if p.is_dir()).rename(target);stage.rmdir()
++    download('https://ml-site.cdn-apple.com/models/depth-pro/depth_pro.pt',base/'depth_pro.pt')
++    (base/'depth_pro_manifest.json').write_text(json.dumps({'model':'Apple Depth Pro','source_revision':rev,'license':'Apple supplied license',
++        'weights_sha256':hashlib.file_digest((base/'depth_pro.pt').open('rb'),'sha256').hexdigest()},indent=2))
++    print('Depth Pro ready')
++if __name__=='__main__':
++    import sys
++    depth_pro() if '--depth-pro' in sys.argv else main()
