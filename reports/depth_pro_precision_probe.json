@@ -1,0 +1,11 @@
+{
+  "input": "first sorted three_room kitchen photo resized to 448x600",
+  "float32_focal_px": 236.58096313476562,
+  "int8_focal_px": 462.1650695800781,
+  "median_relative_depth_difference": 0.7208366394042969,
+  "float32_total_s": 225.6189,
+  "int8_total_s": 230.4502,
+  "includes_model_load": true,
+  "concurrent_other_work": true,
+  "decision": "reject int8 for reported benchmark; numerical fidelity changed materially"
+}

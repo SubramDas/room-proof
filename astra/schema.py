@@ -22,6 +22,23 @@ def validate(result,official=None):
     for kind in ['openings','damage','scope_items','concealed_damage_flags']:
         for item in result[kind]:
             if item['surface_id'] not in ids:raise ValueError(f'Orphan {kind} surface reference')
+    room_ids=[r['id'] for r in result['rooms']]
+    if len(room_ids)!=len(set(room_ids)):raise ValueError('Duplicate room IDs')
+    surface_map={s['id']:s for s in result['surfaces']}
+    for surface in result['surfaces']:
+        if surface['room_id'] not in room_ids:raise ValueError('Orphan surface room reference')
+    for kind in ['openings','damage','scope_items','concealed_damage_flags']:
+        item_ids=[x['id'] for x in result[kind]]
+        if len(item_ids)!=len(set(item_ids)):raise ValueError(f'Duplicate {kind} IDs')
+        for x in result[kind]:
+            if 'room_id' in x and x['room_id']!=surface_map[x['surface_id']]['room_id']:raise ValueError('Room/surface association mismatch')
+    opening_ids={x['id'] for x in result['openings']};damage_ids={x['id'] for x in result['damage']}
+    for edge in result['adjacency']:
+        if not set(edge['rooms'])<=set(room_ids) or not set(edge['opening_ids'])<=opening_ids:raise ValueError('Orphan adjacency reference')
+    for surface in result['surfaces']:
+        if not set(surface['damage_ids'])<=damage_ids:raise ValueError('Orphan surface damage reference')
+    for kind in ['scope_items','concealed_damage_flags']:
+        if any(x['damage_id'] not in damage_ids for x in result[kind]):raise ValueError('Orphan damage reference')
     def check(o):
         if isinstance(o,dict):
             if 'value' in o and 'interval' in o:
@@ -31,3 +48,23 @@ def validate(result,official=None):
         elif isinstance(o,list):
             for v in o:check(v)
     check(result)
+
+# The local contract is deliberately explicit; an official schema can be supplied
+# as a second validation layer, without pretending these two contracts are equal.
+SCHEMA['$defs'].update({
+ 'point':{'type':'array','minItems':2,'maxItems':2,'items':{'type':'number'}},
+ 'wall':{'type':'object','required':['surface_id','start','end','length'],
+         'properties':{'surface_id':{'type':'string'},'start':{'$ref':'#/$defs/point'},'end':{'$ref':'#/$defs/point'},'length':{'$ref':'#/$defs/measurement'}}},
+ 'surface':{'type':'object','required':['id','room_id','kind','gross_area','visibility','damage_ids'],
+            'properties':{'id':{'type':'string'},'room_id':{'type':'string'},'kind':{'enum':['wall','floor','ceiling']},'gross_area':{'$ref':'#/$defs/measurement'},'damage_ids':{'type':'array','items':{'type':'string'}}}},
+ 'opening':{'type':'object','required':['id','surface_id','room_id','kind','width','height','status','evidence','surface_uv_bounds'],
+            'properties':{'id':{'type':'string'},'surface_id':{'type':'string'},'room_id':{'type':'string'},'kind':{'enum':['doorway','window']},'width':{'$ref':'#/$defs/measurement'},'height':{'$ref':'#/$defs/measurement'},'evidence':{'type':'array','items':{'type':'string'}}}},
+ 'damage':{'type':'object','required':['id','surface_id','room_id','class','area','extent_width','extent_height','surface_polygon','status','evidence'],
+           'properties':{'area':{'$ref':'#/$defs/measurement'},'extent_width':{'$ref':'#/$defs/measurement'},'extent_height':{'$ref':'#/$defs/measurement'},'class':{'enum':['crack','water_logging/floods']},'surface_polygon':{'type':'array','minItems':3,'items':{'$ref':'#/$defs/point'}}}},
+ 'adjacency':{'type':'object','required':['rooms','opening_ids','status'],'properties':{'rooms':{'type':'array','minItems':2,'maxItems':2,'uniqueItems':True,'items':{'type':'string'}},'opening_ids':{'type':'array','minItems':2,'items':{'type':'string'}}}},
+ 'scope':{'type':'object','required':['id','surface_id','damage_id','action','quantity','rule','provisional'],'properties':{'quantity':{'$ref':'#/$defs/measurement'}}},
+ 'flag':{'type':'object','required':['id','surface_id','damage_id','rule','rule_inputs','message','status','evidence']}
+})
+for name,definition in [('surfaces','surface'),('openings','opening'),('damage','damage'),('adjacency','adjacency'),('scope_items','scope'),('concealed_damage_flags','flag')]:
+    SCHEMA['properties'][name]={'type':'array','items':{'$ref':f'#/$defs/{definition}'}}
+SCHEMA['properties']['rooms']['items']['properties']['walls']={'type':'array','minItems':3,'items':{'$ref':'#/$defs/wall'}}

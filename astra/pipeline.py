@@ -49,6 +49,10 @@ def adjacency_from_openings(layout):
 
 def run(args):
     start=time.perf_counter();out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
+    source_root=Path(__file__).resolve().parents[1]
+    start_revision=code_revision()
+    source_hashes={str(p.relative_to(source_root)):sha256(p) for p in sorted((source_root/'astra').glob('*.py'))}
+    write_json(out/'source_manifest_at_start.json',{'revision':start_revision,'files':source_hashes})
     write_json(out/'run_status.json',{'status':'running','tier':args.tier})
     warnings=['Official evaluator schema unavailable; validated against astra.provisional.v1.',
         'Intervals are engineering ranges, not empirically calibrated confidence intervals.']
@@ -118,13 +122,11 @@ def run(args):
     validate(result,args.schema);write_json(out/'result.json',result);render(result,out)
     manifest=input_manifest(files,base);write_json(out/'input_manifest.json',manifest)
     import importlib.metadata
-    source_root=Path(__file__).resolve().parents[1]
-    source_hashes={str(p.relative_to(source_root)):sha256(p) for p in sorted((source_root/'astra').glob('*.py'))}
     dependencies={}
     for package in ['numpy','scipy','opencv-python-headless','torch','torchvision','transformers','timm','matplotlib','imageio-ffmpeg']:
         try:dependencies[package]=importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:pass
-    provenance={'source_hashes':source_hashes,'dependencies':dependencies,'semantic_model_manifest':'semantics/candidates.json','version':__version__,'code_revision':code_revision(),'config':vars(args),'platform':platform.platform(),
+    provenance={'source_hashes':source_hashes,'dependencies':dependencies,'semantic_model_manifest':'semantics/candidates.json','version':__version__,'code_revision':start_revision,'config':vars(args),'platform':platform.platform(),
         'python':platform.python_version(),'input_root':str(Path(base).resolve()),'input_manifest':'input_manifest.json',
         'wall_time_seconds':time.perf_counter()-start,'max_rss_mb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024,
         'ground_truth_used_for_inference':False,'intervals_calibrated':False,'models':extra.get('rgb_reconstruction',{}).get('model',None)}

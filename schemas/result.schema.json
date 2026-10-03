@@ -65,27 +65,52 @@
           },
           "floor_area": {
             "$ref": "#/$defs/measurement"
+          },
+          "walls": {
+            "type": "array",
+            "minItems": 3,
+            "items": {
+              "$ref": "#/$defs/wall"
+            }
           }
         }
       }
     },
     "surfaces": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/surface"
+      }
     },
     "openings": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/opening"
+      }
     },
     "adjacency": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/adjacency"
+      }
     },
     "damage": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/damage"
+      }
     },
     "concealed_damage_flags": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/flag"
+      }
     },
     "scope_items": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scope"
+      }
     },
     "warnings": {
       "type": "array",
@@ -150,6 +175,210 @@
           }
         }
       }
+    },
+    "point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "number"
+      }
+    },
+    "wall": {
+      "type": "object",
+      "required": [
+        "surface_id",
+        "start",
+        "end",
+        "length"
+      ],
+      "properties": {
+        "surface_id": {
+          "type": "string"
+        },
+        "start": {
+          "$ref": "#/$defs/point"
+        },
+        "end": {
+          "$ref": "#/$defs/point"
+        },
+        "length": {
+          "$ref": "#/$defs/measurement"
+        }
+      }
+    },
+    "surface": {
+      "type": "object",
+      "required": [
+        "id",
+        "room_id",
+        "kind",
+        "gross_area",
+        "visibility",
+        "damage_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "room_id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "wall",
+            "floor",
+            "ceiling"
+          ]
+        },
+        "gross_area": {
+          "$ref": "#/$defs/measurement"
+        },
+        "damage_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "opening": {
+      "type": "object",
+      "required": [
+        "id",
+        "surface_id",
+        "room_id",
+        "kind",
+        "width",
+        "height",
+        "status",
+        "evidence",
+        "surface_uv_bounds"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "surface_id": {
+          "type": "string"
+        },
+        "room_id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "doorway",
+            "window"
+          ]
+        },
+        "width": {
+          "$ref": "#/$defs/measurement"
+        },
+        "height": {
+          "$ref": "#/$defs/measurement"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "damage": {
+      "type": "object",
+      "required": [
+        "id",
+        "surface_id",
+        "room_id",
+        "class",
+        "area",
+        "extent_width",
+        "extent_height",
+        "surface_polygon",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "area": {
+          "$ref": "#/$defs/measurement"
+        },
+        "extent_width": {
+          "$ref": "#/$defs/measurement"
+        },
+        "extent_height": {
+          "$ref": "#/$defs/measurement"
+        },
+        "class": {
+          "enum": [
+            "crack",
+            "water_logging/floods"
+          ]
+        },
+        "surface_polygon": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/point"
+          }
+        }
+      }
+    },
+    "adjacency": {
+      "type": "object",
+      "required": [
+        "rooms",
+        "opening_ids",
+        "status"
+      ],
+      "properties": {
+        "rooms": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "opening_ids": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "id",
+        "surface_id",
+        "damage_id",
+        "action",
+        "quantity",
+        "rule",
+        "provisional"
+      ],
+      "properties": {
+        "quantity": {
+          "$ref": "#/$defs/measurement"
+        }
+      }
+    },
+    "flag": {
+      "type": "object",
+      "required": [
+        "id",
+        "surface_id",
+        "damage_id",
+        "rule",
+        "rule_inputs",
+        "message",
+        "status",
+        "evidence"
+      ]
     }
   }
 }

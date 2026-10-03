@@ -1,0 +1,234 @@
+{
+  "scans": [
+    {
+      "frame_count": 2298,
+      "duration_s": 52.303777708206326,
+      "rgb_size": [
+        1920.0,
+        1440.0
+      ],
+      "depth_units": "mm",
+      "pose_units": "m",
+      "pose_convention": "camera_to_world_xyzw_OpenCV_camera_y_world_up",
+      "intrinsics_source": "per_frame",
+      "variable_video_timing": true,
+      "rgb_pose_timing_max_residual_s": 0.0037777082063286116,
+      "imu_median_acceleration_norm": 0.9989578242016921,
+      "imu_unit_assessment": "likely_g",
+      "imu_translation_integration": false,
+      "warnings": [],
+      "path": "kitchen/lidar",
+      "fx_range_px": [
+        1338.1069,
+        1363.0559
+      ],
+      "fy_range_px": [
+        1338.1069,
+        1363.0559
+      ]
+    },
+    {
+      "frame_count": 5351,
+      "duration_s": 123.52629866590723,
+      "rgb_size": [
+        1920.0,
+        1440.0
+      ],
+      "depth_units": "mm",
+      "pose_units": "m",
+      "pose_convention": "camera_to_world_xyzw_OpenCV_camera_y_world_up",
+      "intrinsics_source": "per_frame",
+      "variable_video_timing": true,
+      "rgb_pose_timing_max_residual_s": 0.05963199924056539,
+      "imu_median_acceleration_norm": 0.9999890820458569,
+      "imu_unit_assessment": "likely_g",
+      "imu_translation_integration": false,
+      "warnings": [],
+      "path": "three_room/lidar",
+      "fx_range_px": [
+        1338.0862,
+        1352.8297
+      ],
+      "fy_range_px": [
+        1338.0862,
+        1352.8297
+      ]
+    },
+    {
+      "frame_count": 2338,
+      "duration_s": 39.286123000085354,
+      "rgb_size": [
+        1920.0,
+        1440.0
+      ],
+      "depth_units": "mm",
+      "pose_units": "m",
+      "pose_convention": "camera_to_world_xyzw_OpenCV_camera_y_world_up",
+      "intrinsics_source": "per_frame",
+      "variable_video_timing": true,
+      "rgb_pose_timing_max_residual_s": 0.03612300008535385,
+      "imu_median_acceleration_norm": 0.9992678301732498,
+      "imu_unit_assessment": "likely_g",
+      "imu_translation_integration": false,
+      "warnings": [],
+      "path": "Crack_water/lidar/04a0d041fc",
+      "fx_range_px": [
+        1340.945,
+        1348.22
+      ],
+      "fy_range_px": [
+        1340.945,
+        1348.22
+      ]
+    },
+    {
+      "frame_count": 1715,
+      "duration_s": 37.17236916699039,
+      "rgb_size": [
+        1920.0,
+        1440.0
+      ],
+      "depth_units": "mm",
+      "pose_units": "m",
+      "pose_convention": "camera_to_world_xyzw_OpenCV_camera_y_world_up",
+      "intrinsics_source": "per_frame",
+      "variable_video_timing": true,
+      "rgb_pose_timing_max_residual_s": 0.005702500323728543,
+      "imu_median_acceleration_norm": 1.0026588456123766,
+      "imu_unit_assessment": "likely_g",
+      "imu_translation_integration": false,
+      "warnings": [],
+      "path": "single_room/c00a170fe1",
+      "fx_range_px": [
+        1586.5905,
+        1617.7719
+      ],
+      "fy_range_px": [
+        1586.5905,
+        1617.7719
+      ]
+    },
+    {
+      "frame_count": 5251,
+      "duration_s": 114.78321783400315,
+      "rgb_size": [
+        1920.0,
+        1440.0
+      ],
+      "depth_units": "mm",
+      "pose_units": "m",
+      "pose_convention": "camera_to_world_xyzw_OpenCV_camera_y_world_up",
+      "intrinsics_source": "per_frame",
+      "variable_video_timing": true,
+      "rgb_pose_timing_max_residual_s": 0.016551167336487538,
+      "imu_median_acceleration_norm": 1.0011050227937754,
+      "imu_unit_assessment": "likely_g",
+      "imu_translation_integration": false,
+      "warnings": [],
+      "path": "single_scan_floor_only/1a8384c3f6",
+      "fx_range_px": [
+        1588.85,
+        1615.9642
+      ],
+      "fy_range_px": [
+        1588.85,
+        1615.9642
+      ]
+    },
+    {
+      "frame_count": 9745,
+      "duration_s": 214.92937012499897,
+      "rgb_size": [
+        1920.0,
+        1440.0
+      ],
+      "depth_units": "mm",
+      "pose_units": "m",
+      "pose_convention": "camera_to_world_xyzw_OpenCV_camera_y_world_up",
+      "intrinsics_source": "per_frame",
+      "variable_video_timing": true,
+      "rgb_pose_timing_max_residual_s": 0.02937012499896241,
+      "imu_median_acceleration_norm": 1.0025215430450305,
+      "imu_unit_assessment": "likely_g",
+      "imu_translation_integration": false,
+      "warnings": [],
+      "path": "single_scan_with_ceiling/c7d28f72c6",
+      "fx_range_px": [
+        1581.1676,
+        1614.6085
+      ],
+      "fy_range_px": [
+        1581.1676,
+        1614.6085
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "dataset": "kitchen",
+      "room": "kitchen",
+      "image_count": 8
+    },
+    {
+      "dataset": "three_room",
+      "room": "room_1",
+      "image_count": 8
+    },
+    {
+      "dataset": "three_room",
+      "room": "room_2",
+      "image_count": 8
+    },
+    {
+      "dataset": "three_room",
+      "room": "room_3",
+      "image_count": 6
+    },
+    {
+      "dataset": "Crack_water",
+      "room": "Crack_water",
+      "image_count": 7
+    }
+  ],
+  "duplicate_photos": [
+    [
+      "kitchen/IMG_0001.jpeg",
+      "three_room/room_1/IMG_0001.jpeg"
+    ],
+    [
+      "kitchen/IMG_0002.jpeg",
+      "three_room/room_1/IMG_0002.jpeg"
+    ],
+    [
+      "kitchen/IMG_0003.jpeg",
+      "three_room/room_1/IMG_0003.jpeg"
+    ],
+    [
+      "kitchen/IMG_0004.jpeg",
+      "three_room/room_1/IMG_0004.jpeg"
+    ],
+    [
+      "kitchen/IMG_0005.jpeg",
+      "three_room/room_1/IMG_0005.jpeg"
+    ],
+    [
+      "kitchen/IMG_0006.jpeg",
+      "three_room/room_1/IMG_0006.jpeg"
+    ],
+    [
+      "kitchen/IMG_0007.jpeg",
+      "three_room/room_1/IMG_0007.jpeg"
+    ],
+    [
+      "kitchen/IMG_0008.jpeg",
+      "three_room/room_1/IMG_0008.jpeg"
+    ]
+  ],
+  "decisions": [
+    "Use per-frame K; static camera_matrix is only a fallback.",
+    "Decode MP4 sample timing and preserve edit-list-hidden frames.",
+    "Do not integrate IMU translation; acceleration norms suggest g units.",
+    "Two rooms plus corridor retained per user instruction.",
+    "Consumer-app comparison unavailable tonight; repeat scans deferred."
+  ]
+}

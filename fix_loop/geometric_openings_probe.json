@@ -1,0 +1,581 @@
+[
+  {
+    "id": "geometric_opening_1",
+    "surface_id": "room_1_wall_1",
+    "room_id": "room_1",
+    "kind": "doorway",
+    "surface_uv_bounds": [
+      [
+        2.5037668271822864,
+        0.0
+      ],
+      [
+        3.253397613763809,
+        2.149999999999998
+      ]
+    ],
+    "width": {
+      "value": 0.7496307865815228,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 0.6996307865815228,
+        "upper": 0.7996307865815229,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "wall_gap_and_transmitted_depth_rays"
+    },
+    "height": {
+      "value": 2.149999999999998,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 2.089999999999998,
+        "upper": 2.209999999999998,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "observed_lintel_on_wall_plane"
+    },
+    "status": "provisional_geometry_candidate",
+    "evidence": [
+      "depth_frame:0",
+      "depth_frame:38",
+      "depth_frame:76",
+      "depth_frame:115",
+      "depth_frame:153",
+      "depth_frame:192",
+      "depth_frame:230",
+      "depth_frame:269",
+      "depth_frame:307",
+      "depth_frame:346",
+      "depth_frame:384",
+      "depth_frame:423",
+      "depth_frame:461",
+      "depth_frame:500",
+      "depth_frame:538",
+      "depth_frame:577",
+      "depth_frame:615",
+      "depth_frame:654",
+      "depth_frame:692",
+      "depth_frame:731",
+      "depth_frame:769",
+      "depth_frame:808",
+      "depth_frame:846",
+      "depth_frame:885",
+      "depth_frame:923",
+      "depth_frame:962",
+      "depth_frame:1000",
+      "depth_frame:1039",
+      "depth_frame:1077",
+      "depth_frame:1116",
+      "depth_frame:1154",
+      "depth_frame:1193",
+      "depth_frame:1231",
+      "depth_frame:1270",
+      "depth_frame:1308",
+      "depth_frame:1655",
+      "depth_frame:1693",
+      "depth_frame:1732",
+      "depth_frame:1847",
+      "depth_frame:1885",
+      "depth_frame:1924",
+      "depth_frame:1962",
+      "depth_frame:2001",
+      "depth_frame:2039"
+    ],
+    "support_views": 44,
+    "geometry_checks": {
+      "rays_cross_wall_plane": true,
+      "low_wall_occupancy": true,
+      "observed_lintel": true
+    }
+  },
+  {
+    "id": "geometric_opening_2",
+    "surface_id": "room_1_wall_4",
+    "room_id": "room_1",
+    "kind": "doorway",
+    "surface_uv_bounds": [
+      [
+        2.933136342692291,
+        0.0
+      ],
+      [
+        3.6963503910458972,
+        2.149999999999998
+      ]
+    ],
+    "width": {
+      "value": 0.7632140483536061,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 0.713214048353606,
+        "upper": 0.8132140483536061,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "wall_gap_and_transmitted_depth_rays"
+    },
+    "height": {
+      "value": 2.149999999999998,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 2.089999999999998,
+        "upper": 2.209999999999998,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "observed_lintel_on_wall_plane"
+    },
+    "status": "provisional_geometry_candidate",
+    "evidence": [
+      "depth_frame:1770",
+      "depth_frame:1847",
+      "depth_frame:2078",
+      "depth_frame:2116",
+      "depth_frame:2925",
+      "depth_frame:2963",
+      "depth_frame:3002",
+      "depth_frame:3040",
+      "depth_frame:3079",
+      "depth_frame:3117",
+      "depth_frame:3156",
+      "depth_frame:3194",
+      "depth_frame:3233",
+      "depth_frame:3271",
+      "depth_frame:3310",
+      "depth_frame:3348",
+      "depth_frame:3387",
+      "depth_frame:3425",
+      "depth_frame:3579",
+      "depth_frame:4272",
+      "depth_frame:4310",
+      "depth_frame:4349",
+      "depth_frame:4387",
+      "depth_frame:4464",
+      "depth_frame:4618",
+      "depth_frame:4657",
+      "depth_frame:4695",
+      "depth_frame:4772",
+      "depth_frame:4811",
+      "depth_frame:4849",
+      "depth_frame:4888",
+      "depth_frame:5273",
+      "depth_frame:5311",
+      "depth_frame:5350"
+    ],
+    "support_views": 34,
+    "geometry_checks": {
+      "rays_cross_wall_plane": true,
+      "low_wall_occupancy": true,
+      "observed_lintel": true
+    }
+  },
+  {
+    "id": "geometric_opening_3",
+    "surface_id": "room_2_wall_1",
+    "room_id": "room_2",
+    "kind": "doorway",
+    "surface_uv_bounds": [
+      [
+        0.7018610388040543,
+        0.0
+      ],
+      [
+        2.3893141746520996,
+        2.149999999999998
+      ]
+    ],
+    "width": {
+      "value": 1.6874531358480453,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 1.6374531358480453,
+        "upper": 1.7374531358480454,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "wall_gap_and_transmitted_depth_rays"
+    },
+    "height": {
+      "value": 2.149999999999998,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 2.089999999999998,
+        "upper": 2.209999999999998,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "observed_lintel_on_wall_plane"
+    },
+    "status": "provisional_geometry_candidate",
+    "evidence": [
+      "depth_frame:2078",
+      "depth_frame:2963",
+      "depth_frame:3002",
+      "depth_frame:3040",
+      "depth_frame:3079",
+      "depth_frame:3117",
+      "depth_frame:3156",
+      "depth_frame:3194",
+      "depth_frame:3233",
+      "depth_frame:3271",
+      "depth_frame:3310",
+      "depth_frame:3964",
+      "depth_frame:4002",
+      "depth_frame:4041",
+      "depth_frame:4195",
+      "depth_frame:4233",
+      "depth_frame:4272",
+      "depth_frame:4310",
+      "depth_frame:4349",
+      "depth_frame:4464",
+      "depth_frame:4580",
+      "depth_frame:4618",
+      "depth_frame:4657",
+      "depth_frame:4772",
+      "depth_frame:4811",
+      "depth_frame:4849",
+      "depth_frame:4888",
+      "depth_frame:5311"
+    ],
+    "support_views": 28,
+    "geometry_checks": {
+      "rays_cross_wall_plane": true,
+      "low_wall_occupancy": true,
+      "observed_lintel": true
+    }
+  },
+  {
+    "id": "geometric_opening_4",
+    "surface_id": "room_2_wall_2",
+    "room_id": "room_2",
+    "kind": "doorway",
+    "surface_uv_bounds": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.7763332698330189,
+        2.149999999999998
+      ]
+    ],
+    "width": {
+      "value": 0.7763332698330189,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 0.7263332698330188,
+        "upper": 0.8263332698330189,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "wall_gap_and_transmitted_depth_rays"
+    },
+    "height": {
+      "value": 2.149999999999998,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 2.089999999999998,
+        "upper": 2.209999999999998,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "observed_lintel_on_wall_plane"
+    },
+    "status": "provisional_geometry_candidate",
+    "evidence": [
+      "depth_frame:2078",
+      "depth_frame:2925",
+      "depth_frame:2963",
+      "depth_frame:3002",
+      "depth_frame:3040",
+      "depth_frame:3079",
+      "depth_frame:3117",
+      "depth_frame:3156",
+      "depth_frame:3194",
+      "depth_frame:3233",
+      "depth_frame:3271",
+      "depth_frame:3310",
+      "depth_frame:3348",
+      "depth_frame:3387",
+      "depth_frame:3425",
+      "depth_frame:3579",
+      "depth_frame:3964",
+      "depth_frame:4272",
+      "depth_frame:4310",
+      "depth_frame:4349",
+      "depth_frame:4387",
+      "depth_frame:4464",
+      "depth_frame:4618",
+      "depth_frame:4657",
+      "depth_frame:4772",
+      "depth_frame:4811",
+      "depth_frame:4849",
+      "depth_frame:4888",
+      "depth_frame:5273",
+      "depth_frame:5311",
+      "depth_frame:5350"
+    ],
+    "support_views": 31,
+    "geometry_checks": {
+      "rays_cross_wall_plane": true,
+      "low_wall_occupancy": true,
+      "observed_lintel": true
+    }
+  },
+  {
+    "id": "geometric_opening_5",
+    "surface_id": "room_3_wall_2",
+    "room_id": "room_3",
+    "kind": "doorway",
+    "surface_uv_bounds": [
+      [
+        0.10462172701954842,
+        0.0
+      ],
+      [
+        1.6739476323127747,
+        2.149999999999998
+      ]
+    ],
+    "width": {
+      "value": 1.5693259052932262,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 1.5193259052932262,
+        "upper": 1.6193259052932263,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "wall_gap_and_transmitted_depth_rays"
+    },
+    "height": {
+      "value": 2.149999999999998,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 2.089999999999998,
+        "upper": 2.209999999999998,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "observed_lintel_on_wall_plane"
+    },
+    "status": "provisional_geometry_candidate",
+    "evidence": [
+      "depth_frame:0",
+      "depth_frame:38",
+      "depth_frame:76",
+      "depth_frame:115",
+      "depth_frame:153",
+      "depth_frame:192",
+      "depth_frame:230",
+      "depth_frame:269",
+      "depth_frame:307",
+      "depth_frame:384",
+      "depth_frame:423",
+      "depth_frame:461",
+      "depth_frame:500",
+      "depth_frame:538",
+      "depth_frame:577",
+      "depth_frame:615",
+      "depth_frame:731",
+      "depth_frame:769",
+      "depth_frame:808",
+      "depth_frame:846",
+      "depth_frame:885",
+      "depth_frame:923",
+      "depth_frame:962",
+      "depth_frame:1000",
+      "depth_frame:1039",
+      "depth_frame:1077",
+      "depth_frame:1116",
+      "depth_frame:1154",
+      "depth_frame:1193",
+      "depth_frame:1231",
+      "depth_frame:1270",
+      "depth_frame:1308",
+      "depth_frame:1655",
+      "depth_frame:1693",
+      "depth_frame:1732",
+      "depth_frame:1885",
+      "depth_frame:1924",
+      "depth_frame:1962",
+      "depth_frame:2001",
+      "depth_frame:2039"
+    ],
+    "support_views": 40,
+    "geometry_checks": {
+      "rays_cross_wall_plane": true,
+      "low_wall_occupancy": true,
+      "observed_lintel": true
+    }
+  },
+  {
+    "id": "geometric_opening_6",
+    "surface_id": "room_3_wall_3",
+    "room_id": "room_3",
+    "kind": "doorway",
+    "surface_uv_bounds": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.7627324246697956,
+        2.149999999999998
+      ]
+    ],
+    "width": {
+      "value": 0.7627324246697956,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 0.7127324246697956,
+        "upper": 0.8127324246697957,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "wall_gap_and_transmitted_depth_rays"
+    },
+    "height": {
+      "value": 2.149999999999998,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 2.089999999999998,
+        "upper": 2.209999999999998,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "observed_lintel_on_wall_plane"
+    },
+    "status": "provisional_geometry_candidate",
+    "evidence": [
+      "depth_frame:0",
+      "depth_frame:38",
+      "depth_frame:76",
+      "depth_frame:115",
+      "depth_frame:153",
+      "depth_frame:192",
+      "depth_frame:230",
+      "depth_frame:269",
+      "depth_frame:307",
+      "depth_frame:346",
+      "depth_frame:384",
+      "depth_frame:423",
+      "depth_frame:461",
+      "depth_frame:500",
+      "depth_frame:538",
+      "depth_frame:577",
+      "depth_frame:615",
+      "depth_frame:654",
+      "depth_frame:692",
+      "depth_frame:731",
+      "depth_frame:769",
+      "depth_frame:808",
+      "depth_frame:846",
+      "depth_frame:885",
+      "depth_frame:923",
+      "depth_frame:962",
+      "depth_frame:1000",
+      "depth_frame:1039",
+      "depth_frame:1077",
+      "depth_frame:1116",
+      "depth_frame:1154",
+      "depth_frame:1193",
+      "depth_frame:1231",
+      "depth_frame:1270",
+      "depth_frame:1308",
+      "depth_frame:1655",
+      "depth_frame:1693",
+      "depth_frame:1732",
+      "depth_frame:1847",
+      "depth_frame:1885",
+      "depth_frame:1924",
+      "depth_frame:1962",
+      "depth_frame:2001",
+      "depth_frame:2039"
+    ],
+    "support_views": 44,
+    "geometry_checks": {
+      "rays_cross_wall_plane": true,
+      "low_wall_occupancy": true,
+      "observed_lintel": true
+    }
+  },
+  {
+    "id": "geometric_opening_7",
+    "surface_id": "room_3_wall_4",
+    "room_id": "room_3",
+    "kind": "doorway",
+    "surface_uv_bounds": [
+      [
+        0.3885949860726084,
+        0.0
+      ],
+      [
+        0.8967576601675579,
+        2.0899999999999985
+      ]
+    ],
+    "width": {
+      "value": 0.5081626740949494,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 0.45816267409494943,
+        "upper": 0.5581626740949495,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "wall_gap_and_transmitted_depth_rays"
+    },
+    "height": {
+      "value": 2.0899999999999985,
+      "unit": "m",
+      "interval": {
+        "level": 0.95,
+        "lower": 2.0299999999999985,
+        "upper": 2.1499999999999986,
+        "calibration_status": "provisional_not_empirically_calibrated"
+      },
+      "status": "estimated",
+      "method": "observed_lintel_on_wall_plane"
+    },
+    "status": "provisional_geometry_candidate",
+    "evidence": [
+      "depth_frame:192",
+      "depth_frame:230",
+      "depth_frame:269",
+      "depth_frame:307",
+      "depth_frame:346",
+      "depth_frame:384",
+      "depth_frame:423",
+      "depth_frame:461",
+      "depth_frame:500",
+      "depth_frame:615",
+      "depth_frame:654",
+      "depth_frame:692",
+      "depth_frame:731",
+      "depth_frame:769",
+      "depth_frame:808"
+    ],
+    "support_views": 15,
+    "geometry_checks": {
+      "rays_cross_wall_plane": true,
+      "low_wall_occupancy": true,
+      "observed_lintel": true
+    }
+  }
+]

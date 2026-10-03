@@ -31,14 +31,27 @@ def render(result,out):
     for room in result['rooms']:
         for name in ['ceiling_height','floor_area','extent_x','extent_z']:
             m=room[name];interval=m['interval'];rows.append(f"<tr><td>{html.escape(room['id'])}</td><td>{name}</td><td>{m['value']}</td><td>{m['unit']}</td><td>{interval['lower']} – {interval['upper']}</td><td>{interval['calibration_status']}</td></tr>")
+    for room in result['rooms']:
+        for wall in room['walls']:
+            m=wall['length'];iv=m['interval'];rows.append(f"<tr><td>{html.escape(wall['surface_id'])}</td><td>wall length</td><td>{m['value']:.3f}</td><td>m</td><td>{iv['lower']:.3f} – {iv['upper']:.3f}</td><td>{iv['calibration_status']}</td></tr>")
+    for op in result['openings']:
+        for key in ['width','height']:
+            m=op[key];iv=m['interval'];rows.append(f"<tr><td>{html.escape(op['id'])}</td><td>opening {key}</td><td>{m['value']:.3f}</td><td>m</td><td>{iv['lower']:.3f} – {iv['upper']:.3f}</td><td>{iv['calibration_status']}</td></tr>")
+    damage_rows=''.join(f"<tr><td>{html.escape(d['id'])}</td><td><a href='surfaces/{html.escape(d['surface_id'])}.svg'>{html.escape(d['surface_id'])}</a></td><td>{html.escape(d['class'])}</td><td>{d['area']['value']:.3f} m²</td><td>{html.escape(d['status'])}</td></tr>" for d in result['damage'])
+    flags=''.join(f"<li>{html.escape(f['rule'])}: {html.escape(f['message'])}</li>" for f in result['concealed_damage_flags'])
+    scope=''.join(f"<li>{html.escape(s['surface_id'])}: {html.escape(s['action'])} ({s['quantity']['value']:.3f} {s['quantity']['unit']}); rule {html.escape(s['rule'])}</li>" for s in result['scope_items'])
     warnings=''.join(f'<li>{html.escape(w)}</li>' for w in result['warnings'])
     (out/'report.html').write_text('<!doctype html><html><meta charset="utf-8"><title>Astra capture report</title><style>body{font:16px system-ui;margin:32px;max-width:1200px}img{max-width:100%}table{border-collapse:collapse;font-size:13px}td,th{padding:8px;border:1px solid #ddd}code{background:#eee}</style>'
         +f"<h1>{html.escape(result['capture_id'])}</h1><p>{html.escape(result['status'])}</p><img src='plan.svg' alt='Property floor plan'><h2>Limitations</h2><ul>{warnings}</ul>"
         +'<h2>Measurement intervals</h2><p>Engineering uncertainty ranges are provisional until independently calibrated.</p><table><tr><th>Room</th><th>Measurement</th><th>Value</th><th>Unit</th><th>95% nominal range</th><th>Calibration</th></tr>'+''.join(rows)+'</table>'
+        +f"<h2>Damage candidates</h2><table><tr><th>Region</th><th>Surface</th><th>Class</th><th>Observed area</th><th>Status</th></tr>{damage_rows}</table><h2>Inspection flags</h2><ul>{flags}</ul><p>An empty list is not evidence of no concealed damage.</p><h2>Scope items</h2><ul>{scope}</ul>"
         +f"<h2>Evidence</h2><p>{len(result['openings'])} opening candidates; {len(result['damage'])} damage regions; {len(result['scope_items'])} scope items.</p><p><a href='result.json'>Full JSON</a> · <a href='provenance.json'>Provenance</a> · <a href='semantics/candidates.json'>Visual candidates</a></p></html>")
     (out/'rooms').mkdir(exist_ok=True);(out/'surfaces').mkdir(exist_ok=True)
     for room in result['rooms']:
-        f,a=plt.subplots(figsize=(6,6));p=np.array(room['polygon']);a.add_patch(Polygon(p,fill=False));a.autoscale();a.axis('equal');a.set_title(room['id']);f.savefig(out/'rooms'/f"{room['id']}.svg");plt.close(f)
+        f,a=plt.subplots(figsize=(6,6));p=np.array(room['polygon']);a.add_patch(Polygon(p,fill=False));a.autoscale();a.axis('equal');a.set_title(f"{room['id']} — {room['floor_area']['value']:.2f} m²");a.set_xlabel('x (m)');a.set_ylabel('z (m)')
+        for wall in room['walls']:
+            mid=(np.array(wall['start'])+wall['end'])/2;a.text(*mid,f"{wall['length']['value']:.2f} m",ha='center',fontsize=9,bbox={'facecolor':'white','edgecolor':'none','alpha':.8})
+        f.tight_layout();f.savefig(out/'rooms'/f"{room['id']}.svg");plt.close(f)
     for s in result['surfaces']:
         if s['kind']!='wall':continue
         f,a=plt.subplots(figsize=(7,4));length=np.linalg.norm(np.array(s['end'])-s['start']);height=s['height']['value'] or 3

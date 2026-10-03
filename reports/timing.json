@@ -1,0 +1,50 @@
+[
+  {
+    "run": "three_room_lidar_final",
+    "tier": "lidar",
+    "seconds": 460.63317992698285,
+    "max_rss_mb": 2395.45703125,
+    "device": "cpu",
+    "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
+  },
+  {
+    "run": "kitchen_lidar_final",
+    "tier": "lidar",
+    "seconds": 281.66448195200064,
+    "max_rss_mb": 2363.390625,
+    "device": "cpu",
+    "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
+  },
+  {
+    "run": "three_room_video_final",
+    "tier": "video",
+    "seconds": 647.7991158950026,
+    "max_rss_mb": 2869.63671875,
+    "device": "cpu",
+    "code_revision": "70979923e2cdd39d671f3503a56b31593dc28d42"
+  },
+  {
+    "run": "evaluator_single_room",
+    "tier": "lidar",
+    "seconds": 13.795359554002061,
+    "max_rss_mb": 255.33984375,
+    "device": "cpu",
+    "code_revision": "b21e4ced844e6f0496b9200177de27e290313347"
+  },
+  {
+    "run": "evaluator_floor_only",
+    "tier": "lidar",
+    "seconds": 11.17032146800193,
+    "max_rss_mb": 265.4765625,
+    "device": "cpu",
+    "code_revision": "b21e4ced844e6f0496b9200177de27e290313347"
+  },
+  {
+    "run": "evaluator_with_ceiling",
+    "tier": "lidar",
+    "seconds": 29.01069746000576,
+    "max_rss_mb": 308.48828125,
+    "device": "cpu",
+    "code_revision": "b21e4ced844e6f0496b9200177de27e290313347"
+  }
+]

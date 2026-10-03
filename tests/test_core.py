@@ -78,3 +78,35 @@ def test_paired_openings_recover_adjacency():
     assert len(result)==1 and result[0]['rooms']==['one','two']
     openings[1]['kind']='window'
     assert adjacency_from_openings({'surfaces':surfaces,'openings':openings})==[]
+
+
+def test_depth_rays_distinguish_doorway_from_solid_wall():
+    from astra.openings import geometric_openings
+    u,y=np.meshgrid(np.arange(0,3,.015),np.arange(.05,2.8,.015))
+    hole=(u>1)&(u<1.9)&(y<2.2)
+    wall=np.c_[u[~hole],y[~hole],np.full((~hole).sum(),2.)]
+    uu,yy=np.meshgrid(np.arange(1.02,1.89,.015),np.arange(.75,1.8,.025))
+    behind=np.c_[1.5+2*(uu.ravel()-1.5),1.3+2*(yy.ravel()-1.3),np.full(uu.size,4.)]
+    points=np.tile(np.r_[wall,behind],(3,1));fids=np.repeat(np.arange(3),len(wall)+len(behind))
+    poses=np.tile(np.eye(4),(3,1,1));poses[:,:3,3]=[1.5,1.3,0.]
+    geo={'points':points,'frame_ids':fids,'poses':poses,'indices':np.arange(3)}
+    surface={'id':'wall','room_id':'room','kind':'wall','start':[0,2],'end':[3,2],'floor_y':0.,'height':measure(2.8)}
+    openings=geometric_openings(geo,[surface]);assert len(openings)==1
+    assert openings[0]['width']['value']==pytest.approx(.9,abs=.08)
+    assert openings[0]['height']['value']==pytest.approx(2.2,abs=.06)
+    # Remove transmitted returns; a point-density gap alone is not a doorway.
+    geo['points']=np.tile(wall,(3,1));geo['frame_ids']=np.repeat(np.arange(3),len(wall))
+    assert geometric_openings(geo,[surface])==[]
+
+
+def test_overlap_and_missing_adjacency_are_reported():
+    from astra.quality import topology_quality
+    rooms=[{'id':'a','polygon':[[0,0],[2,0],[2,2],[0,2]],'floor_area':measure(4,'m2')},
+           {'id':'b','polygon':[[1,0],[3,0],[3,2],[1,2]],'floor_area':measure(4,'m2')}]
+    q=topology_quality(rooms,[],'photos',False)
+    assert q['status']=='unresolved_physical_stitch';assert q['room_overlaps'];assert q['connected_components']==2
+
+
+def test_root_photo_count_is_validated(tmp_path):
+    (tmp_path/'one.jpg').write_bytes(b'x')
+    with pytest.raises(ValueError,match='2–8'):photo_groups(tmp_path)

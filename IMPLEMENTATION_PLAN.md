@@ -2,7 +2,7 @@
 
 Prepared: 3 October 2026. Primary specification: `Applied_AI_Case_Study.pdf` (all six PDF pages reviewed; the cover is unnumbered and the body is numbered 1–5).
 
-**Status:** planning and initial data inspection completed. Reconstruction, AI inference, accuracy evaluation, and gate compliance have not been demonstrated yet. All commands, modules, and output paths below are proposed unless explicitly identified as existing inputs. This document is the working implementation plan, not the final six-page technical report.
+**Status update, 3 October 2026:** implementation is underway and all three input adapters have executed on the supplied data. Actual code, commands and deviations are documented in `README.md`, `docs/ARCHITECTURE.md`, and the generated `reports/` artifacts. This original plan records intended work; it must not be read as evidence that accuracy/calibration gates pass. Consumer-app captures are unavailable tonight; repeat scans remain deferred at the user's request. The laptop CPU is Intel i7-1265U. The working benchmark remains kitchen + hall + corridor.
 
 ## 1. What we must build
 

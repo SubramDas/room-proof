@@ -1,0 +1,41 @@
+{
+  "mappings": {
+    "three_room_lidar_final": {
+      "room_1": "room_2",
+      "room_2": "room_1",
+      "room_3": "room_3"
+    },
+    "kitchen_lidar_final": {
+      "room_1": "room_1"
+    },
+    "three_room_photos_final": {
+      "room_1": "room_1",
+      "room_2": "room_2",
+      "room_3": "room_3"
+    },
+    "kitchen_photos_final": {
+      "room_1": "kitchen"
+    },
+    "three_room_lidar": {
+      "room_1": "room_2",
+      "room_2": "room_1",
+      "room_3": "room_3"
+    },
+    "three_room_lidar_after": {
+      "room_1": "room_2",
+      "room_2": "room_1",
+      "room_3": "room_3"
+    },
+    "three_room_photos": {
+      "room_1": "room_1",
+      "room_2": "room_2",
+      "room_3": "room_3"
+    },
+    "three_room_photos_posefix": {
+      "room_1": "room_1",
+      "room_2": "room_2",
+      "room_3": "room_3"
+    }
+  },
+  "note": "Physical room labels are evaluation-only. Video correspondence remains unresolved until manually inspected; never choose correspondence to minimize dimension errors."
+}

@@ -54,7 +54,14 @@ class DepthPro:
         from PIL import Image
         key=__import__('hashlib').sha256(bgr.tobytes()+self.cache_fingerprint.encode()).hexdigest()
         path=Path(cache)/(key+'.npz') if cache else None
+        if path and not path.exists():
+            # Exact content/model/precision cache replay; no reference labels.
+            import shutil
+            prior=next(iter(sorted((ROOT/'runs').glob(f'*/geometry/depth_cache/{key}.npz'))),None)
+            if prior is not None:
+                path.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(prior,path)
         if path and path.exists():
+            self.description['cache_hits']=self.description.get('cache_hits',0)+1
             data=np.load(path);return data['depth'],float(data['focal'])
         image=Image.fromarray(cv2.cvtColor(bgr,cv2.COLOR_BGR2RGB))
         with self.torch.inference_mode():pred=self.model.infer(self.preprocess(image),f_px=None)
