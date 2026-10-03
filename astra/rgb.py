@@ -68,9 +68,9 @@ def match_pair(a,b):
 
 def reconstruct_rgb(path,tier,out,models=None,device='cpu',max_frames=40,rotation=0,depth_model='small'):
     out=Path(out);out.mkdir(parents=True,exist_ok=True);views=prepare_views(path,tier,out,max_frames,rotation)
-    model=(DepthPro(models,device) if depth_model=='depth-pro' else MetricDepth(models,device));sift=cv2.SIFT_create(nfeatures=1800)
+    model=(DepthPro(models,device,quantized=depth_model=='depth-pro-int8') if depth_model.startswith('depth-pro') else MetricDepth(models,device));sift=cv2.SIFT_create(nfeatures=1800)
     for v in views:
-        if depth_model=='depth-pro':
+        if depth_model.startswith('depth-pro'):
             v['depth'],f=model.predict_with_focal(v['bgr'],out/'depth_cache');v['K'][0,0]=f;v['K'][1,1]=f;v['intrinsics_method']='DepthPro_learned_focal'
         else:v['depth']=model.predict(v['bgr'],out/'depth_cache')
         v['keypoints'],v['desc']=sift.detectAndCompute(cv2.cvtColor(v['bgr'],cv2.COLOR_BGR2GRAY),None)

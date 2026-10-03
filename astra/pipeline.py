@@ -2,13 +2,14 @@ from pathlib import Path
 import json,os,platform,subprocess,time,resource
 import cv2,numpy as np
 from . import __version__
-from .io import write_json,input_manifest,selected_video
+from .io import write_json,input_manifest,selected_video,sha256
 from .lidar import reconstruct
 from .layout import build_layout,point_in_poly
 from .rgb import reconstruct_rgb
 from .semantics import run_semantics,scope_and_flags
 from .schema import validate
 from .export import render
+from .quality import topology_quality
 from .openings import geometric_openings,merge_openings
 
 
@@ -107,14 +108,23 @@ def run(args):
     opens,damage,semantic_warnings=run_semantics(views,layout,out/'semantics',args.device,args.semantic_views,args.staged_damage,args.semantics=='on')
     opens=merge_openings(geometry_openings,opens);layout['openings']=opens;layout['adjacency']=adjacency_from_openings(layout)
     scope,flags=scope_and_flags(damage,layout['surfaces']);warnings+=semantic_warnings
+    topology=topology_quality(layout['rooms'],layout['adjacency'],args.tier,physical_stitch=args.tier=='lidar' or len(components)==1)
+    if topology['status']=='unresolved_physical_stitch':warnings.append('Physical whole-property stitch unresolved: inspect connectivity, component placement and overlaps.')
     if args.staged_damage:warnings.append('Explicit staging-marker mode: not a benchmark of natural crack/flood recognition.')
     result={'schema_version':'astra.provisional.v1','capture_id':args.capture_id or Path(args.input).stem,'tier':args.tier,
         'status':'provisional_reconstruction' if layout['rooms'] else 'unresolved_geometry',
-        'rooms':layout['rooms'],'surfaces':layout['surfaces'],'openings':opens,'adjacency':layout['adjacency'],'damage':damage,
+        'layout_quality':topology,'rooms':layout['rooms'],'surfaces':layout['surfaces'],'openings':opens,'adjacency':layout['adjacency'],'damage':damage,
         'concealed_damage_flags':flags,'scope_items':scope,'warnings':warnings,'diagnostics':extra}
     validate(result,args.schema);write_json(out/'result.json',result);render(result,out)
     manifest=input_manifest(files,base);write_json(out/'input_manifest.json',manifest)
-    provenance={'version':__version__,'code_revision':code_revision(),'config':vars(args),'platform':platform.platform(),
+    import importlib.metadata
+    source_root=Path(__file__).resolve().parents[1]
+    source_hashes={str(p.relative_to(source_root)):sha256(p) for p in sorted((source_root/'astra').glob('*.py'))}
+    dependencies={}
+    for package in ['numpy','scipy','opencv-python-headless','torch','torchvision','transformers','timm','matplotlib','imageio-ffmpeg']:
+        try:dependencies[package]=importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:pass
+    provenance={'source_hashes':source_hashes,'dependencies':dependencies,'semantic_model_manifest':'semantics/candidates.json','version':__version__,'code_revision':code_revision(),'config':vars(args),'platform':platform.platform(),
         'python':platform.python_version(),'input_root':str(Path(base).resolve()),'input_manifest':'input_manifest.json',
         'wall_time_seconds':time.perf_counter()-start,'max_rss_mb':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024,
         'ground_truth_used_for_inference':False,'intervals_calibrated':False,'models':extra.get('rgb_reconstruction',{}).get('model',None)}

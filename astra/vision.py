@@ -30,22 +30,29 @@ class MetricDepth:
 
 class DepthPro:
     """Apple metric depth with its own focal estimate; entirely local inference."""
-    def __init__(self,models=None,device='cpu'):
+    def __init__(self,models=None,device='cpu',quantized=False):
         import torch
         from dataclasses import replace
         self.torch=torch;torch.set_num_threads(4);self.device=device
         root=Path(models or ROOT/'models');source=root/'depth-pro-source'/'src';weights=root/'depth_pro.pt'
         if not source.exists() or not weights.exists():raise RuntimeError('Depth Pro assets missing. Run: python scripts/fetch_models.py --depth-pro')
         sys.path.insert(0,str(source))
-        import depth_pro
-        from depth_pro.depth_pro import DEFAULT_MONODEPTH_CONFIG_DICT
-        cfg=replace(DEFAULT_MONODEPTH_CONFIG_DICT,checkpoint_uri=str(weights))
+        # Load the official numerical module directly. Its package initializer
+        # also imports an optional HEIF reader; inputs here are already arrays.
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('_astra_depth_pro',source/'depth_pro/depth_pro.py',submodule_search_locations=[str(source/'depth_pro')])
+        depth_pro=importlib.util.module_from_spec(spec);sys.modules[spec.name]=depth_pro;spec.loader.exec_module(depth_pro)
+        cfg=replace(depth_pro.DEFAULT_MONODEPTH_CONFIG_DICT,checkpoint_uri=str(weights))
         self.model,self.preprocess=depth_pro.create_model_and_transforms(config=cfg,device=torch.device(device),precision=torch.float32)
         self.model.eval();self.fingerprint=sha256(weights)
-        self.description={'name':'Apple Depth Pro','weights_sha256':self.fingerprint,'device':device,'license':'Apple supplied license','focal_method':'learned_from_image'}
+        if quantized:
+            if device!='cpu':raise ValueError('Dynamic int8 quantization is CPU-only')
+            self.model=torch.ao.quantization.quantize_dynamic(self.model,{torch.nn.Linear},dtype=torch.qint8,inplace=True)
+        self.cache_fingerprint=self.fingerprint+(':dynamic_int8' if quantized else ':float32')
+        self.description={'quantization':'dynamic_int8' if quantized else 'none','name':'Apple Depth Pro','weights_sha256':self.fingerprint,'device':device,'license':'Apple supplied license','focal_method':'learned_from_image'}
     def predict_with_focal(self,bgr,cache=None):
         from PIL import Image
-        key=__import__('hashlib').sha256(bgr.tobytes()+self.fingerprint.encode()).hexdigest()
+        key=__import__('hashlib').sha256(bgr.tobytes()+self.cache_fingerprint.encode()).hexdigest()
         path=Path(cache)/(key+'.npz') if cache else None
         if path and path.exists():
             data=np.load(path);return data['depth'],float(data['focal'])

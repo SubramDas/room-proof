@@ -1,0 +1,17 @@
+{
+  "description": "Inference inputs and budgets; no ground-truth dimensions enter these commands.",
+  "runs": [
+    {"id":"three_room_lidar_final","tier":"lidar","input":"three_room/lidar","max_frames":140,"semantic_views":12},
+    {"id":"kitchen_lidar_final","tier":"lidar","input":"kitchen/lidar","max_frames":100,"semantic_views":8,"single_room":true},
+    {"id":"damage_lidar_final","tier":"lidar","input":"Crack_water/lidar","max_frames":90,"semantic_views":10,"single_room":true,"staged_damage":true},
+    {"id":"three_room_photos_final","tier":"photos","input":"three_room","depth_model":"depth-pro-int8","semantic_views":9},
+    {"id":"kitchen_photos_final","tier":"photos","input":"kitchen","depth_model":"depth-pro-int8","semantic_views":6,"single_room":true},
+    {"id":"damage_photos_final","tier":"photos","input":"Crack_water","depth_model":"depth-pro-int8","semantic_views":7,"single_room":true,"staged_damage":true},
+    {"id":"three_room_video_final","tier":"video","input":"three_room/lidar/rgb.mp4","max_frames":64,"rotation":90,"depth_model":"small","semantic_views":10},
+    {"id":"kitchen_video_final","tier":"video","input":"kitchen/lidar/rgb.mp4","max_frames":40,"rotation":90,"depth_model":"small","semantic_views":8,"single_room":true},
+    {"id":"damage_video_final","tier":"video","input":"Crack_water/lidar/04a0d041fc/rgb.mp4","max_frames":32,"rotation":90,"depth_model":"small","semantic_views":8,"single_room":true,"staged_damage":true},
+    {"id":"evaluator_single_room","tier":"lidar","input":"single_room","max_frames":80,"semantic_views":0,"semantics":"off","single_room":true},
+    {"id":"evaluator_floor_only","tier":"lidar","input":"single_scan_floor_only","max_frames":80,"semantic_views":0,"semantics":"off"},
+    {"id":"evaluator_with_ceiling","tier":"lidar","input":"single_scan_with_ceiling","max_frames":100,"semantic_views":0,"semantics":"off"}
+  ]
+}

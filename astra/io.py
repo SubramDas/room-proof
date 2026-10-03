@@ -84,7 +84,7 @@ def load_scan(path):
     required=['timestamp','frame','x','y','z','qx','qy','qz','qw']
     if any(k not in rows[0] for k in required):raise ValueError('Unsupported pose columns')
     ids=[r['frame'] for r in rows];ts=np.array([float(r['timestamp']) for r in rows])
-    if len(set(ids))!=len(ids) or (np.diff(ts)<=0).any():raise ValueError('Duplicate frame IDs or nonmonotonic timestamps')
+    if not np.isfinite(ts).all() or len(set(ids))!=len(ids) or (np.diff(ts)<=0).any():raise ValueError('Duplicate frame IDs or nonmonotonic timestamps')
     for folder in ['depth','confidence']:
         available={p.stem for p in (root/folder).glob('*.png')}
         if set(ids)!=available:raise ValueError(f'{folder} IDs do not match poses')
@@ -92,6 +92,7 @@ def load_scan(path):
     if not np.isfinite(q).all() or np.max(abs(np.linalg.norm(q,axis=1)-1))>.01:raise ValueError('Invalid pose quaternion')
     poses=np.tile(np.eye(4),(len(rows),1,1));poses[:,:3,:3]=Rotation.from_quat(q).as_matrix()
     poses[:,:3,3]=[[float(r[k]) for k in ['x','y','z']] for r in rows]
+    if not np.isfinite(poses).all():raise ValueError('Nonfinite camera position')
     K=np.tile(np.eye(3),(len(rows),1,1))
     if all(k in rows[0] for k in ['fx','fy','cx','cy']):
         for i,r in enumerate(rows):K[i,0,0],K[i,1,1],K[i,0,2],K[i,1,2]=[float(r[k]) for k in ['fx','fy','cx','cy']]
@@ -116,7 +117,9 @@ def photo_groups(path):
     p=Path(path)
     if p.is_file():raise ValueError('Photos require a room folder or per-room folders')
     root_files=sorted(x for x in p.iterdir() if x.is_file() and x.suffix.lower() in IMAGE_SUFFIXES)
-    if root_files:return {p.name:root_files}
+    if root_files:
+        if not 2<=len(root_files)<=8:raise ValueError(f'{p.name}: photo contract is 2–8 images, found {len(root_files)}')
+        return {p.name:root_files}
     groups={}
     for child in sorted(p.iterdir()):
         if not child.is_dir() or child.name in ['lidar','depth','confidence']:continue

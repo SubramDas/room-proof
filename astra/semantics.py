@@ -95,7 +95,7 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
             c={**c,'view_id':str(v.get('id',vi)),'source':v.get('source',v.get('image')),'rotation':angle};box=c['box'];x1,y1,x2,y2=box
             corners=inverse_pixels([[x1,y1],[x2,y1],[x2,y2],[x1,y2]],angle,w,h)
             centre=corners.mean(0);hit=ray_surface(centre,K,pose,layout['surfaces'],v.get('room_ids')) if pose is not None else None
-            label=c['label'].lower();is_open=any(t in label for t in ['door','window','opening']);is_damage=any(t in label for t in ['crack','water','stain','flood'])
+            label=c['label'].lower();is_open=any(t in label for t in ['door','window','opening']);is_damage=any(t in label for t in ['crack','water','stain','flood']) and (not staged or label.startswith('staged_'))
             cv2.rectangle(overlay,(int(x1),int(y1)),(int(x2),int(y2)),(0,180,255),2)
             cv2.putText(overlay,c['label'],(int(x1),max(15,int(y1)-4)),cv2.FONT_HERSHEY_SIMPLEX,.4,(0,0,255),1)
             if hit:
@@ -132,8 +132,10 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
         print(f'Semantics {vi+1}/{len(views)}: {len(candidates)} candidates',flush=True)
     # Surface raster union merges repeated views, preserving one region per class/surface.
     merged=[]
-    for sid,cls in sorted({(d['surface_id'],d['class']) for d in damage}):
-        ds=[d for d in damage if d['surface_id']==sid and d['class']==cls];alluv=np.concatenate([d['surface_polygon'] for d in ds]);origin=alluv.min(0);span=alluv.max(0)-origin
+    for sid,cls,status in sorted({(d['surface_id'],d['class'],d['status']) for d in damage}):
+        ds=[d for d in damage if d['surface_id']==sid and d['class']==cls and d['status']==status]
+        surface=next(s for s in layout['surfaces'] if s['id']==sid)
+        origin=np.zeros(2);span=np.array([np.linalg.norm(np.array(surface['end'])-surface['start']),surface['height']['value'] or 3.])
         cell=max(.005,float(span.max()/1200));size=np.ceil(span/cell).astype(int)+3;mask=np.zeros((size[1],size[0]),np.uint8)
         for d in ds:cv2.fillPoly(mask,[np.rint((np.array(d['surface_polygon'])-origin)/cell).astype(np.int32)],1)
         contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
@@ -141,6 +143,8 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
             poly=contour[:,0]*cell+origin;area=float(cv2.contourArea(contour)*cell*cell)
             if area<=0:continue
             item={**ds[0],'id':f'damage_{len(merged)+1}','surface_polygon':poly.tolist(),'area':measure(area,'m2',half_width=max(.01,area*.4)),
+                  'extent_width':measure(float(np.ptp(poly[:,0])),half_width=max(.05,float(np.ptp(poly[:,0]))*.15)),
+                  'extent_height':measure(float(np.ptp(poly[:,1])),half_width=max(.05,float(np.ptp(poly[:,1]))*.15)),
                   'evidence':sorted({e for d in ds for e in d['evidence']})};merged.append(item)
     write_json(out/'candidates.json',{'candidates':all_candidates,'warnings':warnings,'detector':detector.description if detector else None,'staged_mode':staged})
     return openings,merged,warnings
