@@ -48,7 +48,7 @@ def icp(source,target,threshold=.15,iterations=15):
               'before_rmse_m':before,'translation_m':shift,'rotation_rad':angle}
 
 
-def correct_pose_graph(clouds,poses):
+def correct_pose_graph(clouds,poses,gravity_lock=False):
     """Verified point-cloud factors plus smooth correction priors; never force closure."""
     n=len(poses);edges=[]
     for j in range(1,n):
@@ -67,6 +67,7 @@ def correct_pose_graph(clouds,poses):
         x=x.reshape(n,6);rs=[(x[0]*100).ravel(),(x*.7).ravel(),(np.diff(x,axis=0)*2).ravel()]
         for i,j,T,kind,_ in edges:
             target=np.r_[Rotation.from_matrix(T[:3,:3]).as_rotvec(),T[:3,3]]
+            if gravity_lock:target[[0,2]]=0.
             rs.append((x[j]-x[i]-target)*(8 if kind=='loop' else 3))
         return np.concatenate(rs)
     if not edges:return poses.copy(),{'method':'verified_ICP_pose_graph','accepted_edges':[],'status':'no_verified_constraints'}
@@ -80,8 +81,9 @@ def correct_pose_graph(clouds,poses):
     result=least_squares(residual,np.zeros(n*6),jac_sparsity=sp.tocsr(),loss='soft_l1',f_scale=.03,max_nfev=25)
     corrected=poses.copy();xs=result.x.reshape(n,6)
     for i,x in enumerate(xs):
+        if gravity_lock:x[[0,2]]=0.
         C=np.eye(4);C[:3,:3]=Rotation.from_rotvec(x[:3]).as_matrix();C[:3,3]=x[3:];corrected[i]=C@poses[i]
-    return corrected,{'method':'verified_ICP_pose_graph','status':'optimized','small_angle_approximation':True,
+    return corrected,{'method':'verified_ICP_pose_graph','status':'optimized','small_angle_approximation':True,'gravity_lock':gravity_lock,
         'max_translation_correction_m':float(np.linalg.norm(xs[:,3:],axis=1).max()),
         'accepted_edges':[{'from':i,'to':j,'kind':kind,**info} for i,j,_,kind,info in edges]}
 

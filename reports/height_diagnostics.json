@@ -1,0 +1,56 @@
+{
+  "purpose": "Diagnostic exploration, not independent held-out validation or sensor calibration",
+  "runs": [
+    {
+      "configuration": "confidence_1_gravity_True",
+      "measurements": [
+        {
+          "room": "room_1",
+          "height": 2.7608745366712633,
+          "extent_x": 6.32,
+          "extent_z": 4.640000000000001
+        },
+        {
+          "room": "room_2",
+          "height": 2.1842622239124867,
+          "extent_x": 0.8073351966811272,
+          "extent_z": 1.6687088903418188
+        }
+      ]
+    },
+    {
+      "configuration": "confidence_2_gravity_False",
+      "measurements": [
+        {
+          "room": "room_1",
+          "height": 2.76087796365748,
+          "extent_x": 6.12,
+          "extent_z": 4.5600000000000005
+        },
+        {
+          "room": "room_2",
+          "height": 2.194211961979133,
+          "extent_x": 0.7972608717413562,
+          "extent_z": 1.6658841998457836
+        }
+      ]
+    },
+    {
+      "configuration": "confidence_2_gravity_True",
+      "measurements": [
+        {
+          "room": "room_1",
+          "height": 2.7609927139782657,
+          "extent_x": 6.16,
+          "extent_z": 4.5600000000000005
+        },
+        {
+          "room": "room_2",
+          "height": 2.1945356453987985,
+          "extent_x": 0.7968423959167573,
+          "extent_z": 1.6659654012308993
+        }
+      ]
+    }
+  ]
+}

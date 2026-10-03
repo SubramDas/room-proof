@@ -14,14 +14,25 @@ def main():
     p=argparse.ArgumentParser(prog='astra',description='Local property reconstruction and evidence-linked assessment')
     sub=p.add_subparsers(dest='action',required=True)
     r=sub.add_parser('run');r.add_argument('--tier',choices=['lidar','photos','video'],required=True);r.add_argument('--input',required=True);r.add_argument('--output',required=True)
-    r.add_argument('--depth-model',choices=['small','depth-pro','depth-pro-int8'],default='small');r.add_argument('--layout-method',choices=['planes','free-space'],default='planes');r.add_argument('--capture-id');r.add_argument('--max-frames',type=int,default=120);r.add_argument('--single-room',action='store_true');r.add_argument('--drift',choices=['on','off'],default='on')
+    r.add_argument('--depth-model',choices=['small','depth-pro','depth-pro-int8','hybrid'],default='small');r.add_argument('--layout-method',choices=['planes','free-space'],default='planes');r.add_argument('--capture-id');r.add_argument('--max-frames',type=int,default=120);r.add_argument('--single-room',action='store_true');r.add_argument('--drift',choices=['on','off'],default='on')
     r.add_argument('--semantics',choices=['on','off'],default='on');r.add_argument('--semantic-views',type=int,default=10);r.add_argument('--device',choices=['cpu','cuda'],default='cpu')
+    r.add_argument('--rgb-scale-refinement',action='store_true')
+    r.add_argument('--rgb-geometry-bridges',action='store_true')
+    r.add_argument('--min-confidence',type=int,choices=[1,2],default=1);r.add_argument('--gravity-lock',action='store_true')
     r.add_argument('--rotation',type=int,choices=[0,90,180,270],default=0);r.add_argument('--staged-damage',action='store_true');r.add_argument('--schema',help='Optional official evaluator JSON schema')
     a=sub.add_parser('audit');a.add_argument('--input',required=True);a.add_argument('--output',required=True)
     v=sub.add_parser('validate');v.add_argument('result');v.add_argument('--schema')
     e=sub.add_parser('evaluate');e.add_argument('--result',required=True);e.add_argument('--truth',required=True);e.add_argument('--mapping',required=True,help='JSON reference-room to prediction-room map');e.add_argument('--output',required=True)
     t=sub.add_parser('repeat');t.add_argument('--first',required=True);t.add_argument('--second',required=True);t.add_argument('--output',required=True)
     args=p.parse_args()
+    if args.action=='run':
+        from .runtime import install_progress_log
+        install_progress_log(Path(args.output)/'progress.log')
+        import signal
+        def interrupted(signum,frame):
+            write_json(Path(args.output)/'run_status.json',{'status':'interrupted','signal':signum,'resume':'Rerun the same command; exact-image depth caches are retained.'})
+            raise SystemExit(128+signum)
+        signal.signal(signal.SIGTERM,interrupted);signal.signal(signal.SIGINT,interrupted)
     import cv2,numpy as np
     cv2.setRNGSeed(0);np.random.seed(0)
     try:

@@ -11,8 +11,14 @@ def topology_quality(rooms,adjacency,tier,physical_stitch=True):
     for r,poly in zip(rooms,polygons):
         mask=np.zeros(occupancy.shape,np.uint8);cv2.fillPoly(mask,[np.rint((poly-origin)/cell).astype(np.int32)],1)
         for other,previous in masks:
-            area=float(np.sum((mask>0)&(previous>0))*cell*cell)
-            # Raster boundary pixels are shared even for exactly touching polygons.
+            other_poly=np.asarray(other['polygon'],np.float32);current_poly=np.asarray(poly,np.float32)
+            if cv2.isContourConvex(other_poly) and cv2.isContourConvex(current_poly):
+                area=float(cv2.intersectConvexConvex(other_poly,current_poly)[0])
+            else:
+                interior=cv2.erode(mask,np.ones((3,3),np.uint8));previous_interior=cv2.erode(previous,np.ones((3,3),np.uint8))
+                area=float(np.sum((interior>0)&(previous_interior>0))*cell*cell)
+            # Exact convex intersections, or an interior raster for concave fallback.
+
             if area>max(.025,.01*min(r['floor_area']['value'],other['floor_area']['value'])):
                 overlaps.append({'rooms':[other['id'],r['id']],'overlap_m2':area})
         masks.append((r,mask));occupancy+=mask

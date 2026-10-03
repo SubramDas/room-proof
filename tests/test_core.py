@@ -110,3 +110,25 @@ def test_overlap_and_missing_adjacency_are_reported():
 def test_root_photo_count_is_validated(tmp_path):
     (tmp_path/'one.jpg').write_bytes(b'x')
     with pytest.raises(ValueError,match='2–8'):photo_groups(tmp_path)
+
+
+def test_disconnected_progress_pipe_preserves_log_and_continues(tmp_path):
+    from astra.runtime import ResilientLogStream
+    class ClosedPipe:
+        def write(self,text):raise BrokenPipeError(32,'Broken pipe')
+        def flush(self):raise BrokenPipeError(32,'Broken pipe')
+    path=tmp_path/'progress.log'
+    with path.open('w') as log:
+        stream=ResilientLogStream(ClosedPipe(),log)
+        print('first stage complete',file=stream,flush=True)
+        print('second stage complete',file=stream,flush=True)
+        assert stream.disconnected
+    assert path.read_text()=='first stage complete\nsecond stage complete\n'
+
+
+def test_touching_room_boundaries_are_not_area_overlap():
+    from astra.quality import topology_quality
+    rooms=[{'id':'a','polygon':[[0,0],[1,0],[1,4],[0,4]],'floor_area':measure(4,'m2')},
+           {'id':'b','polygon':[[1,0],[2,0],[2,4],[1,4]],'floor_area':measure(4,'m2')}]
+    q=topology_quality(rooms,[{'rooms':['a','b']}],'lidar')
+    assert not q['room_overlaps'];assert q['status']=='provisional_connected_layout'

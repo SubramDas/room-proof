@@ -67,13 +67,13 @@ def staged_regions(image):
     hsv=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);h,w=hsv.shape[:2];results=[]
     # The user's colored props are declared staging, so this mode assesses their
     # projection/extent only and must not be scored as natural-damage recognition.
-    ranges=[('staged_crack_marker',(0,0,0),(179,255,55)),('staged_flood_marker',(5,65,40),(30,230,190))]
+    ranges=[('staged_crack_marker',(0,0,0),(179,255,100)),('staged_flood_marker',(5,35,40),(35,230,210))]
     for label,lo,hi in ranges:
         mask=cv2.inRange(hsv,np.array(lo),np.array(hi));mask=cv2.morphologyEx(mask,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))
         contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         for c in contours:
             area=cv2.contourArea(c);x,y,bw,bh=cv2.boundingRect(c)
-            if not .001*h*w<area<.055*h*w or min(bw,bh)<12:continue
+            if not .00015*h*w<area<.045*h*w or min(bw,bh)<8 or max(bw,bh)/min(bw,bh)>6:continue
             approx=cv2.approxPolyDP(c,.025*cv2.arcLength(c,True),True)
             if not 4<=len(approx)<=6 or area/(bw*bh)<.7:continue
             results.append({'label':label,'score':None,'box':[x,y,x+bw,y+bh],'status':'staging_marker_candidate','contour':c[:,0].tolist()})
@@ -95,6 +95,14 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
             c={**c,'view_id':str(v.get('id',vi)),'source':v.get('source',v.get('image')),'rotation':angle};box=c['box'];x1,y1,x2,y2=box
             corners=inverse_pixels([[x1,y1],[x2,y1],[x2,y2],[x1,y2]],angle,w,h)
             centre=corners.mean(0);hit=ray_surface(centre,K,pose,layout['surfaces'],v.get('room_ids')) if pose is not None else None
+            if hit and 'sensor_depth' in v:
+                depth=v['sensor_depth'];dh,dw=depth.shape
+                dx=int(np.clip(round(centre[0]*dw/w),0,dw-1));dy=int(np.clip(round(centre[1]*dh/h),0,dh-1))
+                observed=float(depth[dy,dx]);confidence=int(v['sensor_confidence'][dy,dx])
+                expected=float((hit[2]-pose[:3,3])@pose[:3,2])
+                c['depth_evidence']={'observed_camera_z_m':observed,'wall_camera_z_m':expected,'confidence':confidence}
+                if confidence>=1 and observed>.2 and observed<expected-max(.12,.025*expected):
+                    c['projection_rejected']='foreground_object_in_front_of_wall';hit=None
             label=c['label'].lower();is_open=any(t in label for t in ['door','window','opening']);is_damage=any(t in label for t in ['crack','water','stain','flood']) and (not staged or label.startswith('staged_'))
             cv2.rectangle(overlay,(int(x1),int(y1)),(int(x2),int(y2)),(0,180,255),2)
             cv2.putText(overlay,c['label'],(int(x1),max(15,int(y1)-4)),cv2.FONT_HERSHEY_SIMPLEX,.4,(0,0,255),1)
@@ -103,7 +111,9 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
                 c['surface_id']=s['id'];c['surface_uv_box']=uv.tolist() if good.all() else None
                 if good.all():
                     low=uv.min(0);high=uv.max(0);width,height=high-low
-                    if is_open and .35<width<3.5 and .5<height<3.5:
+                    wall_length=float(np.linalg.norm(np.array(s['end'])-s['start']));wall_height=s['height']['value']
+                    contained=(low[0]>=-.05 and high[0]<=wall_length+.05 and low[1]>=-.15 and (wall_height is None or high[1]<=wall_height+.15))
+                    if is_open and contained and .35<width<3.5 and .5<height<3.5:
                         kind='window' if 'window' in label else 'doorway';candidate={'id':f'opening_{len(openings)+1}','surface_id':s['id'],'room_id':s['room_id'],'kind':kind,
                             'surface_uv_bounds':[low.tolist(),high.tolist()],'width':measure(width,half_width=max(.08,width*.12)),
                             'height':measure(height,half_width=max(.08,height*.12)),'status':'provisional_visual_candidate','evidence':[c['source']],'support_views':1}
@@ -141,11 +151,17 @@ def run_semantics(views,layout,out,device='cpu',max_views=12,staged=False,enable
         contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         for contour in contours:
             poly=contour[:,0]*cell+origin;area=float(cv2.contourArea(contour)*cell*cell)
-            if area<=0:continue
-            item={**ds[0],'id':f'damage_{len(merged)+1}','surface_polygon':poly.tolist(),'area':measure(area,'m2',half_width=max(.01,area*.4)),
+            if area<=0 or (status=='staged_marker_assessment' and area<.002):continue
+            component_mask=np.zeros_like(mask);cv2.fillPoly(component_mask,[contour],1)
+            contributors=[]
+            for d in ds:
+                support=np.zeros_like(mask);cv2.fillPoly(support,[np.rint((np.array(d['surface_polygon'])-origin)/cell).astype(np.int32)],1)
+                if np.any((support>0)&(component_mask>0)):contributors.append(d)
+            if not contributors:continue
+            item={**contributors[0],'id':f'damage_{len(merged)+1}','surface_polygon':poly.tolist(),'area':measure(area,'m2',half_width=max(.01,area*.4)),
                   'extent_width':measure(float(np.ptp(poly[:,0])),half_width=max(.05,float(np.ptp(poly[:,0]))*.15)),
                   'extent_height':measure(float(np.ptp(poly[:,1])),half_width=max(.05,float(np.ptp(poly[:,1]))*.15)),
-                  'evidence':sorted({e for d in ds for e in d['evidence']})};merged.append(item)
+                  'evidence':sorted({e for d in contributors for e in d['evidence']})};merged.append(item)
     write_json(out/'candidates.json',{'candidates':all_candidates,'warnings':warnings,'detector':detector.description if detector else None,'staged_mode':staged})
     return openings,merged,warnings
 

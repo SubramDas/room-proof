@@ -2,8 +2,13 @@
 import argparse,json,subprocess,sys,time
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from astra.runtime import install_progress_log
 p=argparse.ArgumentParser();p.add_argument('--config',default='configs/benchmark.json');p.add_argument('--only',nargs='*');p.add_argument('--output-root',default='runs');p.add_argument('--skip-complete',action='store_true');args=p.parse_args()
 config=json.loads((ROOT/args.config).read_text());out=ROOT/args.output_root;out.mkdir(parents=True,exist_ok=True);summary=[]
+import hashlib
+run_key=hashlib.sha256(json.dumps(args.only).encode()).hexdigest()[:10]
+install_progress_log(out/'execution_logs'/f'{run_key}.log')
 for run in config['runs']:
     name=run['id']
     if args.only and name not in args.only:continue
@@ -22,5 +27,5 @@ for run in config['runs']:
         for line in proc.stdout:print(line,end='',flush=True);log.write(line);log.flush()
         code=proc.wait()
     summary.append({'run':name,'exit_code':code,'runtime_seconds':time.perf_counter()-start,'command':cmd})
-    (out/'execution_summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+    (out/f'execution_summary_{run_key}.json').write_text(json.dumps(summary,indent=2)+'\n')
 if any(s.get('exit_code',0) for s in summary):sys.exit(1)

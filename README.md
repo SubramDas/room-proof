@@ -74,3 +74,17 @@ git --git-dir=.history --work-tree=. log --oneline
 ```
 
 The reproduction bundle includes a standard Git bundle export so another machine can inspect and clone the history. This is actual incremental implementation history, not reconstructed historical timestamps.
+
+## Long CPU runs and recovery
+
+Use the tested environment: `.venv/bin/python scripts/check_environment.py`. Installing xFormers independently changed PyTorch to an incompatible CUDA build during development; the CPU versions were restored. xFormers is not required. Keep the pinned Torch/Torchvision pair together.
+
+The raw Stray walkthrough is sideways. A denser video run is:
+
+```bash
+.venv/bin/python -m astra run --tier video --input three_room/lidar/rgb.mp4 --output runs/video_dense_new --rotation 90 --depth-model small --max-frames 180 --semantic-views 8
+```
+
+Progress is written to `progress.log`, with state in `run_status.json`. A disconnected terminal output pipe no longer aborts computation. An explicit interrupt/termination is recorded separately. If an interrupted run has no completed result, rerun the same command to reuse its exact-image/model depth caches. Cached completion timings are not cold-run timings.
+
+`--depth-model hybrid` is an experimental RGB-only mode using three Depth Pro anchors to estimate a shared focal length and rescale the faster depth model. `--rgb-scale-refinement` tests per-view depth-scale consistency from matched image points. `--rgb-geometry-bridges` tests weak depth-based temporal links. These options do not certify connectivity or accuracy; inspect each run's diagnostics. `--gravity-lock` and `--min-confidence 2` are LiDAR diagnostic alternatives; they were not improvements on the current three-room partition and are not default settings.

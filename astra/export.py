@@ -20,12 +20,16 @@ def render(result,out):
             a=np.array(wall['start']);b=np.array(wall['end']);m=(a+b)/2;length=wall['length']['value']
             if length>.35:ax.text(*m,f'{length:.2f}',fontsize=7,ha='center',bbox=dict(facecolor='white',alpha=.75,edgecolor='none',pad=1))
     surfaces={s['id']:s for s in result['surfaces']}
+    paired_ids={oid for edge in result['adjacency'] for oid in edge['opening_ids']}
     for op in result['openings']:
         s=surfaces[op['surface_id']];a=np.array(s['start']);b=np.array(s['end']);e=(b-a)/np.linalg.norm(b-a);low,high=np.array(op['surface_uv_bounds']);ends=np.array([a+e*low[0],a+e*high[0]])
-        ax.plot(ends[:,0],ends[:,1],color='#e27413',linewidth=4,linestyle='--');mid=ends.mean(0);ax.text(*mid,f"{op['width']['value']:.2f} m ?",fontsize=7,color='#913300')
+        supported=op['id'] in paired_ids
+        ax.plot(ends[:,0],ends[:,1],color='#b75c12' if supported else '#a8a2a0',linewidth=4 if supported else 1.5,linestyle='--',alpha=1. if supported else .6)
+        if supported:
+            mid=ends.mean(0);ax.text(*mid,f"{op['width']['value']:.2f} m ?",fontsize=7,color='#913300',bbox={'facecolor':'white','edgecolor':'none','alpha':.8})
     ax.autoscale();ax.set_aspect('equal');ax.set_xlabel('Property x (m)');ax.set_ylabel('Property z (m)');ax.grid(alpha=.2)
     ax.set_title(f"Astra — {result['tier']} — {result['capture_id']}\n{result['status']}",fontsize=12)
-    fig.text(.02,.015,'Dimensions in metres. Orange: unverified openings. Intervals and evidence in result.json/report.html.\nProvisional uncertainty; no accuracy-gate claim. Disconnected RGB components are schematic placements.',fontsize=8)
+    fig.text(.02,.015,'Dimensions in metres. Orange: paired opening candidates; grey: other unverified proposals. Intervals and evidence in result.json/report.html.\nProvisional uncertainty; no accuracy-gate claim. Disconnected RGB components are schematic placements.',fontsize=8)
     fig.tight_layout(rect=[0,.05,1,1]);fig.savefig(out/'plan.svg');fig.savefig(out/'plan.pdf');fig.savefig(out/'plan.png',dpi=150);plt.close(fig)
     rows=[]
     for room in result['rooms']:

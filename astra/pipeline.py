@@ -58,7 +58,7 @@ def run(args):
         'Intervals are engineering ranges, not empirically calibrated confidence intervals.']
     views=[];files=[];extra={};geometry_openings=[]
     if args.tier=='lidar':
-        g=reconstruct(args.input,out/'geometry',args.max_frames,args.drift=='on');layout=build_layout(g,single_room=args.single_room,method=args.layout_method)
+        g=reconstruct(args.input,out/'geometry',args.max_frames,args.drift=='on',min_confidence=args.min_confidence,gravity_lock=args.gravity_lock);layout=build_layout(g,single_room=args.single_room,method=args.layout_method)
         geometry_openings=geometric_openings(g,layout['surfaces'])
         raster=layout.pop('raster');np.savez_compressed(out/'layout_raster.npz',**raster)
         extra={'drift':g['drift'],'quality':g['qa']};indices=g['indices'];scan=g['scan']
@@ -66,12 +66,14 @@ def run(args):
         frames=selected_video(scan['root']/'rgb.mp4',indices[visual_ids],out/'keyframes')
         for pos,v in zip(visual_ids,frames):
             im=cv2.imread(v['image']);K=g['K'][pos].copy();K[0]*=im.shape[1]/scan['video']['width'];K[1]*=im.shape[0]/scan['video']['height']
-            views.append({'id':int(indices[pos]),'bgr':im,'pose':g['poses'][pos],'K':K,'source':f"rgb.mp4#frame={indices[pos]}"})
+            views.append({'id':int(indices[pos]),'bgr':im,'pose':g['poses'][pos],'K':K,'source':f"rgb.mp4#frame={indices[pos]}",
+                          'sensor_depth':cv2.imread(str(scan['root']/'depth'/f"{scan['ids'][indices[pos]]}.png"),cv2.IMREAD_UNCHANGED).astype(np.float32)*.001,
+                          'sensor_confidence':cv2.imread(str(scan['root']/'confidence'/f"{scan['ids'][indices[pos]]}.png"),cv2.IMREAD_UNCHANGED)})
         files=[scan['root']/n for n in ['odometry.csv','imu.csv','camera_matrix.csv','rgb.mp4']]
         files+=list((scan['root']/'depth').glob('*.png'))+list((scan['root']/'confidence').glob('*.png'));base=scan['root']
         warnings+=g['qa']['warnings']+layout['layout_qa']['warnings']
     else:
-        components,views,summary=reconstruct_rgb(args.input,args.tier,out/'geometry',device=args.device,max_frames=args.max_frames,rotation=args.rotation,depth_model=args.depth_model)
+        components,views,summary=reconstruct_rgb(args.input,args.tier,out/'geometry',device=args.device,max_frames=args.max_frames,rotation=args.rotation,depth_model=args.depth_model,geometry_bridges=args.rgb_geometry_bridges,scale_refinement=args.rgb_scale_refinement)
         layout={'rooms':[],'surfaces':[],'openings':[],'adjacency':[]};cursor=0.;component_offsets={}
         if args.tier=='photos':
             # One output room per source folder; choose its best-supported component.

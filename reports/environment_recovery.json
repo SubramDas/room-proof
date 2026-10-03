@@ -1,0 +1,5 @@
+{
+  "reason": "Project environment changed to torch 2.14.1 CUDA while torchvision stayed 0.23 CPU; detector import failed",
+  "action": "Restore previously tested torch 2.8.0+cpu package from local available installation and preserve changed torch/xformers files in .cache/environment_recovery",
+  "cache_policy": "Retain content-addressed depth results; resume incomplete runs"
+}
