@@ -1,0 +1,33 @@
+Kitchen:
+height: 2.8 m
+length: 2.3 m
+breadth: 2.36 m
+doorway height(hall->kitchen): 2.26 m
+doorway width(hall->kitchen): 0.88 m
+
+Hall:
+height: 2.8 m
+length: 3.3 m
+breadth: 4.2 m
+doorway height(hall->kitchen): 2.26 m
+doorway width(hall->kitchen): 0.88 m
+doorway height(hall->connector): 2.26 m
+doorway width(hall->connector): 0.81 m
+
+connector:
+height: 2.26 m
+length: 0.81 m
+breadth: 1.67 m
+doorway height(hall->connector): 2.26 m
+doorway width(hall->connector): 0.81 m
+
+Bedroom:
+height: 2.77 m
+length: 2.83 m
+breadth: 2.97 m
+doorway height(bedroom->connector): 2.17 m
+doorway width(bedroom->connector): 0.85 m
+
+
+
+
